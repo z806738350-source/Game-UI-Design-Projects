@@ -39,6 +39,12 @@ pnpm build
 pnpm test
 ```
 
+## 在线运行
+
+生产环境使用 `pnpm build` 生成前端，再由 `node server/webServer.cjs` 提供静态页面、服务端 API、飞书 OAuth 和按用户隔离的持久化空间。浏览器不会读取 Kunpo Key；服务端通过 `KUNPO_GATEWAY_BASE_URL` 调用受控公共 Gateway。
+
+在线版所需变量名称见 `.env.example`。真实 `FEISHU_APP_SECRET` 与 `SESSION_SECRET` 只能保存在服务器受限环境文件中，不得提交到仓库。飞书登录使用 OAuth v3 token 接口，仅以基础用户信息中的 `tenant_key + open_id` 映射内部 tenant UUID，不申请通讯录、邮箱、手机号或离线访问权限。
+
 ## Kunpo 配置
 
 推荐让桌面端后端调用本地 Gateway：

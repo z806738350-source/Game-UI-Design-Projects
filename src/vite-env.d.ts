@@ -20,6 +20,7 @@ interface DesignCopilotApi {
   approveArtifact(projectId: string, kind: 'screen-contract' | 'approved-layout' | 'style-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject>;
   updateArtifact(projectId: string, kind: 'screen-contract' | 'style-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject>;
   exportVisual(projectId: string, variationId: string): Promise<{ ok: boolean; filePath?: string }>;
+  logout?(): Promise<{ ok: boolean }>;
 }
 
 interface Window {

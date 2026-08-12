@@ -38,8 +38,8 @@ function defaultWorkflow(projectId) {
   };
 }
 
-function createProjectStore() {
-  const workspaceRoot = process.env.DESIGN_COPILOT_WORKSPACE || path.join(os.homedir(), 'Game UI Design Projects');
+function createProjectStore(options = {}) {
+  const workspaceRoot = options.workspaceRoot || process.env.DESIGN_COPILOT_WORKSPACE || path.join(os.homedir(), 'Game UI Design Projects');
 
   async function list() {
     await ensureDir(workspaceRoot);

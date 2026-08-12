@@ -79,11 +79,90 @@ function previewApi(): DesignCopilotApi {
 }
 
 let browserPreviewApi: DesignCopilotApi | null = null;
+let browserWebApi: DesignCopilotApi | null = null;
+
+async function request<T>(pathname: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(pathname, {
+    credentials: 'same-origin',
+    ...init,
+    headers: init.body instanceof Blob
+      ? init.headers
+      : { 'Content-Type': 'application/json', ...(init.headers || {}) }
+  });
+  if (response.status === 401) {
+    window.location.assign('/auth/feishu/start');
+    throw new Error('登录状态已失效，正在重新登录。');
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `请求失败（${response.status}）`);
+  return payload as T;
+}
+
+function chooseImages(multiple: boolean): Promise<File[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp';
+    input.multiple = multiple;
+    input.addEventListener('change', () => resolve(Array.from(input.files || [])), { once: true });
+    input.click();
+  });
+}
+
+function webApi(): DesignCopilotApi {
+  const projectPath = (id: string) => `/api/projects/${encodeURIComponent(id)}`;
+  return {
+    getConfig: () => request('/api/config'),
+    saveModelConfig: (input) => request('/api/config/models', { method: 'POST', body: JSON.stringify(input) }),
+    listProjects: () => request('/api/projects'),
+    createProject: (input) => request('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
+    duplicateProject: (id) => request(`${projectPath(id)}/duplicate`, { method: 'POST', body: '{}' }),
+    openProject: (id, options) => request(`${projectPath(id)}?includePreviews=${options?.includePreviews === false ? 'false' : 'true'}`),
+    saveProject: (id, patch) => request(projectPath(id), { method: 'PATCH', body: JSON.stringify(patch) }),
+    importFile: async (id, kind) => {
+      const files = await chooseImages(kind === 'reference');
+      let project = await request<DesignProject>(`${projectPath(id)}?includePreviews=true`);
+      for (const file of files) {
+        project = await request<DesignProject>(`${projectPath(id)}/import?kind=${kind}`, {
+          method: 'POST',
+          body: file,
+          headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) }
+        });
+      }
+      return project;
+    },
+    manageReference: (id, input) => request(`${projectPath(id)}/reference`, { method: 'POST', body: JSON.stringify(input) }),
+    revealProject: async () => ({ ok: false }),
+    runStage: (id, stage, input) => request(`${projectPath(id)}/pipeline/run`, { method: 'POST', body: JSON.stringify({ stage, input }) }),
+    draftRequirement: (id) => request(`${projectPath(id)}/requirement/draft`, { method: 'POST', body: '{}' }),
+    cancelStage: (id, stage) => request(`${projectPath(id)}/pipeline/cancel`, { method: 'POST', body: JSON.stringify({ stage }) }),
+    approveArtifact: (id, kind, input) => request(`${projectPath(id)}/pipeline/approve`, { method: 'POST', body: JSON.stringify({ kind, input }) }),
+    updateArtifact: (id, kind, patch) => request(`${projectPath(id)}/artifact`, { method: 'PATCH', body: JSON.stringify({ kind, patch }) }),
+    exportVisual: async (id, variationId) => {
+      const anchor = document.createElement('a');
+      anchor.href = `${projectPath(id)}/visual/${encodeURIComponent(variationId)}`;
+      anchor.download = '';
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      return { ok: true };
+    },
+    logout: async () => {
+      await request('/auth/logout', { method: 'POST', body: '{}' });
+      window.location.assign('/');
+      return { ok: true };
+    }
+  };
+}
 
 function api() {
   if (window.designCopilot) return window.designCopilot;
-  browserPreviewApi ||= previewApi();
-  return browserPreviewApi;
+  if (import.meta.env.DEV) {
+    browserPreviewApi ||= previewApi();
+    return browserPreviewApi;
+  }
+  browserWebApi ||= webApi();
+  return browserWebApi;
 }
 
 export const copilotApi = {
@@ -102,5 +181,6 @@ export const copilotApi = {
   cancelStage: (id: string, stage: PipelineStage): Promise<DesignProject> => api().cancelStage(id, stage),
   approveArtifact: (id: string, kind: 'screen-contract' | 'approved-layout' | 'style-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
   updateArtifact: (id: string, kind: 'screen-contract' | 'style-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => api().updateArtifact(id, kind, patch),
-  exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId)
+  exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId),
+  logout: () => api().logout ? api().logout!() : Promise.resolve({ ok: true })
 };
