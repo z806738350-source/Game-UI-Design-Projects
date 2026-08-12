@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+release/
+test-artifacts/
+*.pem
+*.key
+*.p12
+*.pfx
