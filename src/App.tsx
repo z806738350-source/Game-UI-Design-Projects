@@ -25,7 +25,7 @@ type ContractReviewStatus = 'unreviewed' | 'confirmed' | 'changed' | 'question';
 type ContractDraft = Record<ContractCategoryKey, string[]> & { screen_name: string; purpose: string; primary_action: string };
 type ContractReview = Record<ContractCategoryKey, ContractReviewStatus[]>;
 
-const emptyDraft: CreateProjectInput = { name: '', projectType: 'new', artDirection: '', requirement: '' };
+const emptyDraft: CreateProjectInput = { name: '', projectType: 'new', artDirection: '', requirement: '', continuationMode: 'exploration' };
 const listFields = ['required_controls', 'required_information', 'states', 'edge_cases'] as const;
 const contractCategories = [
   { key: 'required_controls', label: '必需控件', eyebrow: 'CONTROLS', description: '玩家需要看到或操作的按钮、入口与控件' },
@@ -88,9 +88,10 @@ function NewProjectDialog({ onCreate, onClose, onLogout, busy }: { onCreate: (in
       <div className="dialog-copy"><span className="kicker">NEW DESIGN PIPELINE</span><h2>建立可追踪的 UI 设计项目</h2><p>每次生成、人工修改和批准都会保留版本来源。</p></div>
       <label><span>项目名称</span><input autoFocus required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="例如：云境计划 · 商城改版" /></label>
       <div className="project-type-grid">
-        <button type="button" className={draft.projectType === 'new' ? 'is-selected' : ''} onClick={() => setDraft({ ...draft, projectType: 'new' })}><Sparkles size={18} /><b>新项目</b><small>探索新的视觉语言</small></button>
-        <button type="button" className={draft.projectType === 'existing' ? 'is-selected' : ''} onClick={() => setDraft({ ...draft, projectType: 'existing' })}><RefreshCw size={18} /><b>已有项目</b><small>从批准页面重建风格</small></button>
+        <button type="button" className={draft.projectType === 'new' ? 'is-selected' : ''} onClick={() => setDraft({ ...draft, projectType: 'new', continuationMode: 'exploration' })}><Sparkles size={18} /><b>新项目</b><small>探索新的视觉语言</small></button>
+        <button type="button" className={draft.projectType === 'existing' ? 'is-selected' : ''} onClick={() => setDraft({ ...draft, projectType: 'existing', continuationMode: 'existing-strict' })}><RefreshCw size={18} /><b>已有项目</b><small>默认严格继承批准页面</small></button>
       </div>
+      {draft.projectType === 'existing' && <label><span>继承强度</span><select value={draft.continuationMode} onChange={(event) => setDraft({ ...draft, continuationMode: event.target.value as CreateProjectInput['continuationMode'] })}><option value="existing-strict">严格继承（推荐）</option><option value="existing-guided">引导继承</option></select><small>严格继承会阻止公共组件和正式文字进入图片生成；缺少组件或身份关键字体时会明确阻断。</small></label>}
       <label><span>美术大方向</span><input value={draft.artDirection} onChange={(event) => setDraft({ ...draft, artDirection: event.target.value })} placeholder="如：明快二次元科幻、克制东方奇幻" /></label>
       <div className="dialog-actions">{onLogout && <button type="button" className="button button--ghost" onClick={onLogout}><LogOut size={16} />退出账号</button>}{onClose && <button type="button" className="button button--ghost" onClick={onClose}>取消</button>}<button disabled={busy || !draft.name.trim()} className="button button--primary" type="submit">{busy ? <LoaderCircle className="spin" size={16} /> : <ArrowRight size={16} />}创建并进入工作台</button></div>
     </form>

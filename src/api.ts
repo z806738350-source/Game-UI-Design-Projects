@@ -15,7 +15,7 @@ function previewApi(): DesignCopilotApi {
     createProject: async (input) => {
       const id = `preview-${Date.now()}`;
       const project: DesignProject = {
-        id, name: input.name, project_type: input.projectType, art_direction: input.artDirection,
+        id, name: input.name, project_type: input.projectType, continuation_mode: input.projectType === 'existing' ? (input.continuationMode === 'existing-guided' ? 'existing-guided' : 'existing-strict') : 'exploration', art_direction: input.artDirection,
         requirement: input.requirement, screen_id: 'main', workspacePath: `/preview/${id}`,
         updated_at: new Date().toISOString(),
         workflow: { current_stage: 'input', stages: { input: { status: 'draft' }, wireframe_interpretation: { status: 'draft' }, layout_design: { status: 'draft' }, style_resolution: { status: 'draft' }, visual_exploration: { status: 'draft' } } },

@@ -1,4 +1,5 @@
 export type ArtifactStatus = 'draft' | 'generated' | 'reviewed' | 'approved' | 'rejected' | 'stale';
+export type ContinuationMode = 'exploration' | 'existing-strict' | 'existing-guided' | 'locked-continuation';
 
 export type CanvasSpec = {
   width: number;
@@ -70,6 +71,7 @@ export type DesignProject = {
   id: string;
   name: string;
   project_type: ProjectType;
+  continuation_mode: ContinuationMode;
   art_direction: string;
   requirement: string;
   requirement_source?: 'none' | 'user' | 'ai';
@@ -109,6 +111,7 @@ export type CreateProjectInput = {
   requirementSource?: 'none' | 'user' | 'ai';
   requirementConfirmed?: boolean;
   intentAnalysis?: Record<string, unknown>;
+  continuationMode?: ContinuationMode;
 };
 
 export type AppConfig = {

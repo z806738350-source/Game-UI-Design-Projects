@@ -1,4 +1,6 @@
 const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, visualTask } = require('./prompts.cjs');
+const { providerCapabilities } = require('./providerCapabilities.cjs');
+const { buildReferencePack } = require('./referencePack.cjs');
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
@@ -102,8 +104,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (project.project_type === 'existing' && !(project.reference_paths || []).length) throw new Error('旧项目风格重建至少需要一张已批准参考页。');
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
       await invalidateDownstream(project, stage);
+      const capabilities = providerCapabilities(stageConfig.providerCapabilities);
+      const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'style-resolution' });
+      await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
-        kind: 'style-contract', prompt: stylePrompt(project, approved), imagePaths: (project.reference_assets || []).map((asset) => asset.path),
+        kind: 'style-contract', prompt: stylePrompt(project, approved), imagePaths: referencePack.selected.map((asset) => asset.path),
         id: `${project.id}-style-contract`, source: { approved_layout: approved.id, references: (project.reference_assets || []).map(({ id, name, role }) => ({ id, name, role })), ...inputSource(project) }
       });
       artifact.quality_checks = styleQualityChecks(project, artifact);
@@ -125,12 +130,18 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const strategies = resumeInterrupted
         ? requestedStrategies.filter((strategy) => !previousVariations.some((variation) => variation.strategy === strategy))
         : requestedStrategies;
+      const capabilities = providerCapabilities(stageConfig.providerCapabilities);
+      const structureGuides = project.continuation_mode === 'existing-strict' && project.wireframe_path
+        ? [{ id: `${project.screen_id}-wireframe-guide`, path: project.wireframe_path }]
+        : [];
+      const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'underlay-generation', structureGuides });
+      await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
       const tasks = strategies.map((strategy) => visualTask(project, approved, style, strategy, input.feedback));
       await projectStore.saveArtifact(projectId, 'visual-task', {
         schema_version: '1.0', id: `${project.screen_id}-visual-tasks`, version: 1, status: 'approved',
         source: { approved_layout: approved.id, style_contract: style.id, ...inputSource(project) }, tasks
       });
-      const references = [project.wireframe_path, ...(project.reference_assets || []).map((asset) => asset.path)].filter(Boolean);
+      const references = referencePack.selected.map((asset) => asset.path);
       const preserved = resumeInterrupted
         ? previousVariations
         : input.preserveExisting ? previousVariations.filter((variation) => !strategies.includes(variation.strategy)) : [];
@@ -141,7 +152,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       for (const task of tasks) {
         if (cancelledVisualJobs.has(projectId)) break;
         const result = await kunpoClient.generateImage(stageConfig, {
-          prompt: task.prompt, imagePaths: references, size: project.canvas_spec.generation_size, model: input.model
+          prompt: task.prompt, imagePaths: references, size: project.canvas_spec.generation_size, model: input.model,
+          maxReferenceImages: capabilities.max_reference_images
         });
         variations.push({
           id: task.task_id, strategy: task.variation_strategy, image_url: result.url,

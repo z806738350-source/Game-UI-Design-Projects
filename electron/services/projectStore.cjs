@@ -73,6 +73,9 @@ function createProjectStore(options = {}) {
       name,
       screen_id: 'main',
       project_type: input.projectType === 'existing' ? 'existing' : 'new',
+      continuation_mode: input.projectType === 'existing'
+        ? (input.continuationMode === 'existing-guided' ? 'existing-guided' : 'existing-strict')
+        : 'exploration',
       art_direction: String(input.artDirection || '').trim(),
       requirement: String(input.requirement || '').trim(),
       requirement_source: String(input.requirement || '').trim() ? 'user' : 'none',
@@ -157,6 +160,12 @@ function createProjectStore(options = {}) {
     const project = await resolveProject(projectId);
     const requirement = typeof patch.requirement === 'string' ? patch.requirement : project.requirement;
     const projectType = patch.projectType === 'existing' ? 'existing' : patch.projectType === 'new' ? 'new' : project.project_type;
+    const requestedMode = ['exploration', 'existing-strict', 'existing-guided', 'locked-continuation'].includes(patch.continuationMode)
+      ? patch.continuationMode
+      : project.continuation_mode;
+    const continuationMode = projectType === 'existing'
+      ? (requestedMode === 'existing-guided' ? 'existing-guided' : 'existing-strict')
+      : (requestedMode === 'locked-continuation' ? 'locked-continuation' : 'exploration');
     const artDirection = typeof patch.artDirection === 'string' ? patch.artDirection : project.art_direction;
     const requirementChanged = requirement !== project.requirement;
     const requirementSource = ['none', 'user', 'ai'].includes(patch.requirementSource)
@@ -176,6 +185,7 @@ function createProjectStore(options = {}) {
       requirement_confirmed: requirement ? Boolean(requirementConfirmed) : false,
       intent_analysis: patch.intentAnalysis && typeof patch.intentAnalysis === 'object' ? patch.intentAnalysis : project.intent_analysis,
       project_type: projectType,
+      continuation_mode: continuationMode,
       art_direction: artDirection,
       input_revisions: nextRevisions(project, revisionKeys),
       status: patch.status === 'archived' ? 'archived' : patch.status === 'draft' ? 'draft' : project.status,
@@ -262,6 +272,7 @@ function createProjectStore(options = {}) {
       'layout-proposals': path.join(screenPath, 'layout-proposals.json'),
       'approved-layout': path.join(screenPath, 'approved-layout.json'),
       'style-contract': path.join(project.workspacePath, 'style', 'style-contract.json'),
+      'reference-pack': path.join(screenPath, 'reference-pack.json'),
       'visual-task': path.join(screenPath, 'visual-task.json'),
       'visual-results': path.join(screenPath, 'explorations', 'results.json')
     };
