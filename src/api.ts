@@ -101,7 +101,10 @@ let browserWebApi: DesignCopilotApi | null = null;
 const activeScreenIds = new Map<string, string>();
 const rememberScreen = <T extends DesignProject>(project: T) => { activeScreenIds.set(project.id, project.screen_id); return project; };
 const screenIdFor = (id: string, explicit?: string) => explicit || activeScreenIds.get(id) || '';
-const withScreen = (id: string, input: Record<string, unknown> = {}) => ({ ...input, screenId: String(input.screenId || screenIdFor(id)) });
+function withScreen<T extends Record<string, unknown> = Record<string, never>>(id: string, input?: T): T & { screenId: string } {
+  const value = input || ({} as T);
+  return { ...value, screenId: String(value.screenId || screenIdFor(id)) };
+}
 
 async function request<T>(pathname: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(pathname, {
@@ -256,8 +259,8 @@ export const copilotApi = {
   generateLayoutGuide: async (id: string, screenId?: string) => rememberScreen(await api().generateLayoutGuide(id, screenIdFor(id, screenId))),
   runUnderlayCritique: async (id: string, input: Record<string, unknown>) => rememberScreen(await api().runUnderlayCritique(id, withScreen(id, input))),
   repairUnderlay: async (id: string, input: Record<string, unknown>) => rememberScreen(await api().repairUnderlay(id, withScreen(id, input))),
-  approveUnderlayWaiver: async (id: string, input: { issueId: string; reason: string }) => rememberScreen(await api().approveUnderlayWaiver(id, withScreen(id, input) as { issueId: string; reason: string })),
-  composeVisual: async (id: string, input: { variationId?: string; mode: 'preview' | 'final' }) => rememberScreen(await api().composeVisual(id, withScreen(id, input) as { variationId?: string; mode: 'preview' | 'final' })),
+  approveUnderlayWaiver: async (id: string, input: { issueId: string; reason: string }) => rememberScreen(await api().approveUnderlayWaiver(id, withScreen(id, input))),
+  composeVisual: async (id: string, input: { variationId?: string; mode: 'preview' | 'final' }) => rememberScreen(await api().composeVisual(id, withScreen(id, input))),
   runFidelity: async (id: string, screenId?: string) => rememberScreen(await api().runFidelity(id, screenIdFor(id, screenId))),
   exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId),
   logout: () => api().logout ? api().logout!() : Promise.resolve({ ok: true })
