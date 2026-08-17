@@ -5,7 +5,7 @@ const path = require('node:path');
 const { pipeline } = require('node:stream/promises');
 const { createProjectStore } = require('../electron/services/projectStore.cjs');
 const { createDesignPipeline } = require('../electron/services/designPipeline.cjs');
-const { resolveProjectPath, verifyCompositionOutput } = require('../electron/services/compositionRenderer.cjs');
+const { hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('../electron/services/compositionRenderer.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
 const kunpoClient = require('../electron/services/kunpoClient.cjs');
 
@@ -390,7 +390,7 @@ function createApplication(environment = process.env) {
       } else if (request.method === 'POST' && (suffix === '/assets/font' || suffix === '/assets/component')) {
         const assetKind = suffix.endsWith('/font') ? 'font' : 'component';
         const fileName = decodeURIComponent(String(request.headers['x-file-name'] || 'asset.bin'));
-        const allowed = assetKind === 'font' ? /\.(otf|ttf|woff2?)$/i : /\.(png|jpe?g|webp|svg)$/i;
+        const allowed = assetKind === 'font' ? /\.(otf|ttf)$/i : /\.(png|jpe?g|webp|svg)$/i;
         if (!allowed.test(fileName)) throw Object.assign(new Error(`Invalid ${assetKind} asset type.`), { status: 415 });
         let metadata = {};
         try { metadata = JSON.parse(url.searchParams.get('meta') || '{}'); } catch { throw Object.assign(new Error('Invalid asset metadata.'), { status: 400 }); }
@@ -401,6 +401,17 @@ function createApplication(environment = process.env) {
         await fs.writeFile(temporary, bytes, { mode: 0o600 });
         try { value = assetKind === 'font' ? await designPipeline.addFontAsset(projectId, temporary, metadata) : await designPipeline.addComponentAsset(projectId, temporary, metadata); }
         finally { await fs.unlink(temporary).catch(() => undefined); }
+      } else if (request.method === 'POST' && suffix === '/fonts/confirm') value = await designPipeline.confirmFontUsage(projectId, body);
+      else if (request.method === 'GET' && /^\/fonts\/[^/]+\/bytes$/.test(suffix)) {
+        const fontId = decodeURIComponent(suffix.split('/')[2]);
+        const project = await projectStore.open(projectId, { includePreviews: false });
+        const font = (project.artifacts.fontManifest?.fonts || []).find((item) => item.id === fontId);
+        if (!font) throw Object.assign(new Error('Font not found.'), { status: 404 });
+        const bytes = await fs.readFile(resolveProjectPath(project.workspacePath, font.local_path));
+        if (hashBuffer(bytes) !== font.file_hash) throw Object.assign(new Error('Font asset hash changed.'), { status: 409 });
+        response.writeHead(200, { 'Content-Type': font.format === 'otf' ? 'font/otf' : 'font/ttf', 'Content-Length': bytes.length, 'Cache-Control': 'private, no-store' });
+        response.end(bytes);
+        return true;
       } else if (request.method === 'GET' && suffix === '/screens') value = await projectStore.listScreens(projectId);
       else if (request.method === 'POST' && suffix === '/screens') value = await projectStore.createScreen(projectId, body);
       else if (request.method === 'POST' && suffix === '/screens/active') value = await projectStore.setActiveScreen(projectId, body.screenId);

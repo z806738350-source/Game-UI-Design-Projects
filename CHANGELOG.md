@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased — audit remediation PR-2
+## Unreleased — audit remediation PR-3
+
+- Split font import from explicit license and exact-role confirmation; imports always start unresolved.
+- Added browser `FontFace` loading with `document.fonts.ready` before strict final composition.
+- Added authoritative Sharp/Pango fontfile rendering with actual family, PostScript name, hash, and effect diagnostics.
+- Added letter spacing, line height, stroke, shadow, gradient, baseline offset, and tabular-number rendering controls.
+- Removed WOFF/WOFF2 import claims until a real parser is available.
+- Made strict final composition and Fidelity fail on missing, changed, unconfirmed, mismatched, or fallback fonts.
+- Added real-font tests proving exact/fallback pixel differences and no final fallback on load failure.
+
+## Audit remediation PR-2
 
 - Added a real main-process PNG compositor backed by a pinned `sharp/libvips` renderer.
 - Added a persisted Composition Output artifact with path, hash, dimensions, renderer version, and per-layer diagnostics.

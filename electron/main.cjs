@@ -5,7 +5,7 @@ const { loadKunpoConfig, saveModelConfig } = require('./services/env.cjs');
 const kunpoClient = require('./services/kunpoClient.cjs');
 const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
-const { exportCompositionOutput, verifyCompositionOutput } = require('./services/compositionRenderer.cjs');
+const { exportCompositionOutput, hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('./services/compositionRenderer.cjs');
 
 const isDev = process.env.VITE_DEV_SERVER_URL || !app.isPackaged;
 
@@ -121,9 +121,18 @@ function registerIpc() {
     return projectStore.open(projectId);
   });
   ipcMain.handle('copilot:fonts:import', async (_event, projectId, input) => {
-    const selection = await dialog.showOpenDialog({ title: '选择字体资产', properties: ['openFile'], filters: [{ name: 'Fonts', extensions: ['otf', 'ttf', 'woff', 'woff2'] }] });
+    const selection = await dialog.showOpenDialog({ title: '选择字体资产', properties: ['openFile'], filters: [{ name: 'Fonts', extensions: ['otf', 'ttf'] }] });
     if (selection.canceled || !selection.filePaths[0]) return projectStore.open(projectId);
     return pipeline.addFontAsset(projectId, selection.filePaths[0], input);
+  });
+  ipcMain.handle('copilot:fonts:confirm', (_event, projectId, input) => pipeline.confirmFontUsage(projectId, input));
+  ipcMain.handle('copilot:fonts:bytes', async (_event, projectId, fontId) => {
+    const project = await projectStore.open(projectId, { includePreviews: false });
+    const font = (project.artifacts.fontManifest?.fonts || []).find((item) => item.id === fontId);
+    if (!font) throw new Error(`Font not found: ${fontId}`);
+    const bytes = await fs.readFile(resolveProjectPath(project.workspacePath, font.local_path));
+    if (hashBuffer(bytes) !== font.file_hash) throw Object.assign(new Error(`Font asset hash changed: ${fontId}`), { code: 'FONT_ASSET_HASH_MISMATCH' });
+    return bytes;
   });
   ipcMain.handle('copilot:components:import', async (_event, projectId, input) => {
     const selection = await dialog.showOpenDialog({ title: '选择组件资产', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'] }] });

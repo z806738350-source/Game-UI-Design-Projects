@@ -27,6 +27,9 @@ function textLayer(binding, slot, family, fontManifest, typography) {
   return {
     type: 'text', control_id: binding.control_id, content, font_role: roleId,
     font_id: role?.font_id, font_path: font?.local_path, font_hash: font?.file_hash,
+    font_family: font?.family_name, postscript_name: font?.postscript_name, font_format: font?.format,
+    font_license_status: font?.license_status, font_license_confirmation: font?.license_confirmation,
+    exact_confirmation: role?.exact_confirmation,
     fidelity_mode: role?.fidelity_mode || 'unresolved', typography: typography?.[roleId] || {},
     rect: [slot.rect.x, slot.rect.y, slot.rect.width, slot.rect.height], z_index: Number(slot.z_index || 0) + 1
   };
@@ -51,6 +54,7 @@ function createCompositionManifest({ project, underlay, layout, bindings, compon
     const text = textLayer(binding, slot, family, fontManifest, styleContract.typography);
     if (text) layers.push(text);
   }
+  for (const layer of layers) if (layer.type === 'text') layer.composition_mode = mode;
   if (mode !== 'final' && layers.some((layer) => layer.type === 'text' && layer.fidelity_mode !== 'exact')) layers.push({ type: 'watermark', content: 'TYPOGRAPHY PREVIEW · FONT FIDELITY UNRESOLVED', z_index: 10000 });
   layers.sort((left, right) => left.z_index - right.z_index || `${left.type}:${left.control_id || ''}`.localeCompare(`${right.type}:${right.control_id || ''}`));
   return {

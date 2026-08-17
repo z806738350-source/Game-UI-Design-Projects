@@ -5,6 +5,7 @@ function runFidelityChecks({ project, manifest, output, outputVerification, bind
   const issues = [];
   const add = (severity, code, message) => issues.push({ severity, code, message });
   const componentControls = new Set((manifest?.layers || []).filter((layer) => layer.type === 'component').map((layer) => layer.control_id));
+  const renderedTypography = new Map((output?.render_log?.layers || []).filter((layer) => layer.font_role).map((layer) => [`${layer.control_id}:${layer.font_role}`, layer]));
   for (const binding of bindings?.bindings || []) if (!componentControls.has(binding.control_id)) add('blocker', 'MISSING_RENDERED_CONTROL', `Control ${binding.control_id} is not rendered.`);
   const gate = reviewGate(critique);
   for (const issue of gate.blocking) add(issue.severity === 'blocker' ? 'blocker' : 'critical', 'UNDERLAY_REVIEW_FAILED', issue.reason || issue.type);
@@ -12,6 +13,14 @@ function runFidelityChecks({ project, manifest, output, outputVerification, bind
   for (const layer of manifest?.layers || []) {
     if (layer.type === 'component' && !/^sha256:[a-f0-9]{64}$/i.test(layer.asset_hash || '')) add('critical', 'COMPONENT_ASSET_UNIDENTIFIED', `${layer.component_id} has no valid asset hash.`);
     if (layer.type === 'text' && layer.fidelity_mode === 'unresolved') add('critical', 'UNRESOLVED_IDENTITY_FONT', `${layer.font_role} is unresolved.`);
+    if (layer.type === 'text' && layer.fidelity_mode === 'exact') {
+      const rendered = renderedTypography.get(`${layer.control_id}:${layer.font_role}`);
+      if (!rendered?.actual_font_verified) add('critical', 'FONT_RENDER_NOT_VERIFIED', `${layer.font_role} was not rendered with a verified font file.`);
+      else {
+        if (rendered.font_hash !== layer.font_hash) add('critical', 'FONT_RENDER_HASH_MISMATCH', `${layer.font_role} rendered with a different font hash.`);
+        if (rendered.actual_loaded_family !== layer.font_family) add('critical', 'FONT_RENDER_FAMILY_MISMATCH', `${layer.font_role} rendered with ${rendered.actual_loaded_family || '<unknown>'} instead of ${layer.font_family || '<unknown>'}.`);
+      }
+    }
   }
   for (const issue of outputVerification?.issues || []) add('blocker', issue.code, issue.message);
   if (!output) add('blocker', 'COMPOSITION_OUTPUT_MISSING', 'Composition Output is missing.');
@@ -27,8 +36,8 @@ function runFidelityChecks({ project, manifest, output, outputVerification, bind
     output: output ? { path: output.path, hash: output.hash, width: output.width, height: output.height, renderer_version: output.renderer_version, verified: Boolean(outputVerification?.passed) } : { verified: false },
     coverage: { required_controls: bindings?.coverage?.required_controls || 0, rendered_controls: componentControls.size },
     underlay: { critique_id: critique?.id, result: gate.passed ? 'passed' : 'failed', manual_waivers: critique?.manual_waivers || [] },
-    typography: { identity_critical_roles: Object.values(fontManifest?.roles || {}).filter((role) => role.identity_critical).length, exact_roles: Object.values(fontManifest?.roles || {}).filter((role) => role.identity_critical && role.fidelity_mode === 'exact').length },
-    checks: ['composition-output', 'control-coverage', 'underlay-gate', 'font-assets', 'component-assets', 'dependency-freshness'], issues,
+    typography: { identity_critical_roles: Object.values(fontManifest?.roles || {}).filter((role) => role.identity_critical).length, exact_roles: Object.values(fontManifest?.roles || {}).filter((role) => role.identity_critical && role.fidelity_mode === 'exact').length, actual_verified_layers: [...renderedTypography.values()].filter((layer) => layer.actual_font_verified).length },
+    checks: ['composition-output', 'control-coverage', 'underlay-gate', 'font-assets', 'font-render-evidence', 'component-assets', 'dependency-freshness'], issues,
     manual_review: { required: issues.some((issue) => issue.severity === 'major'), approved: false }
   };
 }

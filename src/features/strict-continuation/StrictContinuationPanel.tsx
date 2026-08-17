@@ -13,6 +13,8 @@ function stableId(value: unknown, index: number) {
 export function StrictContinuationPanel({ project, busy, run }: { project: DesignProject; busy: boolean; run: Run }) {
   const [fontId, setFontId] = useState('ui-primary');
   const [fontRole, setFontRole] = useState('button-label');
+  const [licenseConfirmed, setLicenseConfirmed] = useState(false);
+  const [exactConfirmed, setExactConfirmed] = useState(false);
   const [componentId, setComponentId] = useState('button.primary');
   const [componentCategory, setComponentCategory] = useState('button');
   const [choices, setChoices] = useState<Record<string, string>>({});
@@ -22,11 +24,8 @@ export function StrictContinuationPanel({ project, busy, run }: { project: Desig
     ['Style', project.artifacts.styleContract?.status], ['Font Manifest', project.artifacts.fontManifest?.status],
     ['Component Contract', project.artifacts.componentContract?.status], ['Bindings', project.artifacts.bindings?.status]
   ];
-  const importFont = () => run(async () => {
-    const imported = await copilotApi.importFontAsset(project.id, { id: fontId, licenseStatus: 'confirmed' });
-    const font = ((imported.artifacts.fontManifest?.fonts as Array<Record<string, unknown>>) || []).find((item) => item.id === fontId);
-    return copilotApi.updateArtifact(project.id, 'font-manifest', { roles: { ...((imported.artifacts.fontManifest?.roles as object) || {}), [fontRole]: { font_id: font?.id || fontId, fidelity_mode: 'exact', identity_critical: true, required_coverage: ['zh_cn'] } } });
-  }, { label: '导入并绑定字体角色', stage: 'style_resolution' });
+  const importFont = () => run(() => copilotApi.importFontAsset(project.id, { id: fontId }), { label: '导入字体文件（授权待确认）', stage: 'style_resolution' });
+  const confirmFont = () => run(() => copilotApi.confirmFontUsage(project.id, { fontId, roleId: fontRole, licenseConfirmed, exactConfirmed, identityCritical: true, requiredCoverage: ['zh_cn'] }), { label: '确认字体授权与精确角色', stage: 'style_resolution' });
   const approveFonts = () => run(() => copilotApi.approveArtifact(project.id, 'font-manifest'), { label: '验证并批准字体清单', stage: 'style_resolution' });
   const importComponent = () => run(() => copilotApi.importComponentAsset(project.id, { componentId, name: componentId, category: componentCategory, state: 'default', reuseMode: 'exact', textPolicy: componentCategory === 'button' ? 'text-slot' : 'none', lockedProperties: ['silhouette', 'corner-radius', 'border-layers', 'light-direction'] }), { label: '导入组件状态资产', stage: 'style_resolution' });
   const approveComponents = () => run(async () => {
@@ -38,7 +37,7 @@ export function StrictContinuationPanel({ project, busy, run }: { project: Desig
   return <section className="strict-panel">
     <header><div><span>STRICT CONTINUATION</span><h3>严格继承资产与绑定</h3><p>这些门禁全部由后端复核；未满足时不能进入组件感知布局。</p></div><div className="strict-gates">{gates.map(([label, status]) => <i className={status === 'approved' ? 'is-ready' : ''} key={label}>{status === 'approved' && <Check size={12} />}{label}</i>)}</div></header>
     <div className="strict-grid">
-      <article><b><FileType2 size={16} />字体角色</b><label>字体 ID<input value={fontId} onChange={(event) => setFontId(event.target.value)} /></label><label>角色<input value={fontRole} onChange={(event) => setFontRole(event.target.value)} /></label><div><button className="button button--secondary" disabled={busy} onClick={importFont}>选择字体文件</button><button className="button button--ghost" disabled={busy || !project.artifacts.fontManifest} onClick={approveFonts}><LockKeyhole size={14} />批准</button></div></article>
+      <article><b><FileType2 size={16} />字体角色</b><label>字体 ID<input value={fontId} onChange={(event) => setFontId(event.target.value)} /></label><label>角色<input value={fontRole} onChange={(event) => setFontRole(event.target.value)} /></label><label><input type="checkbox" checked={licenseConfirmed} onChange={(event) => setLicenseConfirmed(event.target.checked)} />我确认有权在本项目中使用此字体</label><label><input type="checkbox" checked={exactConfirmed} onChange={(event) => setExactConfirmed(event.target.checked)} />我确认该角色必须精确使用此字体</label><div><button className="button button--secondary" disabled={busy} onClick={importFont}>选择字体文件</button><button className="button button--secondary" disabled={busy || !project.artifacts.fontManifest || !licenseConfirmed || !exactConfirmed} onClick={confirmFont}>确认授权与角色</button><button className="button button--ghost" disabled={busy || !project.artifacts.fontManifest} onClick={approveFonts}><LockKeyhole size={14} />批准</button></div></article>
       <article><b><ImagePlus size={16} />组件家族</b><label>组件 ID<input value={componentId} onChange={(event) => setComponentId(event.target.value)} /></label><label>类别<select value={componentCategory} onChange={(event) => setComponentCategory(event.target.value)}><option value="button">按钮</option><option value="navigation">导航</option><option value="tab">页签</option><option value="icon">图标</option><option value="page-specific">页面专属</option></select></label><div><button className="button button--secondary" disabled={busy} onClick={importComponent}>选择组件图片</button><button className="button button--ghost" disabled={busy || !families.length} onClick={approveComponents}><LockKeyhole size={14} />批准</button></div></article>
       <article className="strict-bindings"><b><Layers3 size={16} />必要控件绑定</b>{controls.map((control) => <label key={control.id}><span>{control.label}</span><select value={choices[control.id] || String(families[0]?.id || '')} onChange={(event) => setChoices({ ...choices, [control.id]: event.target.value })}><option value="">选择组件</option>{families.map((family) => <option key={String(family.id)} value={String(family.id)}>{String(family.name || family.id)}</option>)}</select></label>)}<div><button className="button button--secondary" disabled={busy || !controls.length || !families.length} onClick={prepareBindings}>保存绑定</button><button className="button button--ghost" disabled={busy || !project.artifacts.bindings} onClick={approveBindings}><LockKeyhole size={14} />批准覆盖率</button></div></article>
     </div>
