@@ -39,7 +39,8 @@ function validateComponentContract(contract, { strict = false } = {}) {
     if (!Array.isArray(family.intrinsic_size) || family.intrinsic_size.some((value) => !Number.isFinite(value) || value <= 0)) errors.push(`${family.id} requires intrinsic_size`);
     if (family.reuse_mode === 'nine-slice') {
       const margins = family.slice?.margins;
-      if (!Array.isArray(margins) || margins.length !== 4 || margins.some((value) => !Number.isFinite(value) || value < 0)) errors.push(`${family.id} requires four valid 9-slice margins`);
+      if (!Array.isArray(margins) || margins.length !== 4 || margins.some((value) => !Number.isInteger(value) || value < 0)) errors.push(`${family.id} requires four integer 9-slice margins`);
+      else if (margins[0] + margins[1] >= family.intrinsic_size[0] || margins[2] + margins[3] >= family.intrinsic_size[1]) errors.push(`${family.id} 9-slice margins leave no scalable center`);
     }
     if (strict && ['button', 'navigation', 'tab', 'resource-bar', 'icon'].includes(family.category) && family.reuse_mode === 'local-generated') errors.push(`${family.id} cannot be local-generated in strict mode`);
     if (strict && family.status !== 'approved') errors.push(`${family.id} is not approved`);

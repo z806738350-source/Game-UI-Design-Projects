@@ -15,6 +15,7 @@ const SCREEN_ARTIFACTS = Object.freeze({
   'underlay-critique': 'underlay-critique.json',
   'underlay-repair-task': 'underlay-repair-task.json',
   'composition-manifest': 'composition-manifest.json',
+  'composition-output': 'composition-output.json',
   'fidelity-report': 'fidelity-report.json',
   'visual-task': 'visual-task.json',
   'visual-results': 'explorations/results.json'

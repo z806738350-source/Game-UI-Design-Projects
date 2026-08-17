@@ -25,7 +25,7 @@ function validateLayout(layout, bindingsArtifact, componentContract, canvasSpec,
     const height = slot.rect.height * canvasSpec.height;
     if (family.reuse_mode === 'exact') {
       const sx = width / family.intrinsic_size[0]; const sy = height / family.intrinsic_size[1];
-      if (family.scale_policy?.uniform_only !== false && Math.abs(sx - sy) > 0.02) errors.push(`${slot.id} distorts exact component ${family.id}`);
+      if (Math.abs(sx - sy) > 0.02) errors.push(`${slot.id} distorts exact component ${family.id}`);
       if (sx < (family.scale_policy?.min_scale ?? 1) || sx > (family.scale_policy?.max_scale ?? 1)) errors.push(`${slot.id} scale is outside ${family.id} policy`);
     }
     if (family.reuse_mode === 'nine-slice' && family.slice?.margins) {
@@ -38,4 +38,3 @@ function validateLayout(layout, bindingsArtifact, componentContract, canvasSpec,
 }
 
 module.exports = { validateLayout };
-

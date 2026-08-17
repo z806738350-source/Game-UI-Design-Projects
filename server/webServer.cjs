@@ -5,6 +5,7 @@ const path = require('node:path');
 const { pipeline } = require('node:stream/promises');
 const { createProjectStore } = require('../electron/services/projectStore.cjs');
 const { createDesignPipeline } = require('../electron/services/designPipeline.cjs');
+const { resolveProjectPath, verifyCompositionOutput } = require('../electron/services/compositionRenderer.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
 const kunpoClient = require('../electron/services/kunpoClient.cjs');
 
@@ -419,6 +420,22 @@ function createApplication(environment = process.env) {
       else if (request.method === 'GET' && suffix.startsWith('/visual/')) {
         const variationId = decodeURIComponent(suffix.slice('/visual/'.length));
         const project = await projectStore.open(projectId, { includePreviews: false });
+        const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
+        if (strict) {
+          const output = project.artifacts.compositionOutput;
+          const verification = await verifyCompositionOutput(project.workspacePath, output, { requireFinal: true });
+          if (!verification.passed) throw Object.assign(new Error(`最终成图不可导出：${verification.issues.map((item) => item.message).join('；')}`), { status: 409 });
+          const bytes = await fs.readFile(resolveProjectPath(project.workspacePath, output.path));
+          response.writeHead(200, {
+            'Content-Type': 'image/png',
+            'Content-Length': bytes.length,
+            'Content-Disposition': `attachment; filename="${project.screen_id.replace(/[^A-Za-z0-9_-]/g, '')}-final.png"`,
+            'Cache-Control': 'private, no-store',
+            'X-Content-SHA256': output.hash
+          });
+          response.end(bytes);
+          return true;
+        }
         const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === variationId);
         if (!variation?.image_url || !kunpoClient.isTrustedKunpoCdnUrl(variation.image_url)) throw Object.assign(new Error('未找到可信的视觉方案。'), { status: 404 });
         const upstream = await fetch(variation.image_url);

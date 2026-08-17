@@ -9,8 +9,11 @@ function componentLayer(binding, slot, family) {
   return {
     type: 'component', control_id: binding.control_id, component_id: family.id, state,
     asset_path: asset.asset_path, asset_hash: asset.asset_hash,
+    intrinsic_size: family.intrinsic_size,
+    scale_policy: family.scale_policy,
     rect: [slot.rect.x, slot.rect.y, slot.rect.width, slot.rect.height],
     anchor: slot.anchor || 'top-left', resize_mode: slot.resize_mode || family.reuse_mode,
+    renderer: family.reuse_mode,
     slice: family.slice, z_index: Number(slot.z_index || 0)
   };
 }
@@ -29,7 +32,7 @@ function textLayer(binding, slot, family, fontManifest, typography) {
   };
 }
 
-function createCompositionManifest({ project, underlay, layout, bindings, componentContract, fontManifest, styleContract, critique, mode = 'preview' }) {
+function createCompositionManifest({ project, underlay, layout, bindings, componentContract, fontManifest, styleContract, critique, mode = 'preview', version = 1 }) {
   const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
   const errors = [];
   const underlayGate = reviewGate(critique);
@@ -51,12 +54,11 @@ function createCompositionManifest({ project, underlay, layout, bindings, compon
   if (mode !== 'final' && layers.some((layer) => layer.type === 'text' && layer.fidelity_mode !== 'exact')) layers.push({ type: 'watermark', content: 'TYPOGRAPHY PREVIEW · FONT FIDELITY UNRESOLVED', z_index: 10000 });
   layers.sort((left, right) => left.z_index - right.z_index || `${left.type}:${left.control_id || ''}`.localeCompare(`${right.type}:${right.control_id || ''}`));
   return {
-    schema_version: '2.0', id: `${project.screen_id}-composition-${mode}`, version: 1, status: 'generated',
+    schema_version: '2.0', id: `${project.screen_id}-composition-${mode}`, version, status: 'draft',
     source: { screen_contract: project.artifacts?.screenContract?.id, approved_layout: layout.id, component_bindings: bindings.id, component_contract: componentContract.id, font_manifest: fontManifest.id, style_contract: styleContract.id, underlay_critique: critique.id },
     mode, canvas: [project.canvas_spec.width, project.canvas_spec.height], underlay,
-    layers, coverage: bindingResult.coverage, renderer: { engine: 'browser-canvas-2d', deterministic_order: true }
+    layers, coverage: bindingResult.coverage, renderer: { engine: 'sharp-libvips', deterministic_order: true, registry: ['exact', 'nine-slice', 'vector-token'] }
   };
 }
 
 module.exports = { createCompositionManifest };
-

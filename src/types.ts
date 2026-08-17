@@ -106,6 +106,7 @@ export type DesignProject = {
     underlayCritique?: Artifact | null;
     underlayRepairTask?: Artifact | null;
     compositionManifest?: Artifact | null;
+    compositionOutput?: Artifact | null;
     fidelityReport?: Artifact | null;
     styleContract: Artifact | null;
     fontManifest?: Artifact | null;
