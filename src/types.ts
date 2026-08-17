@@ -15,6 +15,11 @@ export type ReferenceAsset = {
   name: string;
   role: 'primary' | 'component' | 'material' | 'composition' | 'supporting';
   order: number;
+  approved?: boolean;
+  screen_type?: string;
+  contains?: string[];
+  baseline?: string;
+  notes?: string;
   preview?: string;
   metadata?: { mime: string; width: number; height: number; canvas_spec: CanvasSpec };
 };
@@ -69,7 +74,12 @@ export type WorkflowState = {
   screen_stages?: Record<string, Record<string, { status: string; output?: string; updated_at?: string }>>;
 };
 
-export type ScreenEntry = { id: string; name: string; status: 'active' | 'archived'; created_at: string; updated_at: string };
+export type ScreenEntry = {
+  id: string; name: string; status: 'active' | 'archived'; input_mode?: 'own' | 'inherited';
+  inherited_from_screen_id?: string; duplicated_from_screen_id?: string; created_at: string; updated_at: string;
+};
+
+export type ScreenControl = { id: string; label: string; role: string; required: boolean; migrated_from_label?: string };
 
 export type DesignProject = {
   id: string;
@@ -98,10 +108,12 @@ export type DesignProject = {
   updated_at: string;
   workflow: WorkflowState;
   artifacts: {
+    referenceInventory?: Artifact | null;
     screenContract: Artifact | null;
     bindings?: Artifact | null;
     layouts: (Artifact & { proposals?: LayoutProposal[] }) | null;
     approvedLayout: Artifact | null;
+    referencePack?: Artifact | null;
     underlayContract?: Artifact | null;
     underlayCritique?: Artifact | null;
     underlayRepairTask?: Artifact | null;

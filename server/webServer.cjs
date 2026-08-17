@@ -339,7 +339,7 @@ function createApplication(environment = process.env) {
     enforceOrigin(request);
     const context = tenantContext(session.tenant_id);
     const { projectStore, designPipeline, kunpoConfig } = context;
-    const binaryUpload = url.pathname.endsWith('/import') || /\/assets\/(font|component)$/.test(url.pathname);
+    const binaryUpload = url.pathname.endsWith('/import') || /\/assets\/(font|component|forge-manifest)$/.test(url.pathname);
     const body = ['POST', 'PUT', 'PATCH'].includes(request.method) && !binaryUpload ? await readJsonBody(request) : {};
     let value;
     if (request.method === 'GET' && url.pathname === '/api/config') {
@@ -379,7 +379,7 @@ function createApplication(environment = process.env) {
         const temporary = path.join(uploadRoot, `${crypto.randomUUID()}${path.extname(fileName).toLowerCase()}`);
         await fs.writeFile(temporary, bytes, { mode: 0o600 });
         try {
-          await projectStore.importFile(projectId, temporary, kind);
+          await projectStore.importFile(projectId, temporary, kind, { screenId: url.searchParams.get('screenId') });
           await designPipeline.invalidateFromInputChange(projectId, { wireframe: kind === 'wireframe', references: kind === 'reference' });
           value = await projectStore.open(projectId);
         } finally { await fs.unlink(temporary).catch(() => undefined); }
@@ -387,10 +387,10 @@ function createApplication(environment = process.env) {
         await projectStore.manageReference(projectId, body);
         await designPipeline.invalidateFromInputChange(projectId, { references: true });
         value = await projectStore.open(projectId);
-      } else if (request.method === 'POST' && (suffix === '/assets/font' || suffix === '/assets/component')) {
-        const assetKind = suffix.endsWith('/font') ? 'font' : 'component';
+      } else if (request.method === 'POST' && (suffix === '/assets/font' || suffix === '/assets/component' || suffix === '/assets/forge-manifest')) {
+        const assetKind = suffix.endsWith('/font') ? 'font' : suffix.endsWith('/forge-manifest') ? 'forge-manifest' : 'component';
         const fileName = decodeURIComponent(String(request.headers['x-file-name'] || 'asset.bin'));
-        const allowed = assetKind === 'font' ? /\.(otf|ttf)$/i : /\.(png|jpe?g|webp|svg)$/i;
+        const allowed = assetKind === 'font' ? /\.(otf|ttf)$/i : assetKind === 'forge-manifest' ? /\.json$/i : /\.(png|jpe?g|webp|svg)$/i;
         if (!allowed.test(fileName)) throw Object.assign(new Error(`Invalid ${assetKind} asset type.`), { status: 415 });
         let metadata = {};
         try { metadata = JSON.parse(url.searchParams.get('meta') || '{}'); } catch { throw Object.assign(new Error('Invalid asset metadata.'), { status: 400 }); }
@@ -399,7 +399,7 @@ function createApplication(environment = process.env) {
         await fs.mkdir(uploadRoot, { recursive: true, mode: 0o700 });
         const temporary = path.join(uploadRoot, `${crypto.randomUUID()}${path.extname(fileName).toLowerCase()}`);
         await fs.writeFile(temporary, bytes, { mode: 0o600 });
-        try { value = assetKind === 'font' ? await designPipeline.addFontAsset(projectId, temporary, metadata) : await designPipeline.addComponentAsset(projectId, temporary, metadata); }
+        try { value = assetKind === 'font' ? await designPipeline.addFontAsset(projectId, temporary, metadata) : assetKind === 'forge-manifest' ? await designPipeline.addForgeManifest(projectId, temporary) : await designPipeline.addComponentAsset(projectId, temporary, metadata); }
         finally { await fs.unlink(temporary).catch(() => undefined); }
       } else if (request.method === 'POST' && suffix === '/fonts/confirm') value = await designPipeline.confirmFontUsage(projectId, body);
       else if (request.method === 'GET' && /^\/fonts\/[^/]+\/bytes$/.test(suffix)) {
@@ -414,20 +414,21 @@ function createApplication(environment = process.env) {
         return true;
       } else if (request.method === 'GET' && suffix === '/screens') value = await projectStore.listScreens(projectId);
       else if (request.method === 'POST' && suffix === '/screens') value = await projectStore.createScreen(projectId, body);
+      else if (request.method === 'POST' && /^\/screens\/[^/]+\/duplicate$/.test(suffix)) value = await projectStore.duplicateScreen(projectId, decodeURIComponent(suffix.split('/')[2]), body);
       else if (request.method === 'POST' && suffix === '/screens/active') value = await projectStore.setActiveScreen(projectId, body.screenId);
       else if (request.method === 'PATCH' && suffix.startsWith('/screens/')) value = await projectStore.updateScreen(projectId, decodeURIComponent(suffix.slice('/screens/'.length)), body);
       else if (request.method === 'POST' && suffix === '/pipeline/run') value = await designPipeline.runStage(projectId, body.stage, body.input);
-      else if (request.method === 'POST' && suffix === '/requirement/draft') value = await designPipeline.draftRequirement(projectId);
-      else if (request.method === 'POST' && suffix === '/pipeline/cancel') value = await designPipeline.cancelStage(projectId, body.stage);
+      else if (request.method === 'POST' && suffix === '/requirement/draft') value = await designPipeline.draftRequirement(projectId, body);
+      else if (request.method === 'POST' && suffix === '/pipeline/cancel') value = await designPipeline.cancelStage(projectId, body.stage, body);
       else if (request.method === 'POST' && suffix === '/pipeline/approve') value = await designPipeline.approveArtifact(projectId, body.kind, body.input);
       else if (request.method === 'PATCH' && suffix === '/artifact') value = await designPipeline.updateArtifact(projectId, body.kind, body.patch);
-      else if (request.method === 'POST' && suffix === '/underlay/contract') value = await designPipeline.createUnderlayContract(projectId);
-      else if (request.method === 'POST' && suffix === '/underlay/guide') value = await designPipeline.createLayoutGuide(projectId);
+      else if (request.method === 'POST' && suffix === '/underlay/contract') value = await designPipeline.createUnderlayContract(projectId, body);
+      else if (request.method === 'POST' && suffix === '/underlay/guide') value = await designPipeline.createLayoutGuide(projectId, body);
       else if (request.method === 'POST' && suffix === '/underlay/critique') value = await designPipeline.critiqueUnderlay(projectId, body);
       else if (request.method === 'POST' && suffix === '/underlay/repair') value = await designPipeline.repairUnderlay(projectId, body);
       else if (request.method === 'POST' && suffix === '/underlay/waiver') value = await designPipeline.waiveUnderlayIssue(projectId, body);
       else if (request.method === 'POST' && suffix === '/composition') value = await designPipeline.composeVisual(projectId, body);
-      else if (request.method === 'POST' && suffix === '/fidelity') value = await designPipeline.runFidelity(projectId);
+      else if (request.method === 'POST' && suffix === '/fidelity') value = await designPipeline.runFidelity(projectId, body);
       else if (request.method === 'GET' && suffix.startsWith('/visual/')) {
         const variationId = decodeURIComponent(suffix.slice('/visual/'.length));
         const project = await projectStore.open(projectId, { includePreviews: false });

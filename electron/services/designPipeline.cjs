@@ -6,7 +6,7 @@ const { providerCapabilities } = require('./providerCapabilities.cjs');
 const { buildReferencePack } = require('./referencePack.cjs');
 const { validateArtifact } = require('./contracts.cjs');
 const { confirmFontUsage: confirmFontUsageContract, importFontAsset } = require('./typographyAssets.cjs');
-const { importComponentAsset } = require('./componentKit.cjs');
+const { importComponentAsset, importForgeManifest, validateComponentAssets } = require('./componentKit.cjs');
 const { validateBindings, withCoverage } = require('./componentBindings.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
 const { downstreamArtifacts } = require('./artifactDependencies.cjs');
@@ -22,7 +22,15 @@ const { inspectFidelityEvidence } = require('./fidelityInspector.cjs');
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
-  const openProject = (projectId) => projectStore.open(projectId, { includePreviews: false });
+  const openProject = (projectId, screenId) => projectStore.open(projectId, { includePreviews: false, ...(screenId ? { screenId } : {}) });
+  async function openScreen(projectId, screenId) {
+    if (!String(screenId || '').trim()) throw Object.assign(new Error('screenId is required for screen-scoped pipeline operations.'), { code: 'SCREEN_ID_REQUIRED' });
+    const registry = await projectStore.listScreens(projectId);
+    const screen = registry.screens.find((item) => item.id === screenId && item.status !== 'archived');
+    if (!screen) throw Object.assign(new Error(`Screen not found or archived: ${screenId}`), { code: 'SCREEN_NOT_FOUND' });
+    if (registry.active_screen_id !== screenId) throw Object.assign(new Error(`Screen context mismatch: activate ${screenId} before running its pipeline.`), { code: 'SCREEN_CONTEXT_MISMATCH' });
+    return openProject(projectId, screenId);
+  }
 
   async function materializeUnderlay(project, resolved, variation) {
     if (!variation) throw new Error('Underlay variation is required.');
@@ -70,6 +78,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       'screen-contract': 'screenContract', 'component-bindings': 'bindings', 'layout-proposals': 'layouts',
       'approved-layout': 'approvedLayout', 'style-contract': 'styleContract', 'font-manifest': 'fontManifest',
       'component-contract': 'componentContract', 'reference-pack': 'referencePack', 'underlay-contract': 'underlayContract',
+      'reference-inventory': 'referenceInventory',
       'underlay-critique': 'underlayCritique', 'composition-manifest': 'compositionManifest', 'composition-output': 'compositionOutput', 'fidelity-report': 'fidelityReport',
       'visual-task': 'visualTask', 'visual-results': 'visualResults'
     };
@@ -135,7 +144,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   }
 
   async function runStageUnsafe(projectId, stage, input = {}) {
-    const project = await openProject(projectId);
+    const project = await openScreen(projectId, input.screenId);
     // Freeze the model choices for this stage. A settings change applies to
     // the next task without mixing models inside an already-running batch.
     const stageConfig = { ...kunpoConfig };
@@ -181,10 +190,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
       await invalidateDownstream(project, stage);
       const capabilities = providerCapabilities(stageConfig.providerCapabilities);
-      const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'style-resolution' });
+      const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'style-resolution', omissionsConfirmed: input.confirmReferenceOmissions === true });
       await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
+      if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请在 Reference Workbench 确认省略项后重试。`), { code: 'REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED' });
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
-        kind: 'style-contract', prompt: stylePrompt(project, approved), imagePaths: referencePack.selected.map((asset) => asset.path),
+        kind: 'style-contract', prompt: stylePrompt(project, approved, referencePack), imagePaths: referencePack.selected.map((asset) => asset.path),
         id: `${project.id}-style-contract`, source: { approved_layout: approved.id, references: (project.reference_assets || []).map(({ id, name, role }) => ({ id, name, role })), ...inputSource(project) }
       });
       artifact.quality_checks = styleQualityChecks(project, artifact);
@@ -216,9 +226,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const structureGuides = strictProduction && guideRelativePath
         ? [{ id: `${project.screen_id}-underlay-layout-guide`, path: require('node:path').join(resolvedProject.workspacePath, guideRelativePath) }]
         : [];
-      const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'underlay-generation', structureGuides });
+      const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'underlay-generation', structureGuides, omissionsConfirmed: input.confirmReferenceOmissions === true });
       await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
-      const tasks = strategies.map((strategy) => visualTask(project, approved, style, strategy, input.feedback, { underlayContract: project.artifacts.underlayContract }));
+      if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请确认省略项后重试。`), { code: 'REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED' });
+      const tasks = strategies.map((strategy) => visualTask(project, approved, style, strategy, input.feedback, { underlayContract: project.artifacts.underlayContract, referencePack }));
       await projectStore.saveArtifact(projectId, 'visual-task', {
         schema_version: '1.0', id: `${project.screen_id}-visual-tasks`, version: 1, status: 'approved',
         source: { approved_layout: approved.id, style_contract: style.id, ...inputSource(project) }, tasks
@@ -278,8 +289,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     }
   }
 
-  async function draftRequirement(projectId) {
-    const project = await openProject(projectId);
+  async function draftRequirement(projectId, input = {}) {
+    const project = await openScreen(projectId, input.screenId);
     if (!project.wireframe_path) throw new Error('请先导入 UE Wireframe。');
     await projectStore.updateWorkflow(projectId, 'input', 'in_progress');
     try {
@@ -305,10 +316,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     }
   }
 
-  async function cancelStage(projectId, stage) {
+  async function cancelStage(projectId, stage, input = {}) {
     if (stage !== 'visual_exploration') throw new Error('当前步骤不支持停止。');
     cancelledVisualJobs.add(projectId);
-    const project = await openProject(projectId);
+    const project = await openScreen(projectId, input.screenId);
     const progress = project.workflow?.stages?.visual_exploration?.progress || {};
     await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, {
       progress: { ...progress, message: '正在停止；当前图片完成后不会继续生成' }
@@ -317,8 +328,17 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   }
 
   async function approveArtifact(projectId, kind, input = {}) {
-    const project = await openProject(projectId);
-    if (kind === 'screen-contract') {
+    const project = ['reference-inventory', 'style-contract', 'font-manifest', 'component-contract'].includes(kind)
+      ? await openProject(projectId) : await openScreen(projectId, input.screenId);
+    if (kind === 'reference-inventory') {
+      const current = project.artifacts.referenceInventory;
+      if (!current) throw new Error('Reference Inventory does not exist.');
+      const approved = (current.assets || []).filter((asset) => asset.approved === true);
+      if (!approved.length) throw Object.assign(new Error('Reference Inventory requires at least one approved image.'), { code: 'REFERENCE_INVENTORY_EMPTY' });
+      await invalidateArtifacts(projectId, 'reference-inventory');
+      await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
+      await projectStore.updateWorkflow(projectId, 'reference_analysis', 'approved', 'style/reference-inventory.json');
+    } else if (kind === 'screen-contract') {
       const current = project.artifacts.screenContract;
       if (!current) throw new Error('Screen Contract does not exist.');
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
@@ -394,6 +414,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!current) throw new Error(`${kind} does not exist.`);
       const approved = { ...current, status: 'approved', approved_at: new Date().toISOString() };
       const errors = validateArtifact(kind, approved);
+      if (kind === 'component-contract') {
+        const resolved = await projectStore.resolveProject(projectId);
+        errors.push(...await validateComponentAssets(resolved.workspacePath, approved));
+      }
       if (errors.length) {
         const error = new Error(errors.join('; '));
         error.code = kind === 'font-manifest' ? 'FONT_MANIFEST_INVALID' : 'COMPONENT_CONTRACT_INVALID';
@@ -429,7 +453,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   }
 
   async function updateArtifact(projectId, kind, patch = {}) {
-    const project = await openProject(projectId);
+    const { screenId, ...artifactPatch } = patch;
+    const project = ['style-contract', 'font-manifest', 'component-contract'].includes(kind)
+      ? await openProject(projectId) : await openScreen(projectId, screenId);
     if (kind === 'composition-manifest' || kind === 'fidelity-report') throw Object.assign(new Error(`${kind} is generated evidence and cannot be edited.`), { code: 'GENERATED_EVIDENCE_READ_ONLY' });
     if (kind === 'font-manifest' && (Object.prototype.hasOwnProperty.call(patch, 'fonts') || Object.prototype.hasOwnProperty.call(patch, 'roles'))) {
       throw Object.assign(new Error('Font files, authorization, and exact roles must be changed through the dedicated import and confirmation actions.'), { code: 'FONT_CONFIRMATION_ACTION_REQUIRED' });
@@ -449,20 +475,20 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     if (!definition?.artifact) throw new Error('当前 Artifact 不存在。');
     const screenContractContentKeys = ['screen_name', 'purpose', 'primary_action', 'required_controls', 'required_information', 'states', 'edge_cases'];
     const screenContractContentChanged = kind === 'screen-contract' && screenContractContentKeys.some((key) => (
-      Object.prototype.hasOwnProperty.call(patch, key)
-      && JSON.stringify(patch[key]) !== JSON.stringify(definition.artifact[key])
+      Object.prototype.hasOwnProperty.call(artifactPatch, key)
+      && JSON.stringify(artifactPatch[key]) !== JSON.stringify(definition.artifact[key])
     ));
     if (screenContractContentChanged) await invalidateDownstream(project, 'wireframe_interpretation');
     if (kind === 'style-contract') await invalidateDownstream(project, 'style_resolution');
     if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind);
-    const nextStatus = patch.status === 'rejected'
+    const nextStatus = artifactPatch.status === 'rejected'
       ? 'rejected'
       : kind === 'screen-contract' && !screenContractContentChanged
         ? definition.artifact.status
         : 'reviewed';
     let next = {
       ...definition.artifact,
-      ...patch,
+      ...artifactPatch,
       version: Number(definition.artifact.version || 1) + 1,
       status: nextStatus,
       source: { ...(definition.artifact.source || {}), edited_by: 'ui-designer' },
@@ -526,8 +552,21 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  async function createUnderlayContract(projectId) {
+  async function addForgeManifest(projectId, manifestPath) {
+    const resolved = await projectStore.resolveProject(projectId);
     const project = await openProject(projectId);
+    const imported = await importForgeManifest(resolved.workspacePath, manifestPath);
+    const current = project.artifacts.componentContract || { schema_version: '2.0', id: 'project-component-contract', version: 0, status: 'draft', source: {}, families: [] };
+    const ids = new Set(imported.map((family) => family.id));
+    const families = [...(current.families || []).filter((family) => !ids.has(family.id)), ...imported];
+    await invalidateArtifacts(projectId, 'component-contract', 'forge_manifest_imported');
+    await projectStore.saveArtifact(projectId, 'component-contract', { ...current, version: Number(current.version || 0) + 1, status: 'reviewed', families, source: { ...(current.source || {}), forge_manifest: path.basename(manifestPath) } });
+    await projectStore.updateWorkflow(projectId, 'component_resolution', 'reviewed', 'style/component-contract.json');
+    return openProject(projectId);
+  }
+
+  async function createUnderlayContract(projectId, input = {}) {
+    const project = await openScreen(projectId, input.screenId);
     const artifact = generateUnderlayContract(project, project.artifacts.approvedLayout, project.artifacts.bindings);
     await invalidateArtifacts(projectId, 'underlay-contract');
     await projectStore.saveArtifact(projectId, 'underlay-contract', artifact);
@@ -535,8 +574,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  async function createLayoutGuide(projectId) {
-    const project = await openProject(projectId);
+  async function createLayoutGuide(projectId, input = {}) {
+    const project = await openScreen(projectId, input.screenId);
     if (project.artifacts.underlayContract?.status !== 'approved') throw new Error('Approve the Underlay Contract before generating its guide.');
     const resolved = await projectStore.resolveProject(projectId);
     const guide = await writeLayoutGuide(resolved.workspacePath, project.screen_id, project.artifacts.underlayContract);
@@ -546,7 +585,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   }
 
   async function critiqueUnderlay(projectId, input = {}) {
-    const project = await openProject(projectId);
+    const project = await openScreen(projectId, input.screenId);
     const contract = project.artifacts.underlayContract;
     if (contract?.status !== 'approved') throw new Error('Approved Underlay Contract is required.');
     const underlayId = input.underlayId || 'current';
@@ -570,7 +609,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   }
 
   async function repairUnderlay(projectId, input = {}) {
-    const project = await openProject(projectId);
+    const project = await openScreen(projectId, input.screenId);
     if (!project.artifacts.underlayCritique) throw new Error('Underlay Critique is required.');
     const critique = project.artifacts.underlayCritique;
     const capabilities = providerCapabilities(kunpoConfig.providerCapabilities);
@@ -602,7 +641,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       await projectStore.saveArtifact(projectId, 'visual-results', { ...currentResults, version: Number(currentResults.version || 1) + 1, status: 'generated', variations: [...(currentResults.variations || []), variation] });
       await projectStore.saveArtifact(projectId, 'underlay-repair-task', { ...task, status: 'completed', completed_at: new Date().toISOString(), output: { underlay_id: repairedId, path: repaired.path, hash: repaired.hash, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay } });
       await projectStore.updateWorkflow(projectId, 'underlay_generation', 'reviewed', `screens/${project.screen_id}/underlay-repair-task.json`);
-      return critiqueUnderlay(projectId, { underlayId: repairedId });
+      return critiqueUnderlay(projectId, { screenId: project.screen_id, underlayId: repairedId });
     } catch (error) {
       await projectStore.saveArtifact(projectId, 'underlay-repair-task', { ...task, status: 'failed', failed_at: new Date().toISOString(), error: { code: error.code || 'UNDERLAY_REPAIR_FAILED', message: error.message }, manual_review: { required: true } }).catch(() => undefined);
       await projectStore.updateWorkflow(projectId, 'underlay_generation', 'blocked', `screens/${project.screen_id}/underlay-repair-task.json`, { manual_review: true }).catch(() => undefined);
@@ -611,7 +650,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   }
 
   async function waiveUnderlayIssue(projectId, input = {}) {
-    const project = await openProject(projectId);
+    const project = await openScreen(projectId, input.screenId);
     const critique = project.artifacts.underlayCritique;
     if (!critique) throw new Error('Underlay Critique is required.');
     const reason = String(input.reason || '').trim();
@@ -628,7 +667,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   }
 
   async function composeVisual(projectId, input = {}) {
-    const project = await openProject(projectId);
+    const project = await openScreen(projectId, input.screenId);
     const resolved = await projectStore.resolveProject(projectId);
     const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === input.variationId) || (project.artifacts.visualResults?.variations || [])[0];
     if (!variation?.image_url && !variation?.image_path) throw new Error('Select a generated underlay before composition.');
@@ -657,8 +696,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  async function runFidelity(projectId) {
-    const project = await openProject(projectId);
+  async function runFidelity(projectId, input = {}) {
+    const project = await openScreen(projectId, input.screenId);
     if (!project.artifacts.compositionManifest) throw new Error('Composition Manifest is required.');
     const resolved = await projectStore.resolveProject(projectId);
     const outputVerification = await verifyCompositionOutput(resolved.workspacePath, project.artifacts.compositionOutput, { requireFinal: project.artifacts.compositionManifest.mode === 'final' });
@@ -672,7 +711,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  return { addComponentAsset, addFontAsset, approveArtifact, cancelStage, composeVisual, confirmFontUsage, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
+  return { addComponentAsset, addFontAsset, addForgeManifest, approveArtifact, cancelStage, composeVisual, confirmFontUsage, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
 }
 
 module.exports = { createDesignPipeline };

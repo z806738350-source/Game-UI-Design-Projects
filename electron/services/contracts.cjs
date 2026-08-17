@@ -1,6 +1,7 @@
 const ARTIFACT_STATUS = new Set(['draft', 'generated', 'reviewed', 'approved', 'rejected', 'stale', 'passed']);
 const { validateFontManifest } = require('./typographyAssets.cjs');
 const { validateComponentContract } = require('./componentKit.cjs');
+const { normalizeControls, validateControls } = require('./screenControls.cjs');
 
 function isObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -41,7 +42,7 @@ function normalizeArtifact(kind, value) {
   if (kind === 'screen-contract') {
     const lists = ['secondary_actions', 'required_information', 'required_controls', 'states', 'edge_cases', 'data_dependencies'];
     const next = { ...value };
-    lists.forEach((key) => { next[key] = asStringArray(value[key]); });
+    lists.forEach((key) => { next[key] = key === 'required_controls' ? normalizeControls(value[key]) : asStringArray(value[key]); });
     if (isObject(value.source_inventory)) {
       next.source_inventory = { ...value.source_inventory };
       ['requirement_functions', 'wireframe_controls', 'wireframe_information'].forEach((key) => {
@@ -93,6 +94,7 @@ function validateArtifact(kind, value) {
   if (kind === 'screen-contract') {
     ['screen_id', 'screen_name', 'purpose', 'primary_action'].forEach((key) => requireString(value, key, errors));
     ['secondary_actions', 'required_information', 'required_controls', 'states', 'edge_cases', 'data_dependencies'].forEach((key) => requireArray(value, key, errors));
+    errors.push(...validateControls(normalizeControls(value.required_controls)));
     if (!isObject(value.design_constraints)) errors.push('design_constraints must be an object');
     if (!isObject(value.source_inventory)) errors.push('source_inventory must be an object');
     else ['requirement_functions', 'wireframe_controls', 'wireframe_information'].forEach((key) => requireArray(value.source_inventory, key, errors));
@@ -103,7 +105,7 @@ function validateArtifact(kind, value) {
       if (Array.isArray(value.coverage.uncovered_items) && value.coverage.uncovered_items.length) errors.push('coverage.uncovered_items must be empty');
     }
     const inventoryControls = [...(value.source_inventory?.requirement_functions || []), ...(value.source_inventory?.wireframe_controls || [])];
-    const controls = [...(value.required_controls || []), ...(value.secondary_actions || []), ...(value.coverage?.covered_items || [])];
+    const controls = [...(value.required_controls || []).map((control) => control?.label || control?.id || control), ...(value.secondary_actions || []), ...(value.coverage?.covered_items || [])];
     const uncoveredControls = inventoryControls.filter((item) => !sourceItemCovered(item, controls));
     if (uncoveredControls.length) errors.push(`required_controls missing source items: ${uncoveredControls.join(', ')}`);
     const inventoryInformation = value.source_inventory?.wireframe_information || [];

@@ -48,6 +48,33 @@ function defaultWorkflow(projectId) {
   };
 }
 
+function screenInputPath(projectPath, screenId) {
+  return path.join(projectPath, 'screens', screenId, 'inputs.json');
+}
+
+function baseScreenInput(project, screenId) {
+  return {
+    schema_version: '2.0', screen_id: screenId, input_mode: 'own',
+    requirement: '', requirement_source: 'none', requirement_confirmed: false,
+    input_revisions: { requirement: 0, wireframe: 0 }
+  };
+}
+
+function inventoryFromAssets(assets, previous = null) {
+  const now = new Date().toISOString();
+  return {
+    schema_version: '2.0', id: 'project-reference-inventory',
+    version: Number(previous?.version || 0) + 1, status: 'reviewed',
+    source: { managed_by: 'reference-workbench' }, updated_at: now,
+    assets: (assets || []).map((asset, index) => ({
+      ...asset, order: index, approved: asset.approved === true,
+      screen_type: String(asset.screen_type || 'unspecified'),
+      contains: Array.isArray(asset.contains) ? asset.contains : [],
+      baseline: String(asset.baseline || ''), notes: String(asset.notes || '')
+    }))
+  };
+}
+
 function createProjectStore(options = {}) {
   const workspaceRoot = options.workspaceRoot || process.env.DESIGN_COPILOT_WORKSPACE || path.join(os.homedir(), 'Game UI Design Projects');
 
@@ -76,6 +103,7 @@ function createProjectStore(options = {}) {
       ensureDir(path.join(projectPath, 'screens', 'main', 'explorations')),
       ensureDir(path.join(projectPath, 'screens', 'main', 'underlays')),
       ensureDir(path.join(projectPath, 'screens', 'main', 'compositions')),
+      ensureDir(path.join(projectPath, 'screens', 'main', 'inputs')),
       ensureDir(path.join(projectPath, 'style', 'references')),
       ensureDir(path.join(projectPath, 'style', 'fonts')),
       ensureDir(path.join(projectPath, 'style', 'components')),
@@ -102,7 +130,11 @@ function createProjectStore(options = {}) {
     };
     await fs.writeFile(path.join(projectPath, 'inputs', 'requirement.md'), `${project.requirement}\n`, 'utf8');
     await writeJson(path.join(projectPath, 'project.json'), project);
-    await writeJson(path.join(projectPath, 'screens', 'index.json'), { schema_version: '2.0', active_screen_id: 'main', screens: [{ id: 'main', name: '主页面', status: 'active', created_at: now, updated_at: now }] });
+    await writeJson(screenInputPath(projectPath, 'main'), {
+      ...baseScreenInput(project, 'main'), requirement: project.requirement,
+      requirement_source: project.requirement_source, requirement_confirmed: project.requirement_confirmed
+    });
+    await writeJson(path.join(projectPath, 'screens', 'index.json'), { schema_version: '2.0', active_screen_id: 'main', screens: [{ id: 'main', name: '主页面', status: 'active', input_mode: 'own', created_at: now, updated_at: now }] });
     await writeJson(path.join(projectPath, 'workflow', 'state.json'), defaultWorkflow(id));
     return hydrate(projectPath);
   }
@@ -121,12 +153,23 @@ function createProjectStore(options = {}) {
     if (!project) throw new Error('Invalid project folder.');
     const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const screenPath = path.join(projectPath, 'screens', screenId);
-    const [workflow, screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
+    const storedScreenInput = await readJson(screenInputPath(projectPath, screenId), null);
+    const screenInput = storedScreenInput || {
+      ...baseScreenInput(project, screenId), requirement: project.requirement || '',
+      requirement_source: project.requirement_source || (project.requirement ? 'user' : 'none'),
+      requirement_confirmed: project.requirement_confirmed ?? Boolean(project.requirement),
+      wireframe_path: project.wireframe_path, wireframe_name: project.wireframe_name,
+      wireframe_metadata: project.wireframe_metadata, canvas_spec: project.canvas_spec,
+      input_revisions: project.input_revisions
+    };
+    const [workflow, referenceInventory, screenContract, bindings, layouts, approvedLayout, referencePack, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
       readJson(path.join(projectPath, 'workflow', 'state.json'), defaultWorkflow(project.id)),
+      readJson(path.join(projectPath, 'style', 'reference-inventory.json'), null),
       readJson(path.join(screenPath, 'screen-contract.json'), null),
       readJson(path.join(screenPath, 'component-bindings.json'), null),
       readJson(path.join(screenPath, 'layout-proposals.json'), null),
       readJson(path.join(screenPath, 'approved-layout.json'), null),
+      readJson(path.join(screenPath, 'reference-pack.json'), null),
       readJson(path.join(screenPath, 'underlay-contract.json'), null),
       readJson(path.join(screenPath, 'underlay-critique.json'), null),
       readJson(path.join(screenPath, 'underlay-repair-task.json'), null),
@@ -141,13 +184,14 @@ function createProjectStore(options = {}) {
       readArtifactHistory(projectPath)
     ]);
     let wireframe_preview;
-    let wireframe_metadata = project.wireframe_metadata;
-    if (project.wireframe_path) {
-      wireframe_metadata ||= await readImageMetadata(project.wireframe_path).catch(() => null);
-      if (wireframe_metadata && includePreviews) wireframe_preview = await imagePreview(project.wireframe_path, wireframe_metadata.mime);
+    let wireframe_metadata = screenInput.wireframe_metadata;
+    if (screenInput.wireframe_path) {
+      wireframe_metadata ||= await readImageMetadata(screenInput.wireframe_path).catch(() => null);
+      if (wireframe_metadata && includePreviews) wireframe_preview = await imagePreview(screenInput.wireframe_path, wireframe_metadata.mime);
     }
-    const storedReferences = project.reference_assets?.length
-      ? project.reference_assets
+    const storedReferences = referenceInventory?.assets?.length
+      ? referenceInventory.assets
+      : project.reference_assets?.length ? project.reference_assets
       : (project.reference_paths || []).map((referencePath, index) => ({
           id: `legacy-reference-${index + 1}`,
           path: referencePath,
@@ -163,21 +207,40 @@ function createProjectStore(options = {}) {
         preview: metadata && includePreviews ? await imagePreview(asset.path, metadata.mime) : undefined
       };
     }));
+    const hydratedComponentContract = componentContract && includePreviews ? {
+      ...componentContract,
+      families: await Promise.all((componentContract.families || []).map(async (family) => ({
+        ...family,
+        states: Object.fromEntries(await Promise.all(Object.entries(family.states || {}).map(async ([stateId, state]) => {
+          const assetPath = path.resolve(projectPath, String(state.asset_path || ''));
+          const safe = assetPath.startsWith(`${path.resolve(projectPath)}${path.sep}`);
+          const preview = safe ? await imagePreview(assetPath, state.mime || 'image/png').catch(() => undefined) : undefined;
+          return [stateId, { ...state, preview }];
+        })))
+      })))
+    } : componentContract;
     const screens = await readJson(path.join(projectPath, 'screens', 'index.json'), { active_screen_id: screenId, screens: [] });
     return {
       ...project,
+      requirement: screenInput.requirement || '',
+      requirement_source: screenInput.requirement_source || 'none',
+      requirement_confirmed: Boolean(screenInput.requirement_confirmed),
+      intent_analysis: screenInput.intent_analysis,
+      input_revisions: { ...(project.input_revisions || {}), ...(screenInput.input_revisions || {}) },
+      wireframe_path: screenInput.wireframe_path,
+      wireframe_name: screenInput.wireframe_name,
       screen_id: screenId,
       active_screen_id: screenId,
       screens: screens.screens || [],
       workspacePath: projectPath,
       wireframe_preview,
       wireframe_metadata,
-      canvas_spec: wireframe_metadata?.canvas_spec || project.canvas_spec,
+      canvas_spec: wireframe_metadata?.canvas_spec || screenInput.canvas_spec,
       reference_assets,
       reference_paths: reference_assets.map((asset) => asset.path),
       workflow,
       artifactHistory,
-      artifacts: { screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults }
+      artifacts: { referenceInventory, screenContract, bindings, layouts, approvedLayout, referencePack, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract: hydratedComponentContract, visualTask, visualResults }
     };
   }
 
@@ -188,7 +251,10 @@ function createProjectStore(options = {}) {
 
   async function saveProject(projectId, patch = {}) {
     const project = await resolveProject(projectId);
-    const requirement = typeof patch.requirement === 'string' ? patch.requirement : project.requirement;
+    const screenId = patch.screenId || project.active_screen_id || project.screen_id || 'main';
+    const storedScreenInput = await readJson(screenInputPath(project.workspacePath, screenId), null);
+    const currentInput = storedScreenInput || { ...baseScreenInput(project, screenId), requirement: project.requirement || '', requirement_source: project.requirement_source, requirement_confirmed: project.requirement_confirmed, intent_analysis: project.intent_analysis, input_revisions: project.input_revisions };
+    const requirement = typeof patch.requirement === 'string' ? patch.requirement : currentInput.requirement;
     const projectType = patch.projectType === 'existing' ? 'existing' : patch.projectType === 'new' ? 'new' : project.project_type;
     const requestedMode = ['exploration', 'existing-strict', 'existing-guided', 'locked-continuation'].includes(patch.continuationMode)
       ? patch.continuationMode
@@ -197,15 +263,15 @@ function createProjectStore(options = {}) {
       ? (requestedMode === 'existing-guided' ? 'existing-guided' : 'existing-strict')
       : (requestedMode === 'locked-continuation' ? 'locked-continuation' : 'exploration');
     const artDirection = typeof patch.artDirection === 'string' ? patch.artDirection : project.art_direction;
-    const requirementChanged = requirement !== project.requirement;
+    const requirementChanged = requirement !== currentInput.requirement;
     const requirementSource = ['none', 'user', 'ai'].includes(patch.requirementSource)
       ? patch.requirementSource
-      : requirementChanged ? (requirement ? 'user' : 'none') : project.requirement_source;
+      : requirementChanged ? (requirement ? 'user' : 'none') : currentInput.requirement_source;
     const requirementConfirmed = typeof patch.requirementConfirmed === 'boolean'
       ? patch.requirementConfirmed
-      : requirementChanged ? false : project.requirement_confirmed;
+      : requirementChanged ? false : currentInput.requirement_confirmed;
     const revisionKeys = [];
-    if (requirement !== project.requirement) revisionKeys.push('requirement');
+    if (requirementChanged) revisionKeys.push('requirement');
     if (artDirection !== project.art_direction || projectType !== project.project_type) revisionKeys.push('art_direction');
     const next = {
       ...project,
@@ -223,17 +289,25 @@ function createProjectStore(options = {}) {
     };
     delete next.workspacePath;
     await writeJson(path.join(project.workspacePath, 'project.json'), next);
-    await fs.writeFile(path.join(project.workspacePath, 'inputs', 'requirement.md'), `${next.requirement}\n`, 'utf8');
-    return hydrate(project.workspacePath);
+    const nextScreenInput = {
+      ...currentInput, requirement, requirement_source: next.requirement_source,
+      requirement_confirmed: next.requirement_confirmed, intent_analysis: next.intent_analysis,
+      input_revisions: nextRevisions(currentInput, requirementChanged ? ['requirement'] : []), updated_at: next.updated_at
+    };
+    await writeJson(screenInputPath(project.workspacePath, screenId), nextScreenInput);
+    await ensureDir(path.join(project.workspacePath, 'screens', screenId, 'inputs'));
+    await fs.writeFile(path.join(project.workspacePath, 'screens', screenId, 'inputs', 'requirement.md'), `${requirement}\n`, 'utf8');
+    return hydrate(project.workspacePath, { screenId });
   }
 
-  async function importFile(projectId, sourcePath, kind) {
+  async function importFile(projectId, sourcePath, kind, options = {}) {
     const project = await resolveProject(projectId);
+    const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const metadata = await readImageMetadata(sourcePath);
     const extension = metadata.format === 'jpeg' ? '.jpg' : `.${metadata.format}`;
     const safeName = kind === 'wireframe' ? `wireframe${extension}` : `${Date.now().toString(36)}${extension}`;
     const targetDir = kind === 'wireframe'
-      ? path.join(project.workspacePath, 'inputs')
+      ? path.join(project.workspacePath, 'screens', screenId, 'inputs')
       : path.join(project.workspacePath, 'style', 'references');
     await ensureDir(targetDir);
     const targetPath = path.join(targetDir, safeName);
@@ -241,6 +315,12 @@ function createProjectStore(options = {}) {
     const key = kind === 'wireframe' ? 'wireframe' : 'reference';
     const nextProject = await readJson(path.join(project.workspacePath, 'project.json'), {});
     if (key === 'wireframe') {
+      const currentInput = await readJson(screenInputPath(project.workspacePath, screenId), baseScreenInput(nextProject, screenId));
+      await writeJson(screenInputPath(project.workspacePath, screenId), {
+        ...currentInput, wireframe_path: targetPath, wireframe_name: path.basename(sourcePath),
+        wireframe_metadata: metadata, canvas_spec: metadata.canvas_spec,
+        input_revisions: nextRevisions(currentInput, ['wireframe']), updated_at: new Date().toISOString()
+      });
       nextProject.wireframe_path = targetPath;
       nextProject.wireframe_name = path.basename(sourcePath);
       nextProject.wireframe_metadata = metadata;
@@ -256,6 +336,7 @@ function createProjectStore(options = {}) {
         path: targetPath,
         name: path.basename(sourcePath),
         role: assets.length ? 'supporting' : 'primary',
+        approved: false, screen_type: 'unspecified', contains: [], baseline: '', notes: '',
         metadata
       });
       nextProject.reference_assets = assets;
@@ -264,7 +345,11 @@ function createProjectStore(options = {}) {
     }
     nextProject.updated_at = new Date().toISOString();
     await writeJson(path.join(project.workspacePath, 'project.json'), nextProject);
-    return hydrate(project.workspacePath);
+    if (key === 'reference') {
+      const previous = await readJson(path.join(project.workspacePath, 'style', 'reference-inventory.json'), null);
+      await saveArtifact(projectId, 'reference-inventory', inventoryFromAssets(nextProject.reference_assets, previous));
+    }
+    return hydrate(project.workspacePath, { screenId });
   }
 
   async function manageReference(projectId, input = {}) {
@@ -285,12 +370,24 @@ function createProjectStore(options = {}) {
       const role = ['primary', 'component', 'material', 'composition', 'supporting'].includes(input.role) ? input.role : 'supporting';
       if (role === 'primary') assets = assets.map((asset) => ({ ...asset, role: asset.id === input.id ? 'primary' : asset.role === 'primary' ? 'supporting' : asset.role }));
       else assets[index] = { ...assets[index], role };
+    } else if (input.action === 'details') {
+      assets[index] = {
+        ...assets[index],
+        ...(typeof input.screenType === 'string' ? { screen_type: input.screenType.trim() || 'unspecified' } : {}),
+        ...(Array.isArray(input.contains) ? { contains: input.contains.map(String).map((item) => item.trim()).filter(Boolean) } : {}),
+        ...(typeof input.baseline === 'string' ? { baseline: input.baseline.trim() } : {}),
+        ...(typeof input.notes === 'string' ? { notes: input.notes.trim() } : {})
+      };
+    } else if (input.action === 'approval') {
+      assets[index] = { ...assets[index], approved: input.approved === true };
     } else throw new Error('未知的参考图操作。');
     nextProject.reference_assets = assets;
     nextProject.reference_paths = assets.map((asset) => asset.path);
     nextProject.input_revisions = nextRevisions(nextProject, ['references']);
     nextProject.updated_at = new Date().toISOString();
     await writeJson(path.join(project.workspacePath, 'project.json'), nextProject);
+    const previous = await readJson(path.join(project.workspacePath, 'style', 'reference-inventory.json'), null);
+    await saveArtifact(projectId, 'reference-inventory', inventoryFromAssets(assets, previous));
     return hydrate(project.workspacePath);
   }
 
@@ -371,6 +468,25 @@ function createProjectStore(options = {}) {
       created_at: now,
       updated_at: now
     });
+    const inventoryPath = path.join(destination, 'style', 'reference-inventory.json');
+    const inventory = await readJson(inventoryPath, null);
+    if (inventory) {
+      const assetsById = new Map(referenceAssets.map((asset) => [asset.id, asset]));
+      await writeJson(inventoryPath, {
+        ...inventory,
+        assets: (inventory.assets || []).map((asset) => ({ ...asset, path: assetsById.get(asset.id)?.path || asset.path })),
+        updated_at: now
+      });
+    }
+    const screenRegistry = await readJson(path.join(destination, 'screens', 'index.json'), { screens: [] });
+    for (const screen of screenRegistry.screens || []) {
+      const inputPath = screenInputPath(destination, screen.id);
+      const screenInput = await readJson(inputPath, null);
+      if (!screenInput) continue;
+      const rewrite = (value) => typeof value === 'string' && value.startsWith(project.workspacePath)
+        ? path.join(destination, path.relative(project.workspacePath, value)) : value;
+      await writeJson(inputPath, { ...screenInput, wireframe_path: rewrite(screenInput.wireframe_path), updated_at: now });
+    }
     const workflowPath = path.join(destination, 'workflow', 'state.json');
     const workflow = await readJson(workflowPath, defaultWorkflow(id));
     await writeJson(workflowPath, { ...workflow, project_id: id, updated_at: now });
@@ -389,14 +505,38 @@ function createProjectStore(options = {}) {
     const id = slugify(input.id || input.name || `screen-${registry.screens.length + 1}`);
     if (registry.screens.some((screen) => screen.id === id)) throw new Error(`Screen already exists: ${id}`);
     const now = new Date().toISOString();
-    const entry = { id, name: String(input.name || id), status: 'active', created_at: now, updated_at: now };
+    const entry = { id, name: String(input.name || id), status: 'active', input_mode: input.inheritFromScreenId ? 'inherited' : 'own', ...(input.inheritFromScreenId ? { inherited_from_screen_id: input.inheritFromScreenId } : {}), created_at: now, updated_at: now };
     await ensureDir(path.join(project.workspacePath, 'screens', id, 'explorations'));
     await ensureDir(path.join(project.workspacePath, 'screens', id, 'underlays'));
     await ensureDir(path.join(project.workspacePath, 'screens', id, 'compositions'));
+    await ensureDir(path.join(project.workspacePath, 'screens', id, 'inputs'));
+    const inherited = input.inheritFromScreenId ? await readJson(screenInputPath(project.workspacePath, input.inheritFromScreenId), null) : null;
+    await writeJson(screenInputPath(project.workspacePath, id), inherited
+      ? { ...inherited, screen_id: id, input_mode: 'inherited', inherited_from_screen_id: input.inheritFromScreenId, updated_at: now }
+      : { ...baseScreenInput(project, id), updated_at: now });
     await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens: [...registry.screens, entry] });
     const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
     const state = await readJson(statePath, defaultWorkflow(projectId));
     await writeJson(statePath, { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: defaultWorkflow(projectId).screen_stages.main }, updated_at: now });
+    return entry;
+  }
+
+  async function duplicateScreen(projectId, screenId, input = {}) {
+    const project = await resolveProject(projectId);
+    const registry = await listScreens(projectId);
+    const source = registry.screens.find((screen) => screen.id === screenId && screen.status !== 'archived');
+    if (!source) throw new Error(`Screen not found or archived: ${screenId}`);
+    const id = slugify(input.id || input.name || `${screenId}-copy`);
+    if (registry.screens.some((screen) => screen.id === id)) throw new Error(`Screen already exists: ${id}`);
+    const now = new Date().toISOString();
+    await fs.cp(path.join(project.workspacePath, 'screens', screenId), path.join(project.workspacePath, 'screens', id), { recursive: true });
+    const copiedInput = await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id));
+    await writeJson(screenInputPath(project.workspacePath, id), { ...copiedInput, screen_id: id, input_mode: 'own', duplicated_from_screen_id: screenId, updated_at: now });
+    const entry = { id, name: String(input.name || `${source.name} · 副本`), status: 'active', input_mode: 'own', duplicated_from_screen_id: screenId, created_at: now, updated_at: now };
+    await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens: [...registry.screens, entry] });
+    const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
+    const state = await readJson(statePath, defaultWorkflow(projectId));
+    await writeJson(statePath, { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: { ...(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main) } }, updated_at: now });
     return entry;
   }
 
@@ -427,7 +567,7 @@ function createProjectStore(options = {}) {
     return screens[index];
   }
 
-  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow, resolveProject, hydrate, listScreens, createScreen, setActiveScreen, updateScreen };
+  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow, resolveProject, hydrate, listScreens, createScreen, duplicateScreen, setActiveScreen, updateScreen };
 }
 
 module.exports = { createProjectStore };

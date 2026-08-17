@@ -46,6 +46,8 @@ test('project store preserves upload metadata and duplicates projects independen
     assert.equal(duplicate.name, 'Character Growth · 副本');
     assert.equal(duplicate.wireframe_path.startsWith(duplicate.workspacePath), true);
     assert.notEqual(duplicate.wireframe_path, project.wireframe_path);
+    assert.equal(duplicate.artifacts.referenceInventory.assets[0].path.startsWith(duplicate.workspacePath), true);
+    assert.notEqual(duplicate.artifacts.referenceInventory.assets[0].path, project.artifacts.referenceInventory.assets[0].path);
     const archived = await store.saveProject(duplicate.id, { status: 'archived' });
     assert.equal(archived.status, 'archived');
   } finally {

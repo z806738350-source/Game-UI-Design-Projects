@@ -1,13 +1,11 @@
+const { normalizeControls } = require('./screenControls.cjs');
+
 function controlId(control, index) {
-  if (typeof control === 'string') return control.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || `control-${index + 1}`;
-  return String(control?.id || `control-${index + 1}`);
+  return normalizeControls([control])[0]?.id || `control-${index + 1}`;
 }
 
 function requiredControls(screenContract) {
-  return (screenContract?.required_controls || []).map((control, index) => ({
-    id: controlId(control, index), label: typeof control === 'string' ? control : control.label || control.id,
-    required: typeof control === 'string' ? true : control.required !== false
-  })).filter((control) => control.required);
+  return normalizeControls(screenContract?.required_controls || []).filter((control) => control.required);
 }
 
 function validateBindings(bindingsArtifact, screenContract, componentContract) {
@@ -36,4 +34,3 @@ function withCoverage(artifact, screenContract, componentContract) {
 }
 
 module.exports = { controlId, requiredControls, validateBindings, withCoverage };
-

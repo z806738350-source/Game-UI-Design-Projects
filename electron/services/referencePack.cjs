@@ -10,7 +10,13 @@ function compareAssets(left, right) {
   return a[0] - b[0] || a[1] - b[1] || a[2].localeCompare(b[2]);
 }
 
-function buildReferencePack({ assets = [], capabilities, purpose, structureGuides = [] }) {
+function describeAttachment(asset, index) {
+  const contains = Array.isArray(asset.contains) && asset.contains.length ? `；包含：${asset.contains.join('、')}` : '';
+  const baseline = asset.baseline ? `；基线：${asset.baseline}` : '';
+  return `附件 ${index + 1}：${asset.name || asset.id}；角色：${asset.role}${contains}${baseline}`;
+}
+
+function buildReferencePack({ assets = [], capabilities, purpose, structureGuides = [], omissionsConfirmed = false }) {
   const limit = capabilities.max_reference_images;
   const approved = assets.filter((asset) => asset.approved !== false && asset.role).sort(compareAssets);
   const guides = structureGuides.filter(Boolean).map((item, index) => ({
@@ -20,7 +26,11 @@ function buildReferencePack({ assets = [], capabilities, purpose, structureGuide
     reason: 'spatial-control'
   }));
   const candidates = [...guides, ...approved];
-  const selected = candidates.slice(0, limit).map((asset) => ({ ...asset, selection_reason: asset.role === 'structure-guide' ? 'provider-spatial-guide' : `role-priority:${asset.role}` }));
+  const selected = candidates.slice(0, limit).map((asset, index) => ({
+    ...asset, attachment_index: index + 1,
+    selection_reason: asset.role === 'structure-guide' ? 'provider-spatial-guide' : `role-priority:${asset.role}`,
+    attachment_description: describeAttachment(asset, index)
+  }));
   const selectedIds = new Set(selected.map((asset) => asset.id));
   const omitted = candidates.filter((asset) => !selectedIds.has(asset.id)).map((asset) => ({
     id: asset.id,
@@ -33,7 +43,7 @@ function buildReferencePack({ assets = [], capabilities, purpose, structureGuide
     schema_version: '2.0',
     id: `${purpose || 'generation'}-reference-pack`,
     version: 1,
-    status: 'generated',
+    status: omitted.length && !omissionsConfirmed ? 'reviewed' : 'approved',
     source: { provider_capabilities: { ...capabilities } },
     purpose: purpose || 'underlay-generation',
     provider_limit: limit,
@@ -47,10 +57,12 @@ function buildReferencePack({ assets = [], capabilities, purpose, structureGuide
     },
     selected,
     omitted,
+    attachment_order: selected.map((asset) => ({ index: asset.attachment_index, id: asset.id, path: asset.path, role: asset.role, description: asset.attachment_description })),
+    omissions_confirmed: Boolean(omissionsConfirmed),
+    requires_omission_confirmation: omitted.length > 0 && !omissionsConfirmed,
     capacity_decision: { used: selected.length, limit, omitted: omitted.length },
     wireframe_strategy: guides.length ? 'structured-layout-only' : 'not-included'
   };
 }
 
-module.exports = { buildReferencePack, compareAssets };
-
+module.exports = { buildReferencePack, compareAssets, describeAttachment };
