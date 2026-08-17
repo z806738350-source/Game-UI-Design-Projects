@@ -18,6 +18,8 @@ interface DesignCopilotApi {
   importFile(projectId: string, kind: 'wireframe' | 'reference'): Promise<DesignProject>;
   manageReference(projectId: string, input: { id: string; action: 'remove' | 'move' | 'role'; direction?: 'up' | 'down'; role?: string }): Promise<DesignProject>;
   importFontAsset(projectId: string, input: Record<string, unknown>): Promise<DesignProject>;
+  confirmFontUsage(projectId: string, input: Record<string, unknown>): Promise<DesignProject>;
+  loadFontBytes(projectId: string, fontId: string): Promise<ArrayBuffer | Uint8Array>;
   importComponentAsset(projectId: string, input: Record<string, unknown>): Promise<DesignProject>;
   revealProject(projectId: string): Promise<{ ok: boolean }>;
   runStage(projectId: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject>;

@@ -2,7 +2,7 @@
 
 面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。
 
-> **发布状态：`0.2.0-alpha.1` / 架构型 Alpha。** 整改 PR-2 已接通真实 preview/final PNG、Composition Output、exact/nine-slice/vector-token 渲染和严格模式 final 导出；真实字体、Repair、完整像素级 Fidelity、工作台、真实 Golden Samples 与设计师签核仍未全部闭环，因此不得作为正式生产版本验收。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md`。
+> **发布状态：`0.2.0-alpha.1` / 架构型 Alpha。** 整改 PR-3 已接通显式字体授权/exact 确认、浏览器 FontFace 预加载、服务端真实 fontfile 渲染、实际 family 证据与排版效果；Repair、完整像素级 Fidelity、工作台、真实 Golden Samples 与设计师签核仍未全部闭环，因此不得作为正式生产版本验收。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md`。
 
 当前 Alpha 已覆盖的控制面包括：
 
@@ -15,7 +15,7 @@
 7. Font Manifest、Component Contract 与必要控件 100% Binding
 8. 多 Screen、Schema 2.0 安全迁移与细粒度 stale 传播
 9. Underlay Contract、结构 Guide、自动 Critique 接口与 Repair Task
-10. Composition Manifest + 真实 Composition Output、独立组件 renderer、final PNG 落盘/导出与初步 Fidelity Gate
+10. Composition Manifest + 真实 Composition Output、独立组件/字体 renderer、final PNG 落盘/导出与初步 Fidelity Gate
 
 ## 本地运行
 

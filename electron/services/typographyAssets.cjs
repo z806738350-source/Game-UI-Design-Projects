@@ -3,6 +3,8 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { ensureDir } = require('./jsonStore.cjs');
 
+const SUPPORTED_FONT_EXTENSIONS = new Set(['.otf', '.ttf']);
+
 function decodeName(buffer, platformId) {
   if (platformId === 0 || platformId === 3) {
     let result = '';
@@ -82,7 +84,7 @@ async function inspectFont(filePath) {
 
 async function importFontAsset(projectPath, sourcePath, input = {}) {
   const extension = path.extname(sourcePath).toLowerCase();
-  if (!['.otf', '.ttf', '.woff', '.woff2'].includes(extension)) throw new Error('Only OTF, TTF, WOFF, and WOFF2 fonts are supported.');
+  if (!SUPPORTED_FONT_EXTENSIONS.has(extension)) throw new Error('Only OTF and TTF fonts are supported. WOFF/WOFF2 import is disabled until a real parser is available.');
   const id = String(input.id || path.basename(sourcePath, extension)).replace(/[^A-Za-z0-9._-]+/g, '-').toLowerCase();
   const targetDir = path.join(projectPath, 'style', 'fonts');
   await ensureDir(targetDir);
@@ -93,8 +95,31 @@ async function importFontAsset(projectPath, sourcePath, input = {}) {
     id, family_name: inspected.family_name || input.familyName || id, postscript_name: inspected.postscript_name || input.postscriptName || '',
     source_type: input.sourceType || 'user-provided', local_path: `style/fonts/${id}${extension}`,
     file_hash: inspected.file_hash, byte_length: inspected.byte_length,
-    license_status: input.licenseStatus || 'unresolved', coverage: inspected.coverage
+    format: extension.slice(1), license_status: 'unresolved', coverage: inspected.coverage,
+    imported_at: new Date().toISOString()
   };
+}
+
+function confirmFontUsage(manifest, input = {}, { confirmedBy = 'ui-designer', now = new Date().toISOString() } = {}) {
+  const fontId = String(input.fontId || '').trim();
+  const roleId = String(input.roleId || '').trim();
+  if (!fontId || !roleId) throw new Error('fontId and roleId are required.');
+  if (input.licenseConfirmed !== true) throw Object.assign(new Error('Font license must be explicitly confirmed.'), { code: 'FONT_LICENSE_CONFIRMATION_REQUIRED' });
+  if (input.exactConfirmed !== true) throw Object.assign(new Error('Exact font usage must be explicitly confirmed.'), { code: 'FONT_EXACT_CONFIRMATION_REQUIRED' });
+  const fonts = (manifest?.fonts || []).map((font) => font.id === fontId ? {
+    ...font,
+    license_status: 'confirmed',
+    license_confirmation: { confirmed: true, confirmed_by: confirmedBy, confirmed_at: now }
+  } : font);
+  if (!fonts.some((font) => font.id === fontId)) throw new Error(`Font not found: ${fontId}`);
+  const role = {
+    font_id: fontId,
+    fidelity_mode: 'exact',
+    identity_critical: input.identityCritical !== false,
+    required_coverage: Array.isArray(input.requiredCoverage) ? input.requiredCoverage.map(String) : [],
+    exact_confirmation: { confirmed: true, confirmed_by: confirmedBy, confirmed_at: now }
+  };
+  return { ...manifest, fonts, roles: { ...(manifest?.roles || {}), [roleId]: role } };
 }
 
 function validateFontManifest(manifest, { strict = false } = {}) {
@@ -104,16 +129,19 @@ function validateFontManifest(manifest, { strict = false } = {}) {
   if (!fonts.length) errors.push('fonts must contain at least one asset');
   for (const font of fonts) {
     if (!font.id || !font.local_path || !/^sha256:[a-f0-9]{64}$/i.test(font.file_hash || '')) errors.push(`font ${font.id || '<unknown>'} is missing asset identity`);
+    if (!font.family_name || !font.postscript_name) errors.push(`font ${font.id || '<unknown>'} is missing family or PostScript identity`);
+    if (!SUPPORTED_FONT_EXTENSIONS.has(path.extname(font.local_path || '').toLowerCase())) errors.push(`font ${font.id || '<unknown>'} uses an unsupported format`);
     if (font.license_status !== 'confirmed') errors.push(`font ${font.id || '<unknown>'} license is not confirmed`);
+    else if (font.license_confirmation?.confirmed !== true) errors.push(`font ${font.id || '<unknown>'} has no explicit license confirmation evidence`);
   }
   for (const [roleId, role] of Object.entries(manifest?.roles || {})) {
     const font = byId.get(role.font_id);
     if (!font) errors.push(`role ${roleId} references missing font ${role.font_id || '<none>'}`);
     if (strict && role.identity_critical && role.fidelity_mode !== 'exact') errors.push(`identity-critical role ${roleId} must use exact fidelity`);
+    if (strict && role.fidelity_mode === 'exact' && role.exact_confirmation?.confirmed !== true) errors.push(`role ${roleId} has no explicit exact confirmation evidence`);
     for (const coverage of role.required_coverage || []) if (!font?.coverage?.[coverage]) errors.push(`font ${role.font_id} lacks ${coverage} coverage required by ${roleId}`);
   }
   return errors;
 }
 
-module.exports = { cmapCoverage, importFontAsset, inspectFont, validateFontManifest };
-
+module.exports = { SUPPORTED_FONT_EXTENSIONS, cmapCoverage, confirmFontUsage, importFontAsset, inspectFont, validateFontManifest };

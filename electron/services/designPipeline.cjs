@@ -2,7 +2,7 @@ const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, unde
 const { providerCapabilities } = require('./providerCapabilities.cjs');
 const { buildReferencePack } = require('./referencePack.cjs');
 const { validateArtifact } = require('./contracts.cjs');
-const { importFontAsset } = require('./typographyAssets.cjs');
+const { confirmFontUsage: confirmFontUsageContract, importFontAsset } = require('./typographyAssets.cjs');
 const { importComponentAsset } = require('./componentKit.cjs');
 const { validateBindings, withCoverage } = require('./componentBindings.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
@@ -405,6 +405,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
 
   async function updateArtifact(projectId, kind, patch = {}) {
     const project = await openProject(projectId);
+    if (kind === 'font-manifest' && (Object.prototype.hasOwnProperty.call(patch, 'fonts') || Object.prototype.hasOwnProperty.call(patch, 'roles'))) {
+      throw Object.assign(new Error('Font files, authorization, and exact roles must be changed through the dedicated import and confirmation actions.'), { code: 'FONT_CONFIRMATION_ACTION_REQUIRED' });
+    }
     const definitions = {
       'screen-contract': { artifact: project.artifacts.screenContract, stage: 'wireframe_interpretation' },
       'style-contract': { artifact: project.artifacts.styleContract, stage: 'style_resolution' },
@@ -453,7 +456,24 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const font = await importFontAsset(resolved.workspacePath, sourcePath, input);
     const current = project.artifacts.fontManifest || { schema_version: '2.0', id: 'project-font-manifest', version: 0, status: 'draft', source: {}, fonts: [], roles: {} };
     const fonts = [...(current.fonts || []).filter((item) => item.id !== font.id), font];
+    await invalidateArtifacts(projectId, 'font-manifest', 'font_asset_imported');
     await projectStore.saveArtifact(projectId, 'font-manifest', { ...current, version: Number(current.version || 0) + 1, status: 'reviewed', fonts, source: { ...(current.source || {}), last_import: font.id } });
+    await projectStore.updateWorkflow(projectId, 'typography_resolution', 'reviewed', 'style/font-manifest.json');
+    return openProject(projectId);
+  }
+
+  async function confirmFontUsage(projectId, input = {}) {
+    const project = await openProject(projectId);
+    const current = project.artifacts.fontManifest;
+    if (!current) throw new Error('Import a font before confirming its usage.');
+    const confirmed = confirmFontUsageContract(current, input);
+    await invalidateArtifacts(projectId, 'font-manifest', 'font_usage_confirmed');
+    await projectStore.saveArtifact(projectId, 'font-manifest', {
+      ...confirmed,
+      version: Number(current.version || 0) + 1,
+      status: 'reviewed',
+      source: { ...(current.source || {}), last_confirmation: `${input.fontId}:${input.roleId}` }
+    });
     await projectStore.updateWorkflow(projectId, 'typography_resolution', 'reviewed', 'style/font-manifest.json');
     return openProject(projectId);
   }
@@ -591,7 +611,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  return { addComponentAsset, addFontAsset, approveArtifact, cancelStage, composeVisual, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
+  return { addComponentAsset, addFontAsset, approveArtifact, cancelStage, composeVisual, confirmFontUsage, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
 }
 
 module.exports = { createDesignPipeline };

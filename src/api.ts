@@ -50,6 +50,8 @@ function previewApi(): DesignCopilotApi {
       return project;
     },
     importFontAsset: async (id) => find(id),
+    confirmFontUsage: async (id) => find(id),
+    loadFontBytes: async () => { throw new Error('Browser preview does not contain a real font asset.'); },
     importComponentAsset: async (id) => find(id),
     revealProject: async () => ({ ok: true }),
     runStage: async (id, stage) => {
@@ -156,7 +158,20 @@ function webApi(): DesignCopilotApi {
       return project;
     },
     manageReference: (id, input) => request(`${projectPath(id)}/reference`, { method: 'POST', body: JSON.stringify(input) }),
-    importFontAsset: async (id, input) => { const file = await chooseAsset('.otf,.ttf,.woff,.woff2'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/font?meta=${encodeURIComponent(JSON.stringify(input))}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }); },
+    importFontAsset: async (id, input) => { const file = await chooseAsset('.otf,.ttf'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/font?meta=${encodeURIComponent(JSON.stringify(input))}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }); },
+    confirmFontUsage: (id, input) => request(`${projectPath(id)}/fonts/confirm`, { method: 'POST', body: JSON.stringify(input) }),
+    loadFontBytes: async (id, fontId) => {
+      const response = await fetch(`${projectPath(id)}/fonts/${encodeURIComponent(fontId)}/bytes`, { credentials: 'same-origin' });
+      if (response.status === 401) {
+        window.location.assign('/auth/feishu/start');
+        throw new Error('登录状态已失效，正在重新登录。');
+      }
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(payload.error || `字体读取失败（${response.status}）`);
+      }
+      return response.arrayBuffer();
+    },
     importComponentAsset: async (id, input) => { const file = await chooseAsset('image/png,image/jpeg,image/webp,image/svg+xml'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/component?meta=${encodeURIComponent(JSON.stringify(input))}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }); },
     revealProject: async () => ({ ok: false }),
     runStage: (id, stage, input) => request(`${projectPath(id)}/pipeline/run`, { method: 'POST', body: JSON.stringify({ stage, input }) }),
@@ -213,6 +228,12 @@ export const copilotApi = {
   importFile: (id: string, kind: 'wireframe' | 'reference'): Promise<DesignProject> => api().importFile(id, kind),
   manageReference: (id: string, input: { id: string; action: 'remove' | 'move' | 'role'; direction?: 'up' | 'down'; role?: string }): Promise<DesignProject> => api().manageReference(id, input),
   importFontAsset: (id: string, input: Record<string, unknown>) => api().importFontAsset(id, input),
+  confirmFontUsage: (id: string, input: Record<string, unknown>) => api().confirmFontUsage(id, input),
+  loadFontBytes: async (id: string, fontId: string): Promise<ArrayBuffer> => {
+    const value = await api().loadFontBytes(id, fontId);
+    if (value instanceof ArrayBuffer) return value;
+    return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength) as ArrayBuffer;
+  },
   importComponentAsset: (id: string, input: Record<string, unknown>) => api().importComponentAsset(id, input),
   revealProject: (id: string) => api().revealProject(id),
   runStage: (id: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject> => api().runStage(id, stage, input),

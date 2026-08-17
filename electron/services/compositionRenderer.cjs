@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const sharp = require('sharp');
 const { ensureDir } = require('./jsonStore.cjs');
+const { renderTextLayer } = require('./typographyRenderer.cjs');
 
 const RENDERER_VERSION = `composition-v1/sharp-${sharp.versions.sharp}/libvips-${sharp.versions.vips}`;
 
@@ -180,29 +181,6 @@ function escapeXml(value) {
   return String(value).replace(/[<>&"']/g, (character) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[character]);
 }
 
-async function textOverlay(layer, target) {
-  const typography = layer.typography || {};
-  const fontSize = Math.max(1, Number(typography.size || 24));
-  const weight = Math.max(100, Math.min(900, Number(typography.weight || 400)));
-  const fill = escapeXml(typography.fill || '#ffffff');
-  const stroke = typography.stroke || {};
-  const strokeWidth = Math.max(0, Number(stroke.width || 0));
-  const strokeColor = escapeXml(stroke.color || 'transparent');
-  const family = escapeXml(typography.family || 'sans-serif');
-  const content = escapeXml(layer.content || '');
-  const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${target.width}" height="${target.height}"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="${family}" font-size="${fontSize}" font-weight="${weight}" fill="${fill}" stroke="${strokeColor}" stroke-width="${strokeWidth}" paint-order="stroke">${content}</text></svg>`);
-  return {
-    input: await sharp(svg).png().toBuffer(),
-    diagnostic: {
-      control_id: layer.control_id,
-      renderer: 'svg-text-preview',
-      target_rect: target,
-      requested_font: layer.font_path || family,
-      actual_font_verified: false
-    }
-  };
-}
-
 async function watermarkOverlay(layer, canvas) {
   const content = escapeXml(layer.content || 'PREVIEW');
   const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}"><rect x="0" y="${canvas.height - 40}" width="${canvas.width}" height="40" fill="rgba(150,0,0,.72)"/><text x="20" y="${canvas.height - 14}" font-family="sans-serif" font-size="18" font-weight="700" fill="#fff">${content}</text></svg>`);
@@ -240,7 +218,7 @@ async function renderComposition({ manifest, projectPath, outputPath, fetchImpl 
       diagnostics.push(rendered.diagnostic);
     } else if (layer.type === 'text') {
       const target = outputRect(layer, { width, height });
-      const rendered = await textOverlay(layer, target);
+      const rendered = await renderTextLayer({ projectPath, layer, target, resolveProjectPath, hashBuffer });
       overlays.push({ input: rendered.input, left: target.left, top: target.top });
       diagnostics.push(rendered.diagnostic);
     } else if (layer.type === 'watermark') {
