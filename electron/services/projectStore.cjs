@@ -121,12 +121,15 @@ function createProjectStore(options = {}) {
     if (!project) throw new Error('Invalid project folder.');
     const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const screenPath = path.join(projectPath, 'screens', screenId);
-    const [workflow, screenContract, bindings, layouts, approvedLayout, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
+    const [workflow, screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
       readJson(path.join(projectPath, 'workflow', 'state.json'), defaultWorkflow(project.id)),
       readJson(path.join(screenPath, 'screen-contract.json'), null),
       readJson(path.join(screenPath, 'component-bindings.json'), null),
       readJson(path.join(screenPath, 'layout-proposals.json'), null),
       readJson(path.join(screenPath, 'approved-layout.json'), null),
+      readJson(path.join(screenPath, 'underlay-contract.json'), null),
+      readJson(path.join(screenPath, 'underlay-critique.json'), null),
+      readJson(path.join(screenPath, 'underlay-repair-task.json'), null),
       readJson(path.join(projectPath, 'style', 'style-contract.json'), null),
       readJson(path.join(projectPath, 'style', 'font-manifest.json'), null),
       readJson(path.join(projectPath, 'style', 'component-contract.json'), null),
@@ -171,7 +174,7 @@ function createProjectStore(options = {}) {
       reference_paths: reference_assets.map((asset) => asset.path),
       workflow,
       artifactHistory,
-      artifacts: { screenContract, bindings, layouts, approvedLayout, styleContract, fontManifest, componentContract, visualTask, visualResults }
+      artifacts: { screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, styleContract, fontManifest, componentContract, visualTask, visualResults }
     };
   }
 

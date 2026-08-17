@@ -80,6 +80,11 @@ function previewApi(): DesignCopilotApi {
       project.artifacts[key] = { ...(project.artifacts[key] || {}), ...patch, status: 'reviewed' } as never;
       return project;
     },
+    generateUnderlayContract: async (id) => find(id),
+    generateLayoutGuide: async (id) => find(id),
+    runUnderlayCritique: async (id) => find(id),
+    repairUnderlay: async (id) => find(id),
+    approveUnderlayWaiver: async (id) => find(id),
     exportVisual: async () => ({ ok: true })
   };
 }
@@ -150,6 +155,11 @@ function webApi(): DesignCopilotApi {
     cancelStage: (id, stage) => request(`${projectPath(id)}/pipeline/cancel`, { method: 'POST', body: JSON.stringify({ stage }) }),
     approveArtifact: (id, kind, input) => request(`${projectPath(id)}/pipeline/approve`, { method: 'POST', body: JSON.stringify({ kind, input }) }),
     updateArtifact: (id, kind, patch) => request(`${projectPath(id)}/artifact`, { method: 'PATCH', body: JSON.stringify({ kind, patch }) }),
+    generateUnderlayContract: (id) => request(`${projectPath(id)}/underlay/contract`, { method: 'POST', body: '{}' }),
+    generateLayoutGuide: (id) => request(`${projectPath(id)}/underlay/guide`, { method: 'POST', body: '{}' }),
+    runUnderlayCritique: (id, input) => request(`${projectPath(id)}/underlay/critique`, { method: 'POST', body: JSON.stringify(input) }),
+    repairUnderlay: (id, input) => request(`${projectPath(id)}/underlay/repair`, { method: 'POST', body: JSON.stringify(input) }),
+    approveUnderlayWaiver: (id, input) => request(`${projectPath(id)}/underlay/waiver`, { method: 'POST', body: JSON.stringify(input) }),
     exportVisual: async (id, variationId) => {
       const anchor = document.createElement('a');
       anchor.href = `${projectPath(id)}/visual/${encodeURIComponent(variationId)}`;
@@ -197,8 +207,13 @@ export const copilotApi = {
   runStage: (id: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject> => api().runStage(id, stage, input),
   draftRequirement: (id: string): Promise<DesignProject> => api().draftRequirement(id),
   cancelStage: (id: string, stage: PipelineStage): Promise<DesignProject> => api().cancelStage(id, stage),
-  approveArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'approved-layout' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
-  updateArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => api().updateArtifact(id, kind, patch),
+  approveArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
+  updateArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => api().updateArtifact(id, kind, patch),
+  generateUnderlayContract: (id: string) => api().generateUnderlayContract(id),
+  generateLayoutGuide: (id: string) => api().generateLayoutGuide(id),
+  runUnderlayCritique: (id: string, input: Record<string, unknown>) => api().runUnderlayCritique(id, input),
+  repairUnderlay: (id: string, input: Record<string, unknown>) => api().repairUnderlay(id, input),
+  approveUnderlayWaiver: (id: string, input: { issueId: string; reason: string }) => api().approveUnderlayWaiver(id, input),
   exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId),
   logout: () => api().logout ? api().logout!() : Promise.resolve({ ok: true })
 };

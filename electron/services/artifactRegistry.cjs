@@ -13,6 +13,7 @@ const SCREEN_ARTIFACTS = Object.freeze({
   'reference-pack': 'reference-pack.json',
   'underlay-contract': 'underlay-contract.json',
   'underlay-critique': 'underlay-critique.json',
+  'underlay-repair-task': 'underlay-repair-task.json',
   'composition-manifest': 'composition-manifest.json',
   'fidelity-report': 'fidelity-report.json',
   'visual-task': 'visual-task.json',
@@ -26,4 +27,3 @@ function artifactRelativePath(kind, screenId = 'main') {
 }
 
 module.exports = { GLOBAL_ARTIFACTS, SCREEN_ARTIFACTS, artifactRelativePath };
-

@@ -102,6 +102,9 @@ export type DesignProject = {
     bindings?: Artifact | null;
     layouts: (Artifact & { proposals?: LayoutProposal[] }) | null;
     approvedLayout: Artifact | null;
+    underlayContract?: Artifact | null;
+    underlayCritique?: Artifact | null;
+    underlayRepairTask?: Artifact | null;
     styleContract: Artifact | null;
     fontManifest?: Artifact | null;
     componentContract?: Artifact | null;

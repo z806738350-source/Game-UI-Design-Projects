@@ -133,6 +133,11 @@ function registerIpc() {
   ipcMain.handle('copilot:pipeline:cancel', (_event, projectId, stage) => pipeline.cancelStage(projectId, stage));
   ipcMain.handle('copilot:pipeline:approve', (_event, projectId, kind, input) => pipeline.approveArtifact(projectId, kind, input));
   ipcMain.handle('copilot:pipeline:update', (_event, projectId, kind, patch) => pipeline.updateArtifact(projectId, kind, patch));
+  ipcMain.handle('copilot:underlay:contract', (_event, projectId) => pipeline.createUnderlayContract(projectId));
+  ipcMain.handle('copilot:underlay:guide', (_event, projectId) => pipeline.createLayoutGuide(projectId));
+  ipcMain.handle('copilot:underlay:critique', (_event, projectId, input) => pipeline.critiqueUnderlay(projectId, input));
+  ipcMain.handle('copilot:underlay:repair', (_event, projectId, input) => pipeline.repairUnderlay(projectId, input));
+  ipcMain.handle('copilot:underlay:waiver', (_event, projectId, input) => pipeline.waiveUnderlayIssue(projectId, input));
   ipcMain.handle('copilot:visual:export', async (_event, projectId, variationId) => {
     const project = await projectStore.open(projectId);
     const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === variationId);

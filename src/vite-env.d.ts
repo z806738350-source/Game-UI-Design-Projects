@@ -23,8 +23,13 @@ interface DesignCopilotApi {
   runStage(projectId: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject>;
   draftRequirement(projectId: string): Promise<DesignProject>;
   cancelStage(projectId: string, stage: PipelineStage): Promise<DesignProject>;
-  approveArtifact(projectId: string, kind: 'screen-contract' | 'component-bindings' | 'approved-layout' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject>;
-  updateArtifact(projectId: string, kind: 'screen-contract' | 'component-bindings' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject>;
+  approveArtifact(projectId: string, kind: 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject>;
+  updateArtifact(projectId: string, kind: 'screen-contract' | 'component-bindings' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject>;
+  generateUnderlayContract(projectId: string): Promise<DesignProject>;
+  generateLayoutGuide(projectId: string): Promise<DesignProject>;
+  runUnderlayCritique(projectId: string, input: Record<string, unknown>): Promise<DesignProject>;
+  repairUnderlay(projectId: string, input: Record<string, unknown>): Promise<DesignProject>;
+  approveUnderlayWaiver(projectId: string, input: { issueId: string; reason: string }): Promise<DesignProject>;
   exportVisual(projectId: string, variationId: string): Promise<{ ok: boolean; filePath?: string }>;
   logout?(): Promise<{ ok: boolean }>;
 }

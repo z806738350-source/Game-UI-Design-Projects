@@ -393,6 +393,11 @@ function createApplication(environment = process.env) {
       else if (request.method === 'POST' && suffix === '/pipeline/cancel') value = await designPipeline.cancelStage(projectId, body.stage);
       else if (request.method === 'POST' && suffix === '/pipeline/approve') value = await designPipeline.approveArtifact(projectId, body.kind, body.input);
       else if (request.method === 'PATCH' && suffix === '/artifact') value = await designPipeline.updateArtifact(projectId, body.kind, body.patch);
+      else if (request.method === 'POST' && suffix === '/underlay/contract') value = await designPipeline.createUnderlayContract(projectId);
+      else if (request.method === 'POST' && suffix === '/underlay/guide') value = await designPipeline.createLayoutGuide(projectId);
+      else if (request.method === 'POST' && suffix === '/underlay/critique') value = await designPipeline.critiqueUnderlay(projectId, body);
+      else if (request.method === 'POST' && suffix === '/underlay/repair') value = await designPipeline.repairUnderlay(projectId, body);
+      else if (request.method === 'POST' && suffix === '/underlay/waiver') value = await designPipeline.waiveUnderlayIssue(projectId, body);
       else if (request.method === 'GET' && suffix.startsWith('/visual/')) {
         const variationId = decodeURIComponent(suffix.slice('/visual/'.length));
         const project = await projectStore.open(projectId, { includePreviews: false });

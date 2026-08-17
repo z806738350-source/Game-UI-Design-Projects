@@ -22,5 +22,10 @@ contextBridge.exposeInMainWorld('designCopilot', {
   cancelStage: (projectId, stage) => ipcRenderer.invoke('copilot:pipeline:cancel', projectId, stage),
   approveArtifact: (projectId, kind, input) => ipcRenderer.invoke('copilot:pipeline:approve', projectId, kind, input),
   updateArtifact: (projectId, kind, patch) => ipcRenderer.invoke('copilot:pipeline:update', projectId, kind, patch),
+  generateUnderlayContract: (projectId) => ipcRenderer.invoke('copilot:underlay:contract', projectId),
+  generateLayoutGuide: (projectId) => ipcRenderer.invoke('copilot:underlay:guide', projectId),
+  runUnderlayCritique: (projectId, input) => ipcRenderer.invoke('copilot:underlay:critique', projectId, input),
+  repairUnderlay: (projectId, input) => ipcRenderer.invoke('copilot:underlay:repair', projectId, input),
+  approveUnderlayWaiver: (projectId, input) => ipcRenderer.invoke('copilot:underlay:waiver', projectId, input),
   exportVisual: (projectId, variationId) => ipcRenderer.invoke('copilot:visual:export', projectId, variationId)
 });
