@@ -1,6 +1,10 @@
 # Game UI Design Copilot
 
-面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。0.2.0 覆盖：
+面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。
+
+> **发布状态：`0.2.0-alpha.1` / 架构型 Alpha。** 当前版本已建立严格风格继承的控制面与契约框架，但真实最终 PNG、真实字体渲染、9-slice、Repair、像素级 Fidelity 和真实 Golden Samples 尚未全部闭环，不得作为正式生产版本验收。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md`。
+
+当前 Alpha 已覆盖的控制面包括：
 
 1. 策划需求 + UE Wireframe 输入
 2. Functional Screen Contract 生成与人工批准
@@ -10,8 +14,8 @@
 6. 已有项目默认 `existing-strict`，新项目保留探索模式
 7. Font Manifest、Component Contract 与必要控件 100% Binding
 8. 多 Screen、Schema 2.0 安全迁移与细粒度 stale 传播
-9. Underlay Contract、结构 Guide、自动 Critique 与有限修复
-10. Canvas 2D 确定性组件/文字合成与 Final Fidelity Gate
+9. Underlay Contract、结构 Guide、自动 Critique 接口与 Repair Task
+10. Composition Manifest、Canvas 预览组件与初步 Fidelity Gate
 
 ## 本地运行
 
@@ -70,7 +74,7 @@ KUNPO_API_KEY=your-local-key
 2. 当前项目 `.env`
 3. 同级 `Game UI Forge/.env`（仅作为本地迁移兼容）
 
-不要提交真实 Key。2026-08-09 已完成真实验收：多模态 Screen Contract 请求通过，Image-GPT2 异步提交、任务轮询和永久 Kunpo CDN 结果返回均通过。
+不要提交真实 Key。2026-08-09 已完成 Provider 连通性 Smoke Test：多模态 Screen Contract 请求通过，Image-GPT2 异步提交、任务轮询和永久 Kunpo CDN 结果返回均通过。该结果只证明 Provider 链路可用，不等同于 strict E2E 或正式产品验收。
 
 ## 项目 Artifact
 
@@ -124,7 +128,7 @@ Game UI Forge 负责后半段：
 
 专项说明见 `docs/EXISTING-PROJECT-WORKFLOW.md`，执行拆分见 `docs/PR-MILESTONES.md`。
 
-## 暂未纳入 0.2.0
+## 当前 Alpha 范围外
 
 - 正式 Figma 生产
 - 自动 Sprite Sheet、Atlas 与引擎 JSON（由 Game UI Forge 侧承接）

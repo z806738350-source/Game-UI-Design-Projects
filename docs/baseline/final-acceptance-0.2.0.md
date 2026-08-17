@@ -1,4 +1,6 @@
-# 0.2.0 acceptance record
+# 0.2.0 self-reported acceptance record (superseded)
+
+> **Status: not a formal acceptance.** The independent remediation audit in `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md` found that the control plane was substantially implemented but the real production path was incomplete. This record is preserved as historical execution evidence only and must not be used to claim that 0.2.0 passed formal acceptance.
 
 - Date: 2026-08-17
 - Branch: `codex/existing-style-v2`
@@ -26,13 +28,13 @@ All three privacy-safe samples are executed in automated tests. Known button/nav
 
 Automated 1.0→2.0 migration test passes. It preserves the legacy project/workflow snapshot, registers `main`, writes a migration log, retains legacy visuals, and does not invent font or component evidence.
 
-## Release blockers
+## Blockers reported by the original execution
 
 - blocker: 0
 - critical: 0
 - unresolved automated checks: 0
 - release-environment provider smoke: passed
 
-## Conclusion
+## Superseding conclusion
 
-Automated and real-provider release gates pass for 0.2.0. Production projects must still supply licensed fonts, approved component assets, and human visual scoring; strict backend gates intentionally block final approval until those project-specific inputs exist.
+The checks above prove unit-level control-plane behavior and Provider connectivity, but they do not prove real final PNG composition, actual FontFace rendering, real 9-slice behavior, closed-loop Repair, pixel-aware Fidelity, or real Golden Sample acceptance. Formal release remains blocked until the remediation Definition of Done is complete.

@@ -1,19 +1,21 @@
-# Existing-style continuation: 7 PR milestones
+# Audit remediation: 8 PR milestones
 
-These are dependency-ordered review units. Every PR includes tests and its directly affected documentation.
+These review units follow the dependency order required by `Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md`. Every PR must include its automated checks, error paths, directly affected documentation, real-file evidence where applicable, and an updated acceptance record.
 
-1. **Existing Mode Guardrails** — continuation mode, strict underlay prompt, provider capabilities, deterministic reference pack, no silent truncation.
-2. **Schema 2.0 and migration** — global/screen artifact paths, registry, active screen, recoverable 1.0 migration, screen-aware API.
-3. **Typography and Component Kit** — font and component contracts, asset integrity, strict approval gates, workbench boundaries.
-4. **Bindings and component-aware layout** — stable controls, 100% required coverage, component slots, layout validation, dependency invalidation.
-5. **Underlay contract, guide, critique, repair** — reserved-region contract, deterministic guide, evidence-bearing critique, bounded repair and waiver gate.
-6. **Composition and fidelity** — deterministic layer plan/rendering, typography enforcement, composition manifest, final fidelity approval.
-7. **Golden samples and release** — end-to-end fixtures, new-project regression, user docs, changelog, version 0.2.0, full release checks.
+1. **Release correction, CI, and baseline** — mark the current build as an architecture alpha, preserve the independent audit, add PR/main CI, and freeze reproducible facts without claiming formal acceptance.
+2. **Composition output and renderers** — persist real preview/final PNG output; implement exact, nine-slice, and vector-token renderer dispatch; export the verified final artifact.
+3. **Typography truth** — separate import from authorization/exact confirmation; load real font files in the renderer; record the actual loaded family; remove unsupported format claims.
+4. **Critique and Repair loop** — create review overlays, calculate deterministic image metrics, submit complete multimodal evidence, execute provider repair, and automatically re-critique the new underlay.
+5. **Pixel-aware Fidelity** — validate the real final PNG and current asset files, add layout/pixel checks, and rewrite Final Approval around the latest evidence-bearing report.
+6. **Product workbenches** — deliver Reference, Typography, Component Kit, Screen Manager, per-screen inputs, Underlay, and Fidelity workbenches without concentrating domain logic in `App.tsx`.
+7. **Unified stale and transactional migration** — make the artifact dependency graph the sole invalidation source and make schema migration atomic, recoverable, fault-injected, and idempotent.
+8. **Real Golden Samples and formal release** — run three privacy-safe real visual samples through the full chain, collect real designer signoff, complete execution-grade documentation, and restore formal release only when every Definition of Done item passes.
 
-## Cross-PR rules
+## Merge gates
 
-- Back-end gates are authoritative; UI affordances mirror them.
-- Approved artifacts are versioned and never overwritten without history.
-- Upstream changes mark only affected downstream artifacts stale.
-- Existing safety controls are retained; no new release hashes or baselines are introduced beyond artifact asset identity required for reproducible composition.
-- Real provider smoke tests are release-environment checks and cannot be replaced by mocks.
+- Do not merge a milestone until its required tests, failure paths, and directly affected documentation pass.
+- Do not substitute manifests, task JSON, synthetic detector findings, or self-reported smoke tests for required visual files and business evidence.
+- Back-end gates are authoritative; UI disabled states only mirror them.
+- Preserve unrelated local changes and exclude unrelated visual redesign or bulk formatting.
+- A later milestone may not be used to waive an unmet prerequisite; dependency failures keep downstream milestones blocked.
+- Human design scores and signatures must come from real reviewers and must never be synthesized.
