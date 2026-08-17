@@ -4,6 +4,9 @@ const { buildReferencePack } = require('./referencePack.cjs');
 const { validateArtifact } = require('./contracts.cjs');
 const { importFontAsset } = require('./typographyAssets.cjs');
 const { importComponentAsset } = require('./componentKit.cjs');
+const { validateBindings, withCoverage } = require('./componentBindings.cjs');
+const { validateLayout } = require('./layoutValidator.cjs');
+const { downstreamArtifacts } = require('./artifactDependencies.cjs');
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
@@ -30,6 +33,38 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       stale_at: new Date().toISOString(),
       stale_reason: reason
     });
+  }
+
+  function artifactValue(project, kind) {
+    const keys = {
+      'screen-contract': 'screenContract', 'component-bindings': 'bindings', 'layout-proposals': 'layouts',
+      'approved-layout': 'approvedLayout', 'style-contract': 'styleContract', 'font-manifest': 'fontManifest',
+      'component-contract': 'componentContract', 'reference-pack': 'referencePack', 'underlay-contract': 'underlayContract',
+      'underlay-critique': 'underlayCritique', 'composition-manifest': 'compositionManifest', 'fidelity-report': 'fidelityReport',
+      'visual-task': 'visualTask', 'visual-results': 'visualResults'
+    };
+    return project.artifacts[keys[kind]];
+  }
+
+  async function invalidateArtifacts(projectId, changedKind, reason = `${changedKind}_changed`) {
+    const downstream = downstreamArtifacts(changedKind);
+    if (!downstream.length) return;
+    const root = await openProject(projectId);
+    const screenIds = ['reference-inventory', 'style-contract', 'font-manifest', 'component-contract'].includes(changedKind)
+      ? (root.screens || [{ id: root.screen_id }]).filter((screen) => screen.status !== 'archived').map((screen) => screen.id)
+      : [root.screen_id];
+    const processed = new Set();
+    for (const screenId of screenIds) {
+      const screenProject = await projectStore.open(projectId, { includePreviews: false, screenId });
+      for (const kind of downstream) {
+        const global = ['reference-inventory', 'style-contract', 'font-manifest', 'component-contract'].includes(kind);
+        const key = `${kind}:${global ? 'global' : screenId}`;
+        if (processed.has(key)) continue;
+        processed.add(key);
+        const artifact = artifactValue(screenProject, kind);
+        if (artifact && artifact.status !== 'stale') await projectStore.saveArtifact(projectId, kind, { ...artifact, status: 'stale', stale_at: new Date().toISOString(), stale_reason: reason }, { screenId });
+      }
+    }
   }
 
   async function invalidateDownstream(project, stage, reason) {
@@ -91,10 +126,17 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     if (stage === 'layout_design') {
       const screen = project.artifacts.screenContract;
       if (!screen || screen.status !== 'approved') throw new Error('请先批准 Functional Screen Contract。');
+      const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
+      if (strict) {
+        if (project.artifacts.fontManifest?.status !== 'approved') throw Object.assign(new Error('Strict layout requires an approved Font Manifest.'), { code: 'FONT_MANIFEST_REQUIRED' });
+        if (project.artifacts.componentContract?.status !== 'approved') throw Object.assign(new Error('Strict layout requires an approved Component Contract.'), { code: 'COMPONENT_CONTRACT_REQUIRED' });
+        const bindingResult = validateBindings(project.artifacts.bindings, screen, project.artifacts.componentContract);
+        if (project.artifacts.bindings?.status !== 'approved' || bindingResult.errors.length) throw Object.assign(new Error(`Strict layout requires complete approved bindings: ${bindingResult.errors.join('; ')}`), { code: 'BINDING_COVERAGE_INCOMPLETE' });
+      }
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
       await invalidateDownstream(project, stage);
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
-        kind: 'layout-proposals', prompt: layoutPrompt(project, screen), imagePaths: [project.wireframe_path],
+        kind: 'layout-proposals', prompt: layoutPrompt(project, screen, { fontManifest: project.artifacts.fontManifest, componentContract: project.artifacts.componentContract, bindings: project.artifacts.bindings }), imagePaths: [project.wireframe_path],
         id: `${project.screen_id}-layout-proposals`, source: { screen_contract: screen.id, wireframe: 'inputs/wireframe', ...inputSource(project) }
       });
       await projectStore.saveArtifact(projectId, 'layout-proposals', artifact);
@@ -244,6 +286,15 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!current) throw new Error('Screen Contract does not exist.');
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'wireframe_interpretation', 'approved', `screens/${project.screen_id}/screen-contract.json`);
+    } else if (kind === 'component-bindings') {
+      const current = project.artifacts.bindings;
+      if (!current) throw new Error('Component Bindings do not exist.');
+      const covered = withCoverage(current, project.artifacts.screenContract, project.artifacts.componentContract);
+      const result = validateBindings(covered, project.artifacts.screenContract, project.artifacts.componentContract);
+      if (result.errors.length) throw Object.assign(new Error(result.errors.join('; ')), { code: 'BINDING_COVERAGE_INCOMPLETE' });
+      await invalidateArtifacts(projectId, 'component-bindings');
+      await projectStore.saveArtifact(projectId, kind, { ...covered, status: 'approved', approved_at: new Date().toISOString() });
+      await projectStore.updateWorkflow(projectId, 'component_binding', 'approved', `screens/${project.screen_id}/component-bindings.json`);
     } else if (kind === 'approved-layout') {
       const proposals = project.artifacts.layouts?.proposals || [];
       const selected = proposals.find((proposal) => proposal.id === input.proposalId);
@@ -260,8 +311,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         label: selected.name || selected.id,
         canvas_spec: project.canvas_spec,
         required_controls: project.artifacts.screenContract?.required_controls || [], proposal: selected,
+        slots: selected.slots || [],
         input_revisions: { ...(project.input_revisions || {}) }
       };
+      const layoutErrors = validateLayout(artifact, project.artifacts.bindings, project.artifacts.componentContract, project.canvas_spec, { strict: project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation' });
+      if (layoutErrors.length) throw Object.assign(new Error(layoutErrors.join('; ')), { code: 'LAYOUT_CONSTRAINT_VIOLATION' });
       await projectStore.saveArtifact(projectId, 'approved-layout', artifact);
       await projectStore.updateWorkflow(projectId, 'layout_design', 'approved', `screens/${project.screen_id}/approved-layout.json`);
     } else if (kind === 'style-contract') {
@@ -317,6 +371,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       'style-contract': { artifact: project.artifacts.styleContract, stage: 'style_resolution' },
       'font-manifest': { artifact: project.artifacts.fontManifest, stage: 'typography_resolution' },
       'component-contract': { artifact: project.artifacts.componentContract, stage: 'component_resolution' },
+      'component-bindings': { artifact: project.artifacts.bindings, stage: 'component_binding' },
       'visual-results': { artifact: project.artifacts.visualResults, stage: 'visual_exploration' }
     };
     const definition = definitions[kind];
@@ -328,12 +383,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     ));
     if (screenContractContentChanged) await invalidateDownstream(project, 'wireframe_interpretation');
     if (kind === 'style-contract') await invalidateDownstream(project, 'style_resolution');
+    if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind);
     const nextStatus = patch.status === 'rejected'
       ? 'rejected'
       : kind === 'screen-contract' && !screenContractContentChanged
         ? definition.artifact.status
         : 'reviewed';
-    const next = {
+    let next = {
       ...definition.artifact,
       ...patch,
       version: Number(definition.artifact.version || 1) + 1,
@@ -341,6 +397,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       source: { ...(definition.artifact.source || {}), edited_by: 'ui-designer' },
       edited_at: new Date().toISOString()
     };
+    if (kind === 'component-bindings') next = withCoverage(next, project.artifacts.screenContract, project.artifacts.componentContract);
     await projectStore.saveArtifact(projectId, kind, next);
     await projectStore.updateWorkflow(projectId, definition.stage, next.status, undefined, {
       progress: undefined
@@ -381,7 +438,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  return { addComponentAsset, addFontAsset, approveArtifact, cancelStage, draftRequirement, invalidateFromInputChange, runStage, updateArtifact };
+  return { addComponentAsset, addFontAsset, approveArtifact, cancelStage, draftRequirement, invalidateArtifacts, invalidateFromInputChange, runStage, updateArtifact };
 }
 
 module.exports = { createDesignPipeline };

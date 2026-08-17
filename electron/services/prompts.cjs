@@ -45,15 +45,18 @@ function intentDraftPrompt(project) {
     `Mark genuinely unknown hidden rules as needing designer confirmation instead of guessing. Do not add markdown or commentary outside JSON.`;
 }
 
-function layoutPrompt(project, screenContract) {
+function layoutPrompt(project, screenContract, context = {}) {
+  const strict = continuationMode(project) === 'existing-strict' || continuationMode(project) === 'locked-continuation';
   return `${commonEnvelope(`${project.screen_id}-layout-proposals`)}\n\n` +
     `You are a principal game UI/UX layout designer. Produce three meaningfully different layout proposals while preserving the functional contract. ` +
     `One should prioritize information efficiency, one visual impact, and one balance.\n\n` +
     `${canvasInstruction(project)} The region structure must be feasible inside this exact canvas.\n` +
     `Screen contract:\n${JSON.stringify(screenContract)}\n\n` +
+    (strict ? `Approved font roles:\n${JSON.stringify(context.fontManifest?.roles || {})}\nApproved component contract:\n${JSON.stringify(context.componentContract || {})}\nApproved bindings:\n${JSON.stringify(context.bindings || {})}\n\n` : '') +
     `Return "screen_id", "canvas_spec":${JSON.stringify(project.canvas_spec || {})} and "proposals" with exactly three objects. Each proposal needs: ` +
     `id, name, strategy, designer_fit, visual_hierarchy string[], regions object whose values have label and recommended_ratio number, ` +
     `interaction_flow string[], tradeoffs string[], and rationale array of {change,reason,impact}. ` +
+    (strict ? `Each proposal must also include slots[]. Every bound control needs exactly one slot with id matching binding.slot_id, binding_id, normalized rect{x,y,width,height}, anchor, z_index, resize_mode, safe_area_compliant, keep_clear_margin, and underlay_policy{keep_clear:true,detail_level,subject_overlap,hard_edge_overlap,text_like_shape,preferred_treatment,contrast_role,visual_noise_budget}. Respect intrinsic size, exact uniform scaling, 9-slice margins, text width, and safe areas. ` : '') +
     `Recommended ratios are directional and should total approximately 1.0. Include "designer_summary". ` +
     `Every option must use a genuinely different region structure and interaction flow, not merely different wording.`;
 }

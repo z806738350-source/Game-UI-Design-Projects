@@ -99,6 +99,7 @@ export type DesignProject = {
   workflow: WorkflowState;
   artifacts: {
     screenContract: Artifact | null;
+    bindings?: Artifact | null;
     layouts: (Artifact & { proposals?: LayoutProposal[] }) | null;
     approvedLayout: Artifact | null;
     styleContract: Artifact | null;
