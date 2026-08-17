@@ -1,0 +1,11 @@
+import { FileType2, LockKeyhole } from 'lucide-react';
+import { useState } from 'react';
+import { copilotApi } from '../../api';
+import type { DesignProject } from '../../types';
+
+type Run = (task: () => Promise<DesignProject>, options: { label: string; stage: 'style_resolution' }) => Promise<DesignProject | undefined>;
+export function TypographyWorkbench({ project, busy, run }: { project: DesignProject; busy: boolean; run: Run }) {
+  const [fontId, setFontId] = useState('ui-primary'); const [role, setRole] = useState('button-label'); const [license, setLicense] = useState(false); const [exact, setExact] = useState(false);
+  const manifest = project.artifacts.fontManifest; const fonts = (manifest?.fonts as Array<Record<string, unknown>>) || [];
+  return <article className="asset-workbench"><b><FileType2 size={16} />Typography Workbench</b><p>仅接收 OTF/TTF；批准前会核验授权、精确角色、字形覆盖和实际加载证据。</p><div className="asset-status-list">{fonts.map((font) => <span key={String(font.id)}><b>{String(font.id)}</b><small>{String(font.format)} · {String(font.actual_family || font.family || '待识别')}</small></span>)}</div><label>字体 ID<input value={fontId} onChange={(event) => setFontId(event.target.value)} /></label><label>语义角色<input value={role} onChange={(event) => setRole(event.target.value)} /></label><label><input type="checkbox" checked={license} onChange={(event) => setLicense(event.target.checked)} />我确认有权在本项目中使用</label><label><input type="checkbox" checked={exact} onChange={(event) => setExact(event.target.checked)} />该角色必须精确使用此字体</label><div><button className="button button--secondary" disabled={busy} onClick={() => run(() => copilotApi.importFontAsset(project.id, { id: fontId }), { label: '导入字体文件', stage: 'style_resolution' })}>选择字体</button><button className="button button--secondary" disabled={busy || !manifest || !license || !exact} onClick={() => run(() => copilotApi.confirmFontUsage(project.id, { fontId, roleId: role, licenseConfirmed: license, exactConfirmed: exact, identityCritical: true, requiredCoverage: ['zh_cn'] }), { label: '确认字体授权与角色', stage: 'style_resolution' })}>确认</button><button className="button button--ghost" disabled={busy || !manifest} onClick={() => run(() => copilotApi.approveArtifact(project.id, 'font-manifest'), { label: '批准字体清单', stage: 'style_resolution' })}><LockKeyhole size={14} />批准</button></div></article>;
+}

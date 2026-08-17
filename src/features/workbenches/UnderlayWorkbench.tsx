@@ -1,0 +1,5 @@
+import type { DesignProject } from '../../types';
+export function UnderlayWorkbench({ project }: { project: DesignProject }) {
+  const contract = project.artifacts.underlayContract; const critique = project.artifacts.underlayCritique; const repair = project.artifacts.underlayRepairTask;
+  return <section className="evidence-workbench"><header><span>UNDERLAY WORKBENCH</span><b>结构约束、污染证据与修复链</b></header><div>{[['Contract', contract], ['Critique', critique], ['Repair', repair]].map(([label, artifact]) => <article key={label as string}><b>{label as string}</b>{artifact ? <><small>{artifact.status} · V{String(artifact.version || 1)}</small><pre>{JSON.stringify(label === 'Critique' ? { evidence: artifact.evidence, metrics: artifact.deterministic_metrics, issues: artifact.issues } : label === 'Repair' ? { attempt: artifact.attempt, mode: artifact.repair_mode, output: artifact.output, manual_review: artifact.manual_review } : { slots: artifact.slots, layout_guide: artifact.layout_guide }, null, 2)}</pre></> : <small>尚未生成</small>}</article>)}</div></section>;
+}

@@ -85,6 +85,7 @@ function registerIpc() {
   ipcMain.handle('copilot:projects:open', (_event, projectId, options) => projectStore.open(projectId, options));
   ipcMain.handle('copilot:screens:list', (_event, projectId) => projectStore.listScreens(projectId));
   ipcMain.handle('copilot:screens:create', (_event, projectId, input) => projectStore.createScreen(projectId, input));
+  ipcMain.handle('copilot:screens:duplicate', (_event, projectId, screenId, input) => projectStore.duplicateScreen(projectId, screenId, input));
   ipcMain.handle('copilot:screens:active', (_event, projectId, screenId) => projectStore.setActiveScreen(projectId, screenId));
   ipcMain.handle('copilot:screens:update', (_event, projectId, screenId, patch) => projectStore.updateScreen(projectId, screenId, patch));
   ipcMain.handle('copilot:projects:save', async (_event, projectId, patch) => {
@@ -101,19 +102,19 @@ function registerIpc() {
     shell.showItemInFolder(path.join(project.workspacePath, 'project.json'));
     return { ok: true };
   });
-  ipcMain.handle('copilot:projects:import', async (_event, projectId, kind) => {
+  ipcMain.handle('copilot:projects:import', async (_event, projectId, kind, screenId) => {
     const selection = await dialog.showOpenDialog({
       title: kind === 'wireframe' ? '选择 UE Wireframe' : '选择批准的视觉参考',
       properties: kind === 'reference' ? ['openFile', 'multiSelections'] : ['openFile'],
       filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
     });
-    if (selection.canceled || !selection.filePaths.length) return projectStore.open(projectId);
-    const before = await projectStore.open(projectId);
+    if (selection.canceled || !selection.filePaths.length) return projectStore.open(projectId, { screenId });
+    const before = await projectStore.open(projectId, { screenId });
     let result;
-    for (const filePath of selection.filePaths) result = await projectStore.importFile(projectId, filePath, kind);
+    for (const filePath of selection.filePaths) result = await projectStore.importFile(projectId, filePath, kind, { screenId });
     if (!result) return before;
     await pipeline.invalidateFromInputChange(projectId, { wireframe: kind === 'wireframe', references: kind === 'reference' });
-    return projectStore.open(projectId);
+    return projectStore.open(projectId, { screenId });
   });
   ipcMain.handle('copilot:projects:reference', async (_event, projectId, input) => {
     await projectStore.manageReference(projectId, input);
@@ -139,18 +140,23 @@ function registerIpc() {
     if (selection.canceled || !selection.filePaths[0]) return projectStore.open(projectId);
     return pipeline.addComponentAsset(projectId, selection.filePaths[0], input);
   });
+  ipcMain.handle('copilot:components:forge-import', async (_event, projectId) => {
+    const selection = await dialog.showOpenDialog({ title: '选择 Game UI Forge Manifest', properties: ['openFile'], filters: [{ name: 'JSON Manifest', extensions: ['json'] }] });
+    if (selection.canceled || !selection.filePaths[0]) return projectStore.open(projectId);
+    return pipeline.addForgeManifest(projectId, selection.filePaths[0]);
+  });
   ipcMain.handle('copilot:pipeline:run', (_event, projectId, stage, input) => pipeline.runStage(projectId, stage, input));
-  ipcMain.handle('copilot:input:draft-requirement', (_event, projectId) => pipeline.draftRequirement(projectId));
-  ipcMain.handle('copilot:pipeline:cancel', (_event, projectId, stage) => pipeline.cancelStage(projectId, stage));
+  ipcMain.handle('copilot:input:draft-requirement', (_event, projectId, input) => pipeline.draftRequirement(projectId, input));
+  ipcMain.handle('copilot:pipeline:cancel', (_event, projectId, stage, input) => pipeline.cancelStage(projectId, stage, input));
   ipcMain.handle('copilot:pipeline:approve', (_event, projectId, kind, input) => pipeline.approveArtifact(projectId, kind, input));
   ipcMain.handle('copilot:pipeline:update', (_event, projectId, kind, patch) => pipeline.updateArtifact(projectId, kind, patch));
-  ipcMain.handle('copilot:underlay:contract', (_event, projectId) => pipeline.createUnderlayContract(projectId));
-  ipcMain.handle('copilot:underlay:guide', (_event, projectId) => pipeline.createLayoutGuide(projectId));
+  ipcMain.handle('copilot:underlay:contract', (_event, projectId, input) => pipeline.createUnderlayContract(projectId, input));
+  ipcMain.handle('copilot:underlay:guide', (_event, projectId, input) => pipeline.createLayoutGuide(projectId, input));
   ipcMain.handle('copilot:underlay:critique', (_event, projectId, input) => pipeline.critiqueUnderlay(projectId, input));
   ipcMain.handle('copilot:underlay:repair', (_event, projectId, input) => pipeline.repairUnderlay(projectId, input));
   ipcMain.handle('copilot:underlay:waiver', (_event, projectId, input) => pipeline.waiveUnderlayIssue(projectId, input));
   ipcMain.handle('copilot:composition:create', (_event, projectId, input) => pipeline.composeVisual(projectId, input));
-  ipcMain.handle('copilot:fidelity:run', (_event, projectId) => pipeline.runFidelity(projectId));
+  ipcMain.handle('copilot:fidelity:run', (_event, projectId, input) => pipeline.runFidelity(projectId, input));
   ipcMain.handle('copilot:visual:export', async (_event, projectId, variationId) => {
     const project = await projectStore.open(projectId);
     const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';

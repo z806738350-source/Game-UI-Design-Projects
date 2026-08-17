@@ -78,7 +78,8 @@ test('requestArtifact repairs the previous structured draft instead of asking fo
     assert.equal(calls, 2);
     assert.match(requestPrompts[1], /INVALID_DRAFT/);
     assert.match(requestPrompts[1], /选择5名角色/);
-    assert.deepEqual(artifact.required_controls, ['保存阵容', '选择5名角色']);
+    assert.deepEqual(artifact.required_controls.map((control) => control.label), ['保存阵容', '选择5名角色']);
+    assert.deepEqual(artifact.required_controls.map((control) => control.migrated_from_label), ['保存阵容', '选择5名角色']);
   } finally {
     global.fetch = originalFetch;
   }

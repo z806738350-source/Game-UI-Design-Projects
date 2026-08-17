@@ -2,6 +2,8 @@ import { Check, Download, RefreshCw, ScanSearch, ShieldCheck, WandSparkles } fro
 import { copilotApi } from '../../api';
 import type { DesignProject } from '../../types';
 import { loadProjectExactFonts } from '../production/fontFaceLoader';
+import { FidelityWorkbench } from '../workbenches/FidelityWorkbench';
+import { UnderlayWorkbench } from '../workbenches/UnderlayWorkbench';
 
 type Run = (task: () => Promise<DesignProject>, options: { label: string; stage: 'visual_exploration' }) => Promise<DesignProject | undefined>;
 
@@ -18,6 +20,8 @@ export function StrictProductionPanel({ project, underlayId, busy, run }: { proj
   return <section className="strict-production">
     <header><div><span>STRICT PRODUCTION</span><h3>Underlay → Critique → Composition Output → Fidelity</h3>{output && <small>{String(output.path)} · {String(output.width)}×{String(output.height)} · {String(output.hash).slice(0, 20)}…</small>}</div><div>{[['Critique', critiquePassed], ['Final PNG', output?.mode === 'final'], ['Fidelity', fidelity?.status === 'passed']].map(([label, ready]) => <i className={ready ? 'is-ready' : ''} key={String(label)}>{ready && <Check size={12} />}{label}</i>)}</div></header>
     {Array.isArray(critique?.issues) && <details><summary>审查证据与问题（{critique.issues.length}）</summary><pre>{JSON.stringify({ evidence: critique.evidence, deterministic_metrics: critique.deterministic_metrics, issues: critique.issues, manual_review: critique.manual_review }, null, 2)}</pre></details>}
+    <UnderlayWorkbench project={project} />
+    <FidelityWorkbench project={project} />
     <nav>
       <button className="button button--secondary" disabled={busy || !underlayId} onClick={() => run(() => copilotApi.runUnderlayCritique(project.id, { underlayId }), { label: '自动审查 Underlay 污染', stage: 'visual_exploration' })}><ScanSearch size={15} />自动 Critique</button>
       <button className="button button--ghost" disabled={busy || !critique || critiquePassed} onClick={() => run(() => copilotApi.repairUnderlay(project.id, { attempt: Number(project.artifacts.underlayRepairTask?.attempt || 0) + 1, maxAutomaticAttempts: 2 }), { label: '执行 Underlay 修复并自动复审', stage: 'visual_exploration' })}><RefreshCw size={15} />修复并复审</button>

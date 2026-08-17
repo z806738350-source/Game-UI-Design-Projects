@@ -169,22 +169,22 @@ test('strict pipeline persists final output and final approval fails when its PN
     await projectStore.saveArtifact(project.id, 'underlay-critique', { ...base, id: 'critique', result: 'passed', issues: [], manual_waivers: [] });
     await projectStore.saveArtifact(project.id, 'visual-results', { ...base, id: 'visuals', variations: [{ id: 'underlay-v1', image_path: relativeUnderlay }] });
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
-    project = await pipeline.composeVisual(project.id, { variationId: 'underlay-v1', mode: 'final' });
+    project = await pipeline.composeVisual(project.id, { screenId: 'main', variationId: 'underlay-v1', mode: 'final' });
     assert.equal(project.artifacts.compositionOutput.mode, 'final');
     assert.equal(project.artifacts.compositionManifest.output.hash, project.artifacts.compositionOutput.hash);
     assert.equal((await fs.stat(path.join(project.workspacePath, project.artifacts.compositionOutput.path))).isFile(), true);
-    project = await pipeline.runFidelity(project.id);
+    project = await pipeline.runFidelity(project.id, { screenId: 'main' });
     assert.equal(project.artifacts.fidelityReport.status, 'passed');
     assert.equal(project.artifacts.fidelityReport.manifest_consistency.passed, true);
     assert.equal(project.artifacts.fidelityReport.visual_fidelity.passed, true);
     assert.equal(project.artifacts.fidelityReport.evidence.check_version, 'pixel-fidelity-v1');
-    await assert.rejects(pipeline.updateArtifact(project.id, 'fidelity-report', { status: 'passed', issues: [] }), (error) => error.code === 'GENERATED_EVIDENCE_READ_ONLY');
+    await assert.rejects(pipeline.updateArtifact(project.id, 'fidelity-report', { screenId: 'main', status: 'passed', issues: [] }), (error) => error.code === 'GENERATED_EVIDENCE_READ_ONLY');
     const tamperedComponent = await sharp({ create: { width: 8, height: 8, channels: 4, background: '#00ff00ff' } }).png().toBuffer();
     await fs.writeFile(componentPath, tamperedComponent);
-    await assert.rejects(pipeline.approveArtifact(project.id, 'composition-manifest'), (error) => error.code === 'FIDELITY_CURRENT_EVIDENCE_FAILED');
+    await assert.rejects(pipeline.approveArtifact(project.id, 'composition-manifest', { screenId: 'main' }), (error) => error.code === 'FIDELITY_CURRENT_EVIDENCE_FAILED');
     await fs.writeFile(componentPath, component);
     await fs.unlink(path.join(project.workspacePath, project.artifacts.compositionOutput.path));
-    await assert.rejects(pipeline.approveArtifact(project.id, 'composition-manifest'), (error) => error.code === 'COMPOSITION_OUTPUT_INVALID');
+    await assert.rejects(pipeline.approveArtifact(project.id, 'composition-manifest', { screenId: 'main' }), (error) => error.code === 'COMPOSITION_OUTPUT_INVALID');
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

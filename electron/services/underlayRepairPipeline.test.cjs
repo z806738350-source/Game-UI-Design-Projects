@@ -31,7 +31,7 @@ async function runRepair(supportsInpaint) {
       requestJson: async (_config, input) => { critiqueInputs = input.imagePaths; return { confidence: 0.95, suspected_ui_regions: [], text_like_regions: [], slot_checks: [{ slot_id: 'primary', subject_overlap: false, background_busyness: false, contrast_conflict: false, hard_edge_crossing: false, ui_like_contamination: { detected: false, confidence: 0 } }] }; }
     };
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: client, kunpoConfig: { configured: true, imageModel: 'image-test', visionModel: 'vision-test', providerCapabilities: { supports_inpaint: supportsInpaint, max_reference_images: 6 } } });
-    const result = await pipeline.repairUnderlay(project.id, { attempt: 1, maxAutomaticAttempts: 2 });
+    const result = await pipeline.repairUnderlay(project.id, { screenId: 'main', attempt: 1, maxAutomaticAttempts: 2 });
     assert.equal(repairCall.mode, supportsInpaint ? 'inpaint' : 'regenerate');
     assert.equal(Boolean(repairCall.maskPath), supportsInpaint);
     assert.equal(critiqueInputs.length, 3);
@@ -40,7 +40,7 @@ async function runRepair(supportsInpaint) {
     assert.equal(result.artifacts.underlayRepairTask.status, 'completed');
     assert.equal(result.artifacts.underlayRepairTask.output.parent_underlay_id, 'parent');
     assert.equal(result.artifacts.visualResults.variations.length, 2);
-    await assert.rejects(pipeline.repairUnderlay(project.id, { attempt: 3, maxAutomaticAttempts: 2 }), (error) => error.code === 'UNDERLAY_REPAIR_LIMIT');
+    await assert.rejects(pipeline.repairUnderlay(project.id, { screenId: 'main', attempt: 3, maxAutomaticAttempts: 2 }), (error) => error.code === 'UNDERLAY_REPAIR_LIMIT');
     const blocked = await projectStore.open(project.id, { includePreviews: false });
     assert.equal(blocked.artifacts.underlayRepairTask.status, 'blocked');
     assert.equal(blocked.artifacts.underlayRepairTask.manual_review.required, true);

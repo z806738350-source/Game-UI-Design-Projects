@@ -25,11 +25,13 @@ function screenContractPrompt(project) {
     `Planning requirement:\n${project.requirement}\n\n` +
     `Return exactly these additional fields: ` +
     `"screen_id", "screen_name", "purpose", "primary_action", ` +
-    `"secondary_actions" string[], "required_information" string[], "required_controls" string[], ` +
+    `"secondary_actions" string[], "required_information" string[], ` +
+    `"required_controls" objects shaped exactly as {"id":"stable-kebab-id","label":"可编辑中文标签","role":"semantic-role","required":true}, ` +
     `"states" string[], "edge_cases" string[], "data_dependencies" string[], ` +
     `"design_constraints":{"function_positions_fixed":false,"element_scale_fixed":false,"ue_proportion_fixed":false,"functionality_fixed":true}, ` +
     `"source_inventory":{"requirement_functions" string[],"wireframe_controls" string[],"wireframe_information" string[]}, ` +
     `"coverage":{"covered_items" string[],"uncovered_items":[]}, "designer_summary" string. ` +
+    `Control ids are durable machine identifiers: use unique English kebab-case ids, never derive them again after creation, and keep them unchanged when labels change. ` +
     `First inventory every function, control and information item from both sources. Then make required_controls and required_information supersets of that inventory. ` +
     `Do not omit utility actions such as back, save, clear, filter, batch actions or global navigation. uncovered_items must be empty only after every source item is represented.`;
 }
@@ -61,7 +63,12 @@ function layoutPrompt(project, screenContract, context = {}) {
     `Every option must use a genuinely different region structure and interaction flow, not merely different wording.`;
 }
 
-function stylePrompt(project, approvedLayout) {
+function attachmentInstructions(referencePack) {
+  const lines = (referencePack?.selected || []).map((asset, index) => asset.attachment_description || `附件 ${index + 1}：${asset.name || asset.id}；角色：${asset.role}`);
+  return lines.length ? `Attachments are provided in this exact order. Interpret each only for its declared role:\n${lines.join('\n')}` : 'No visual reference attachments are provided.';
+}
+
+function stylePrompt(project, approvedLayout, referencePack) {
   const branch = project.project_type === 'existing'
     ? `Reconstruct the existing project's stable visual language from the attached approved reference pages. Do not invent a different art direction.`
     : `Resolve a production-ready visual direction for a new project from the broad art direction and attached inspiration references.`;
@@ -69,7 +76,7 @@ function stylePrompt(project, approvedLayout) {
     `You are a game UI art director. ${branch}\n` +
     `Project art direction: ${project.art_direction || 'derive from requirements and references'}\n` +
     `${canvasInstruction(project)}\n` +
-    `Reference roles in attachment order:\n${JSON.stringify((project.reference_assets || []).map(({ name, role }) => ({ name, role })))}\n` +
+    `${attachmentInstructions(referencePack)}\n` +
     `Approved layout:\n${JSON.stringify(approvedLayout)}\n\n` +
     `Return: "style_id", "visual_identity":{"theme","mood" string[],"keywords" string[]}, ` +
     `"colors" object with semantic color roles, "typography" object, "materials" string[], "lighting" object, ` +
@@ -89,6 +96,7 @@ function visualTask(project, approvedLayout, styleContract, variation, feedback 
       `Continuation mode: ${mode}.`,
       `Approved layout: ${JSON.stringify(approvedLayout)}`,
       `Approved style contract: ${JSON.stringify(styleContract)}`,
+      attachmentInstructions(context.referencePack),
       underlayContract ? `Underlay contract: ${JSON.stringify(underlayContract)}` : '',
       canvasInstruction(project),
       `Generate only background, character, scene, and page-specific decoration.`,
@@ -164,4 +172,4 @@ function underlayRepairPrompt(task, contract, critique) {
     `Preserve the scene identity, canvas, composition outside target regions, and all explicitly preserved regions. Return only a repaired underlay: no shared buttons, tabs, navigation, icons, panels, formal text, numbers, or labels.`;
 }
 
-module.exports = { continuationMode, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask };
+module.exports = { attachmentInstructions, continuationMode, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask };

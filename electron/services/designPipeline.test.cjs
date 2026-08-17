@@ -45,7 +45,7 @@ test('blank input is prefilled from UE and must be confirmed before contract gen
       }
     };
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: fakeClient, kunpoConfig: {} });
-    project = await pipeline.draftRequirement(project.id);
+    project = await pipeline.draftRequirement(project.id, { screenId: 'main' });
     assert.deepEqual(draftRequest.requiredStringKeys, ['requirement_draft']);
     assert.equal(draftRequest.imagePaths[0], project.wireframe_path);
     assert.equal(project.requirement_source, 'ai');
@@ -53,11 +53,11 @@ test('blank input is prefilled from UE and must be confirmed before contract gen
     assert.equal(project.workflow.current_stage, 'input');
     assert.equal(project.workflow.stages.input.status, 'reviewed');
     await assert.rejects(
-      pipeline.runStage(project.id, 'wireframe_interpretation', { stayOnInputUntilComplete: true }),
+      pipeline.runStage(project.id, 'wireframe_interpretation', { screenId: 'main', stayOnInputUntilComplete: true }),
       /确认 AI 预填的设计意图/
     );
     await projectStore.saveProject(project.id, { requirementConfirmed: true });
-    project = await pipeline.runStage(project.id, 'wireframe_interpretation', { stayOnInputUntilComplete: true });
+    project = await pipeline.runStage(project.id, 'wireframe_interpretation', { screenId: 'main', stayOnInputUntilComplete: true });
     assert.equal(stageWhileGenerating, 'input');
     assert.equal(project.workflow.current_stage, 'wireframe_interpretation');
     assert.equal(project.artifacts.screenContract.screen_name, '侠客阵容编成');
@@ -88,19 +88,19 @@ test('pipeline persists generated and approved artifacts separately', async () =
       generateImage: async () => ({ url: 'https://kunpoapiimg.ziy.cc/test.png', task_id: 'task-1' })
     };
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: fakeClient, kunpoConfig: {} });
-    project = await pipeline.runStage(project.id, 'wireframe_interpretation');
+    project = await pipeline.runStage(project.id, 'wireframe_interpretation', { screenId: 'main' });
     assert.equal(project.artifacts.screenContract.status, 'generated');
-    project = await pipeline.approveArtifact(project.id, 'screen-contract');
+    project = await pipeline.approveArtifact(project.id, 'screen-contract', { screenId: 'main' });
     assert.equal(project.artifacts.screenContract.status, 'approved');
     assert.equal(project.workflow.stages.wireframe_interpretation.status, 'approved');
     await projectStore.saveArtifact(project.id, 'layout-proposals', {
       schema_version: '1.0', id: 'layouts', version: 1, status: 'approved', source: {}, proposals: []
     });
-    project = await pipeline.updateArtifact(project.id, 'screen-contract', { review_metadata: { required_controls: ['confirmed'] } });
+    project = await pipeline.updateArtifact(project.id, 'screen-contract', { screenId: 'main', review_metadata: { required_controls: ['confirmed'] } });
     assert.equal(project.artifacts.screenContract.status, 'approved');
     assert.equal(project.artifacts.screenContract.version, 2);
     assert.equal(project.artifacts.layouts.status, 'approved');
-    project = await pipeline.updateArtifact(project.id, 'screen-contract', { purpose: 'Upgrade with a clear before/after comparison.' });
+    project = await pipeline.updateArtifact(project.id, 'screen-contract', { screenId: 'main', purpose: 'Upgrade with a clear before/after comparison.' });
     assert.equal(project.artifacts.screenContract.status, 'reviewed');
     assert.equal(project.artifacts.screenContract.version, 3);
     assert.equal(project.artifacts.screenContract.purpose, 'Upgrade with a clear before/after comparison.');
@@ -113,7 +113,7 @@ test('pipeline persists generated and approved artifacts separately', async () =
         { id: 'v2', strategy: 'expressive', image_url: 'https://kunpoapiimg.ziy.cc/v2.png' }
       ]
     });
-    project = await pipeline.approveArtifact(project.id, 'visual-results', { selectedIds: ['v1', 'v2'], mode: 'combine', notes: 'Use V2 hierarchy with V1 cards.' });
+    project = await pipeline.approveArtifact(project.id, 'visual-results', { screenId: 'main', selectedIds: ['v1', 'v2'], mode: 'combine', notes: 'Use V2 hierarchy with V1 cards.' });
     assert.equal(project.artifacts.visualResults.status, 'approved');
     assert.deepEqual(project.artifacts.visualResults.review.selected_variation_ids, ['v1', 'v2']);
     assert.equal(project.artifacts.visualResults.review.mode, 'combine');
@@ -149,7 +149,7 @@ test('portrait canvas and manual adjustments reach image generation', async () =
       generateImage: async (_config, input) => { request = input; return { url: 'https://kunpoapiimg.ziy.cc/portrait.png', task_id: 'portrait-task' }; }
     };
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: fakeClient, kunpoConfig: {} });
-    project = await pipeline.runStage(project.id, 'visual_exploration', { strategies: ['conservative'] });
+    project = await pipeline.runStage(project.id, 'visual_exploration', { screenId: 'main', strategies: ['conservative'] });
     assert.equal(request.size, '864x1536');
     assert.match(request.prompt, /1080x1920/);
     assert.match(request.prompt, /侠客列表必须位于下半屏抽屉/);
@@ -185,6 +185,30 @@ test('input invalidation marks every dependent artifact stale', async () => {
     assert.equal(project.artifacts.visualResults.status, 'stale');
     assert.equal(project.workflow.current_stage, 'input');
     assert.equal(project.workflow.stages.input.status, 'reviewed');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('screen-scoped pipeline operations reject missing or inactive screen context', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-screen-context-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const projectStore = createProjectStore();
+    const project = await projectStore.create({ name: 'Screen Context', projectType: 'new', requirement: 'Main screen.' });
+    await projectStore.createScreen(project.id, { id: 'inventory', name: 'Inventory' });
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    await assert.rejects(
+      pipeline.runStage(project.id, 'wireframe_interpretation', {}),
+      (error) => error.code === 'SCREEN_ID_REQUIRED'
+    );
+    await assert.rejects(
+      pipeline.runStage(project.id, 'wireframe_interpretation', { screenId: 'inventory' }),
+      (error) => error.code === 'SCREEN_CONTEXT_MISMATCH'
+    );
   } finally {
     if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
     else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
