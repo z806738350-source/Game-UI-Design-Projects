@@ -2,6 +2,14 @@
 
 These review units follow the dependency order required by `Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md`. Every PR must include its automated checks, error paths, directly affected documentation, real-file evidence where applicable, and an updated acceptance record.
 
+## Execution status
+
+| Milestone | Status | Evidence |
+| --- | --- | --- |
+| PR-1 | Merged | GitHub PR #2; CI passed; `main` merge `a4f1e2b`; v1.1 corrected to prerelease. |
+| PR-2 | Implemented on current review branch | `docs/baseline/pr2-composition-output.md` |
+| PR-3 – PR-8 | Pending | Must follow dependency order below. |
+
 1. **Release correction, CI, and baseline** — mark the current build as an architecture alpha, preserve the independent audit, add PR/main CI, and freeze reproducible facts without claiming formal acceptance.
 2. **Composition output and renderers** — persist real preview/final PNG output; implement exact, nine-slice, and vector-token renderer dispatch; export the verified final artifact.
 3. **Typography truth** — separate import from authorization/exact confirmation; load real font files in the renderer; record the actual loaded family; remove unsupported format claims.

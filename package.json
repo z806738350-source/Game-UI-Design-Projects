@@ -23,13 +23,14 @@
   "dependencies": {
     "lucide-react": "1.27.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "6.0.4",
     "@types/node": "25.5.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.4",
     "concurrently": "10.0.4",
     "electron": "43.2.0",
     "typescript": "7.0.2",

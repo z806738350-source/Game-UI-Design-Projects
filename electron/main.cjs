@@ -5,6 +5,7 @@ const { loadKunpoConfig, saveModelConfig } = require('./services/env.cjs');
 const kunpoClient = require('./services/kunpoClient.cjs');
 const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
+const { exportCompositionOutput, verifyCompositionOutput } = require('./services/compositionRenderer.cjs');
 
 const isDev = process.env.VITE_DEV_SERVER_URL || !app.isPackaged;
 
@@ -143,6 +144,21 @@ function registerIpc() {
   ipcMain.handle('copilot:fidelity:run', (_event, projectId) => pipeline.runFidelity(projectId));
   ipcMain.handle('copilot:visual:export', async (_event, projectId, variationId) => {
     const project = await projectStore.open(projectId);
+    const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
+    if (strict) {
+      const output = project.artifacts.compositionOutput;
+      const verification = await verifyCompositionOutput(project.workspacePath, output, { requireFinal: true });
+      if (!verification.passed) throw Object.assign(new Error(`无法导出最终成图：${verification.issues.map((item) => item.message).join('；')}`), { code: 'FINAL_EXPORT_BLOCKED' });
+      const selection = await dialog.showSaveDialog({
+        title: '导出最终合成 PNG',
+        defaultPath: `${project.name}-${project.screen_id}-final.png`,
+        filters: [{ name: 'PNG Image', extensions: ['png'] }]
+      });
+      if (selection.canceled || !selection.filePath) return { ok: false };
+      const exported = await exportCompositionOutput(project.workspacePath, output, selection.filePath);
+      shell.showItemInFolder(selection.filePath);
+      return exported;
+    }
     const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === variationId);
     if (!variation?.image_url) throw new Error('未找到可导出的视觉方案。');
     const selection = await dialog.showSaveDialog({

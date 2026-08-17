@@ -22,18 +22,22 @@ test('final composition deterministically records component and exact text prove
   assert.deepEqual(manifest.layers.map((layer) => layer.type), ['component', 'text']);
   assert.equal(manifest.layers[0].asset_hash, `sha256:${'a'.repeat(64)}`);
   assert.equal(manifest.layers[1].font_hash, `sha256:${'a'.repeat(64)}`);
-  assert.equal(manifest.renderer.engine, 'browser-canvas-2d');
+  assert.equal(manifest.renderer.engine, 'sharp-libvips');
+  assert.equal(manifest.layers[0].renderer, 'nine-slice');
 });
 
 test('fidelity passes fresh exact composition and blocks unresolved typography', () => {
   const input = fixtures();
   const manifest = createCompositionManifest({ ...input, underlay: { image_url: 'https://example.invalid/u.png' }, mode: 'final' });
-  const dependencies = [input.bindings, input.componentContract, input.fontManifest, input.layout, input.styleContract, input.critique, manifest];
-  const report = runFidelityChecks({ ...input, manifest, dependencies });
+  const output = { schema_version: '1.0', id: `${manifest.id}-output`, version: 1, status: 'generated', source: { composition_manifest: manifest.id }, mode: 'final', path: 'screens/main/compositions/final-v1.png', hash: `sha256:${'b'.repeat(64)}`, width: 1000, height: 500, renderer_version: 'test' };
+  manifest.output = { artifact_id: output.id, path: output.path, hash: output.hash, width: output.width, height: output.height };
+  const outputVerification = { passed: true, issues: [] };
+  const dependencies = [input.bindings, input.componentContract, input.fontManifest, input.layout, input.styleContract, input.critique, manifest, output];
+  const report = runFidelityChecks({ ...input, manifest, output, outputVerification, dependencies });
   assert.equal(report.status, 'passed');
   assert.equal(finalApprovalGate(report).passed, true);
   const brokenFont = structuredClone(input.fontManifest); brokenFont.roles['button-label'].fidelity_mode = 'unresolved';
-  const broken = runFidelityChecks({ ...input, fontManifest: brokenFont, manifest, dependencies });
+  const broken = runFidelityChecks({ ...input, fontManifest: brokenFont, manifest, output, outputVerification, dependencies });
   assert.ok(broken.issues.some((issue) => issue.code === 'TYPOGRAPHY_GATE_FAILED'));
   assert.equal(finalApprovalGate(broken).passed, false);
 });

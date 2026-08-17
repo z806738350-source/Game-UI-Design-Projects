@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — audit remediation PR-2
+
+- Added a real main-process PNG compositor backed by a pinned `sharp/libvips` renderer.
+- Added a persisted Composition Output artifact with path, hash, dimensions, renderer version, and per-layer diagnostics.
+- Added separate exact, nine-slice, and SVG vector-token renderers; exact rejects non-uniform/out-of-policy scaling and nine-slice preserves fixed corner patches.
+- Changed strict Electron and Web export paths to export the verified final PNG instead of the provider Underlay.
+- Made Fidelity and Final Approval reject missing, unreadable, dimension-mismatched, hash-mismatched, stale, or non-final Composition Outputs.
+- Added real-pixel renderer tests and a strict filesystem pipeline test, including deletion failure behavior.
+
 ## 0.2.0-alpha.1 — 2026-08-17
 
 - Reclassified the current build as an architecture alpha after independent remediation audit.

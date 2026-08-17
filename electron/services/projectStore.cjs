@@ -121,7 +121,7 @@ function createProjectStore(options = {}) {
     if (!project) throw new Error('Invalid project folder.');
     const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const screenPath = path.join(projectPath, 'screens', screenId);
-    const [workflow, screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
+    const [workflow, screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
       readJson(path.join(projectPath, 'workflow', 'state.json'), defaultWorkflow(project.id)),
       readJson(path.join(screenPath, 'screen-contract.json'), null),
       readJson(path.join(screenPath, 'component-bindings.json'), null),
@@ -131,6 +131,7 @@ function createProjectStore(options = {}) {
       readJson(path.join(screenPath, 'underlay-critique.json'), null),
       readJson(path.join(screenPath, 'underlay-repair-task.json'), null),
       readJson(path.join(screenPath, 'composition-manifest.json'), null),
+      readJson(path.join(screenPath, 'composition-output.json'), null),
       readJson(path.join(screenPath, 'fidelity-report.json'), null),
       readJson(path.join(projectPath, 'style', 'style-contract.json'), null),
       readJson(path.join(projectPath, 'style', 'font-manifest.json'), null),
@@ -176,7 +177,7 @@ function createProjectStore(options = {}) {
       reference_paths: reference_assets.map((asset) => asset.path),
       workflow,
       artifactHistory,
-      artifacts: { screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults }
+      artifacts: { screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults }
     };
   }
 
