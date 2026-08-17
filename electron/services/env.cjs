@@ -48,6 +48,7 @@ function readModelConfig(modelConfigPath) {
     if (!value || typeof value !== 'object') return {};
     return {
       visionModel: typeof value.visionModel === 'string' ? value.visionModel.trim() : '',
+      critiqueModel: typeof value.critiqueModel === 'string' ? value.critiqueModel.trim() : '',
       imageModel: typeof value.imageModel === 'string' ? value.imageModel.trim() : ''
     };
   } catch (error) {
@@ -61,6 +62,7 @@ function saveModelConfig(projectRoot, input, processEnv = process.env, options =
   const value = {
     schema_version: '1.0',
     visionModel: validateModelName(input?.visionModel, '视觉理解模型'),
+    critiqueModel: validateModelName(input?.critiqueModel || input?.visionModel, '视觉审查模型'),
     imageModel: validateModelName(input?.imageModel, '图像模型'),
     updated_at: new Date().toISOString()
   };
@@ -101,6 +103,7 @@ function loadKunpoConfig(projectRoot, processEnv = process.env, options = {}) {
     envSource: path.basename(envPath),
     modelSource: modelConfig.visionModel || modelConfig.imageModel ? path.basename(modelConfigPath) : path.basename(envPath),
     visionModel: modelConfig.visionModel || String(processEnv.KUNPO_VISION_MODEL || fileValues.KUNPO_VISION_MODEL || '').trim() || 'google/gemini-3.1-flash-lite',
+    critiqueModel: modelConfig.critiqueModel || String(processEnv.KUNPO_CRITIQUE_MODEL || fileValues.KUNPO_CRITIQUE_MODEL || '').trim() || modelConfig.visionModel || String(processEnv.KUNPO_VISION_MODEL || fileValues.KUNPO_VISION_MODEL || '').trim() || 'google/gemini-3.1-flash-lite',
     imageModel: modelConfig.imageModel || String(processEnv.KUNPO_IMAGE_MODEL || fileValues.KUNPO_IMAGE_MODEL || '').trim() || 'Image-GPT2'
   };
 }

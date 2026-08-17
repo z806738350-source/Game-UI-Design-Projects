@@ -148,4 +148,12 @@ function visualTask(project, approvedLayout, styleContract, variation, feedback 
   };
 }
 
-module.exports = { continuationMode, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, visualTask };
+function underlayCritiquePrompt(contract, componentContract) {
+  return `You are an independent game UI underlay reviewer. Inspect the attached underlay before any shared UI is composed.\n` +
+    `Underlay contract: ${JSON.stringify(contract)}\nComponent thumbnails and categories: ${JSON.stringify((componentContract?.families || []).map((family) => ({ id: family.id, category: family.category, intrinsic_size: family.intrinsic_size })))}\n` +
+    `Return one JSON object with confidence number 0..1, suspected_ui_regions[], text_like_regions[], and slot_checks[]. ` +
+    `Every region needs bbox [x,y,w,h], type, confidence, and reason. Every slot check needs slot_id, subject_overlap boolean, background_busyness, contrast_conflict, and ui_like_contamination{detected,type,confidence}. ` +
+    `Scan the whole canvas and every reserved slot. Treat button/tab/navigation silhouettes, fake text or numbers, subject/weapon/building crossings, and visually busy slot backgrounds as evidence. Do not return only a score.`;
+}
+
+module.exports = { continuationMode, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, visualTask };

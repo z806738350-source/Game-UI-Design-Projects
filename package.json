@@ -1,6 +1,6 @@
 {
   "name": "game-ui-design-copilot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Artifact-driven AI workflow for game UI designers.",
   "main": "electron/main.cjs",

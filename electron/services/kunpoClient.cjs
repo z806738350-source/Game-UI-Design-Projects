@@ -304,6 +304,7 @@ function safeConfig(config) {
     envSource: config.envSource,
     modelSource: config.modelSource,
     visionModel: config.visionModel,
+    critiqueModel: config.critiqueModel,
     imageModel: config.imageModel
   };
 }

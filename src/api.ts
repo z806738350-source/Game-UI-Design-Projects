@@ -122,6 +122,13 @@ function chooseImages(multiple: boolean): Promise<File[]> {
   });
 }
 
+function chooseAsset(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input'); input.type = 'file'; input.accept = accept;
+    input.addEventListener('change', () => resolve(input.files?.[0] || null), { once: true }); input.click();
+  });
+}
+
 function webApi(): DesignCopilotApi {
   const projectPath = (id: string) => `/api/projects/${encodeURIComponent(id)}`;
   return {
@@ -149,8 +156,8 @@ function webApi(): DesignCopilotApi {
       return project;
     },
     manageReference: (id, input) => request(`${projectPath(id)}/reference`, { method: 'POST', body: JSON.stringify(input) }),
-    importFontAsset: async () => { throw new Error('在线字体上传将在选择本地文件后通过安全上传接口执行。'); },
-    importComponentAsset: async () => { throw new Error('在线组件上传将在选择本地文件后通过安全上传接口执行。'); },
+    importFontAsset: async (id, input) => { const file = await chooseAsset('.otf,.ttf,.woff,.woff2'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/font?meta=${encodeURIComponent(JSON.stringify(input))}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }); },
+    importComponentAsset: async (id, input) => { const file = await chooseAsset('image/png,image/jpeg,image/webp,image/svg+xml'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/component?meta=${encodeURIComponent(JSON.stringify(input))}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }); },
     revealProject: async () => ({ ok: false }),
     runStage: (id, stage, input) => request(`${projectPath(id)}/pipeline/run`, { method: 'POST', body: JSON.stringify({ stage, input }) }),
     draftRequirement: (id) => request(`${projectPath(id)}/requirement/draft`, { method: 'POST', body: '{}' }),
@@ -193,7 +200,7 @@ function api() {
 
 export const copilotApi = {
   getConfig: (): Promise<AppConfig> => api().getConfig(),
-  saveModelConfig: (input: { visionModel: string; imageModel: string }): Promise<AppConfig> => api().saveModelConfig(input),
+  saveModelConfig: (input: { visionModel: string; critiqueModel?: string; imageModel: string }): Promise<AppConfig> => api().saveModelConfig(input),
   listProjects: (): Promise<ProjectSummary[]> => api().listProjects(),
   createProject: (input: CreateProjectInput): Promise<DesignProject> => api().createProject(input),
   duplicateProject: (id: string): Promise<DesignProject> => api().duplicateProject(id),

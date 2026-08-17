@@ -4,6 +4,7 @@ function issue(severity, type, input = {}) {
 
 function buildUnderlayCritique({ screenId, underlayId, contract, deterministic = {}, semantic = {} }) {
   const issues = [];
+  if (!semantic || !Number.isFinite(Number(semantic.confidence))) issues.push(issue('major', 'missing-semantic-evidence', { reason: 'Underlay critique must include independent semantic evidence.' }));
   for (const finding of semantic.suspected_ui_regions || []) issues.push(issue(finding.confidence >= 0.75 ? 'critical' : 'major', finding.type || 'ui-like', finding));
   for (const finding of semantic.text_like_regions || []) issues.push(issue(finding.confidence >= 0.8 ? 'critical' : 'major', 'text-like', finding));
   for (const region of contract.reserved_regions || []) {
@@ -13,7 +14,7 @@ function buildUnderlayCritique({ screenId, underlayId, contract, deterministic =
     if (semanticSlot.ui_like_contamination?.detected) issues.push(issue(semanticSlot.ui_like_contamination.confidence >= 0.75 ? 'critical' : 'major', semanticSlot.ui_like_contamination.type || 'ui-like', { slot_id: region.slot_id, bbox: region.bbox, confidence: semanticSlot.ui_like_contamination.confidence }));
     if (Number(metric.edge_density) > 0.35 || Number(metric.local_contrast) > 0.45 || Number(metric.color_complexity) > 0.6) issues.push(issue('major', 'background-busyness', { slot_id: region.slot_id, bbox: region.bbox, reason: `edge=${metric.edge_density || 0}, contrast=${metric.local_contrast || 0}, color=${metric.color_complexity || 0}` }));
   }
-  if (Number(semantic.confidence || 1) < 0.6) issues.push(issue('major', 'low-critique-confidence', { confidence: semantic.confidence, reason: 'Semantic critique confidence is below 0.6.' }));
+  if (Number.isFinite(Number(semantic.confidence)) && Number(semantic.confidence) < 0.6) issues.push(issue('major', 'low-critique-confidence', { confidence: semantic.confidence, reason: 'Semantic critique confidence is below 0.6.' }));
   const failed = issues.some((item) => ['blocker', 'critical', 'major'].includes(item.severity));
   return {
     schema_version: '2.0', id: `${screenId}-underlay-critique-${underlayId}`, version: 1, status: 'reviewed',
@@ -31,4 +32,3 @@ function reviewGate(critique) {
 }
 
 module.exports = { buildUnderlayCritique, reviewGate };
-

@@ -69,6 +69,7 @@ function registerIpc() {
   ipcMain.handle('copilot:config:models', async (_event, input) => {
     const saved = saveModelConfig(projectRoot, input, process.env, { modelConfigPath });
     kunpoConfig.visionModel = saved.visionModel;
+    kunpoConfig.critiqueModel = saved.critiqueModel;
     kunpoConfig.imageModel = saved.imageModel;
     kunpoConfig.modelSource = path.basename(saved.modelConfigPath);
     return {

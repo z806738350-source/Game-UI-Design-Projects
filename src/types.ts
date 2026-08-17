@@ -137,6 +137,7 @@ export type AppConfig = {
     envSource: string;
     modelSource?: string;
     visionModel: string;
+    critiqueModel?: string;
     imageModel: string;
   };
 };

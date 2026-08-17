@@ -5,7 +5,7 @@ type PipelineStage = 'wireframe_interpretation' | 'layout_design' | 'style_resol
 
 interface DesignCopilotApi {
   getConfig(): Promise<AppConfig>;
-  saveModelConfig(input: { visionModel: string; imageModel: string }): Promise<AppConfig>;
+  saveModelConfig(input: { visionModel: string; critiqueModel?: string; imageModel: string }): Promise<AppConfig>;
   listProjects(): Promise<ProjectSummary[]>;
   createProject(input: CreateProjectInput): Promise<DesignProject>;
   duplicateProject(projectId: string): Promise<DesignProject>;

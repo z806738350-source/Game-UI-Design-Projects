@@ -1,4 +1,4 @@
-const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, visualTask } = require('./prompts.cjs');
+const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, visualTask } = require('./prompts.cjs');
 const { providerCapabilities } = require('./providerCapabilities.cjs');
 const { buildReferencePack } = require('./referencePack.cjs');
 const { validateArtifact } = require('./contracts.cjs');
@@ -150,8 +150,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       return openProject(projectId);
     }
     if (stage === 'style_resolution') {
-      const approved = project.artifacts.approvedLayout;
-      if (!approved || approved.status !== 'approved') throw new Error('请先选择并批准布局方案。');
+      const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
+      const approved = strict ? (project.artifacts.approvedLayout?.status === 'approved' ? project.artifacts.approvedLayout : project.artifacts.screenContract) : project.artifacts.approvedLayout;
+      if (!approved || approved.status !== 'approved') throw new Error(strict ? '请先批准 Functional Screen Contract。' : '请先选择并批准布局方案。');
       if (project.project_type === 'existing' && !(project.reference_paths || []).length) throw new Error('旧项目风格重建至少需要一张已批准参考页。');
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
       await invalidateDownstream(project, stage);
@@ -397,7 +398,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       'style-contract': { artifact: project.artifacts.styleContract, stage: 'style_resolution' },
       'font-manifest': { artifact: project.artifacts.fontManifest, stage: 'typography_resolution' },
       'component-contract': { artifact: project.artifacts.componentContract, stage: 'component_resolution' },
-      'component-bindings': { artifact: project.artifacts.bindings, stage: 'component_binding' },
+      'component-bindings': { artifact: project.artifacts.bindings || { schema_version: '2.0', id: `${project.screen_id}-component-bindings`, version: 0, status: 'draft', source: {}, bindings: [], coverage: {} }, stage: 'component_binding' },
       'underlay-contract': { artifact: project.artifacts.underlayContract, stage: 'underlay_specification' },
       'composition-manifest': { artifact: project.artifacts.compositionManifest, stage: 'composition' },
       'fidelity-report': { artifact: project.artifacts.fidelityReport, stage: 'fidelity_review' },
@@ -490,7 +491,20 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const project = await openProject(projectId);
     const contract = project.artifacts.underlayContract;
     if (contract?.status !== 'approved') throw new Error('Approved Underlay Contract is required.');
-    const critique = buildUnderlayCritique({ screenId: project.screen_id, underlayId: input.underlayId || 'current', contract, deterministic: input.deterministic, semantic: input.semantic });
+    const underlayId = input.underlayId || 'current';
+    let semantic = input.semantic;
+    if (!semantic) {
+      const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === underlayId);
+      if (!variation?.image_url) throw new Error('Underlay image is required for automatic critique.');
+      const resolved = await projectStore.resolveProject(projectId);
+      const fs = require('node:fs/promises'); const path = require('node:path');
+      const response = await fetch(variation.image_url);
+      if (!response.ok) throw new Error(`Unable to download underlay for critique: ${response.status}`);
+      const localPath = path.join(resolved.workspacePath, 'screens', project.screen_id, 'underlays', `${underlayId.replace(/[^A-Za-z0-9_-]/g, '-')}.png`);
+      await fs.writeFile(localPath, Buffer.from(await response.arrayBuffer()));
+      semantic = await kunpoClient.requestJson({ ...kunpoConfig, visionModel: kunpoConfig.critiqueModel || kunpoConfig.visionModel }, { prompt: underlayCritiquePrompt(contract, project.artifacts.componentContract), imagePaths: [localPath] });
+    }
+    const critique = buildUnderlayCritique({ screenId: project.screen_id, underlayId, contract, deterministic: input.deterministic, semantic });
     await projectStore.saveArtifact(projectId, 'underlay-critique', critique);
     const gate = reviewGate(critique);
     await projectStore.updateWorkflow(projectId, 'underlay_review', gate.passed ? 'approved' : 'blocked', `screens/${project.screen_id}/underlay-critique.json`, { blocking_issues: gate.blocking.length });
