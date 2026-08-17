@@ -65,7 +65,11 @@ export type VisualVariation = {
 export type WorkflowState = {
   current_stage: string;
   stages: Record<string, { status: string; output?: string; updated_at?: string; progress?: { completed: number; total: number; message?: string } }>;
+  global_stages?: Record<string, { status: string; output?: string; updated_at?: string }>;
+  screen_stages?: Record<string, Record<string, { status: string; output?: string; updated_at?: string }>>;
 };
+
+export type ScreenEntry = { id: string; name: string; status: 'active' | 'archived'; created_at: string; updated_at: string };
 
 export type DesignProject = {
   id: string;
@@ -78,6 +82,8 @@ export type DesignProject = {
   requirement_confirmed?: boolean;
   intent_analysis?: { requirement_draft?: string; inferred_page_type?: string; inferred_rules?: string[]; uncertainties?: string[]; generated_at?: string };
   screen_id: string;
+  active_screen_id?: string;
+  screens?: ScreenEntry[];
   workspacePath: string;
   wireframe_path?: string;
   wireframe_name?: string;

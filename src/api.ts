@@ -32,6 +32,10 @@ function previewApi(): DesignCopilotApi {
       return copy;
     },
     openProject: async (id) => find(id),
+    listScreens: async (id) => ({ active_screen_id: find(id).active_screen_id || 'main', screens: find(id).screens || [] }),
+    createScreen: async (id, input) => { const project = find(id); const now = new Date().toISOString(); const screen = { id: input.id || `screen-${(project.screens?.length || 0) + 1}`, name: input.name, status: 'active' as const, created_at: now, updated_at: now }; project.screens = [...(project.screens || []), screen]; return screen; },
+    setActiveScreen: async (id, screenId) => Object.assign(find(id), { active_screen_id: screenId, screen_id: screenId }),
+    updateScreen: async (id, screenId, patch) => { const project = find(id); const screen = project.screens?.find((item) => item.id === screenId); if (!screen) throw new Error('Screen not found.'); Object.assign(screen, patch, { updated_at: new Date().toISOString() }); return screen; },
     saveProject: async (id, patch) => Object.assign(find(id), { requirement: patch.requirement ?? find(id).requirement, art_direction: patch.artDirection ?? find(id).art_direction }),
     importFile: async (id, kind) => {
       const project = find(id);
@@ -118,6 +122,10 @@ function webApi(): DesignCopilotApi {
     createProject: (input) => request('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
     duplicateProject: (id) => request(`${projectPath(id)}/duplicate`, { method: 'POST', body: '{}' }),
     openProject: (id, options) => request(`${projectPath(id)}?includePreviews=${options?.includePreviews === false ? 'false' : 'true'}`),
+    listScreens: (id) => request(`${projectPath(id)}/screens`),
+    createScreen: (id, input) => request(`${projectPath(id)}/screens`, { method: 'POST', body: JSON.stringify(input) }),
+    setActiveScreen: (id, screenId) => request(`${projectPath(id)}/screens/active`, { method: 'POST', body: JSON.stringify({ screenId }) }),
+    updateScreen: (id, screenId, patch) => request(`${projectPath(id)}/screens/${encodeURIComponent(screenId)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
     saveProject: (id, patch) => request(projectPath(id), { method: 'PATCH', body: JSON.stringify(patch) }),
     importFile: async (id, kind) => {
       const files = await chooseImages(kind === 'reference');
@@ -172,6 +180,10 @@ export const copilotApi = {
   createProject: (input: CreateProjectInput): Promise<DesignProject> => api().createProject(input),
   duplicateProject: (id: string): Promise<DesignProject> => api().duplicateProject(id),
   openProject: (id: string, options?: { includePreviews?: boolean }): Promise<DesignProject> => api().openProject(id, options),
+  listScreens: (id: string) => api().listScreens(id),
+  createScreen: (id: string, input: { id?: string; name: string }) => api().createScreen(id, input),
+  setActiveScreen: (id: string, screenId: string) => api().setActiveScreen(id, screenId),
+  updateScreen: (id: string, screenId: string, patch: { name?: string; status?: 'archived' }) => api().updateScreen(id, screenId, patch),
   saveProject: (id: string, patch: Partial<CreateProjectInput>): Promise<DesignProject> => api().saveProject(id, patch),
   importFile: (id: string, kind: 'wireframe' | 'reference'): Promise<DesignProject> => api().importFile(id, kind),
   manageReference: (id: string, input: { id: string; action: 'remove' | 'move' | 'role'; direction?: 'up' | 'down'; role?: string }): Promise<DesignProject> => api().manageReference(id, input),

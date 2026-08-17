@@ -384,7 +384,11 @@ function createApplication(environment = process.env) {
         await projectStore.manageReference(projectId, body);
         await designPipeline.invalidateFromInputChange(projectId, { references: true });
         value = await projectStore.open(projectId);
-      } else if (request.method === 'POST' && suffix === '/pipeline/run') value = await designPipeline.runStage(projectId, body.stage, body.input);
+      } else if (request.method === 'GET' && suffix === '/screens') value = await projectStore.listScreens(projectId);
+      else if (request.method === 'POST' && suffix === '/screens') value = await projectStore.createScreen(projectId, body);
+      else if (request.method === 'POST' && suffix === '/screens/active') value = await projectStore.setActiveScreen(projectId, body.screenId);
+      else if (request.method === 'PATCH' && suffix.startsWith('/screens/')) value = await projectStore.updateScreen(projectId, decodeURIComponent(suffix.slice('/screens/'.length)), body);
+      else if (request.method === 'POST' && suffix === '/pipeline/run') value = await designPipeline.runStage(projectId, body.stage, body.input);
       else if (request.method === 'POST' && suffix === '/requirement/draft') value = await designPipeline.draftRequirement(projectId);
       else if (request.method === 'POST' && suffix === '/pipeline/cancel') value = await designPipeline.cancelStage(projectId, body.stage);
       else if (request.method === 'POST' && suffix === '/pipeline/approve') value = await designPipeline.approveArtifact(projectId, body.kind, body.input);

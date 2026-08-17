@@ -10,6 +10,10 @@ interface DesignCopilotApi {
   createProject(input: CreateProjectInput): Promise<DesignProject>;
   duplicateProject(projectId: string): Promise<DesignProject>;
   openProject(projectId: string, options?: { includePreviews?: boolean }): Promise<DesignProject>;
+  listScreens(projectId: string): Promise<{ active_screen_id: string; screens: ScreenEntry[] }>;
+  createScreen(projectId: string, input: { id?: string; name: string }): Promise<ScreenEntry>;
+  setActiveScreen(projectId: string, screenId: string): Promise<DesignProject>;
+  updateScreen(projectId: string, screenId: string, patch: { name?: string; status?: 'archived' }): Promise<ScreenEntry>;
   saveProject(projectId: string, patch: Partial<CreateProjectInput>): Promise<DesignProject>;
   importFile(projectId: string, kind: 'wireframe' | 'reference'): Promise<DesignProject>;
   manageReference(projectId: string, input: { id: string; action: 'remove' | 'move' | 'role'; direction?: 'up' | 'down'; role?: string }): Promise<DesignProject>;

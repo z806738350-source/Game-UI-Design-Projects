@@ -81,6 +81,10 @@ function registerIpc() {
   ipcMain.handle('copilot:projects:create', (_event, input) => projectStore.create(input));
   ipcMain.handle('copilot:projects:duplicate', (_event, projectId) => projectStore.duplicate(projectId));
   ipcMain.handle('copilot:projects:open', (_event, projectId, options) => projectStore.open(projectId, options));
+  ipcMain.handle('copilot:screens:list', (_event, projectId) => projectStore.listScreens(projectId));
+  ipcMain.handle('copilot:screens:create', (_event, projectId, input) => projectStore.createScreen(projectId, input));
+  ipcMain.handle('copilot:screens:active', (_event, projectId, screenId) => projectStore.setActiveScreen(projectId, screenId));
+  ipcMain.handle('copilot:screens:update', (_event, projectId, screenId, patch) => projectStore.updateScreen(projectId, screenId, patch));
   ipcMain.handle('copilot:projects:save', async (_event, projectId, patch) => {
     const before = await projectStore.open(projectId);
     const saved = await projectStore.saveProject(projectId, patch);
