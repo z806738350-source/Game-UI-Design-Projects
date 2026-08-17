@@ -138,6 +138,8 @@ function registerIpc() {
   ipcMain.handle('copilot:underlay:critique', (_event, projectId, input) => pipeline.critiqueUnderlay(projectId, input));
   ipcMain.handle('copilot:underlay:repair', (_event, projectId, input) => pipeline.repairUnderlay(projectId, input));
   ipcMain.handle('copilot:underlay:waiver', (_event, projectId, input) => pipeline.waiveUnderlayIssue(projectId, input));
+  ipcMain.handle('copilot:composition:create', (_event, projectId, input) => pipeline.composeVisual(projectId, input));
+  ipcMain.handle('copilot:fidelity:run', (_event, projectId) => pipeline.runFidelity(projectId));
   ipcMain.handle('copilot:visual:export', async (_event, projectId, variationId) => {
     const project = await projectStore.open(projectId);
     const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === variationId);

@@ -85,6 +85,8 @@ function previewApi(): DesignCopilotApi {
     runUnderlayCritique: async (id) => find(id),
     repairUnderlay: async (id) => find(id),
     approveUnderlayWaiver: async (id) => find(id),
+    composeVisual: async (id) => find(id),
+    runFidelity: async (id) => find(id),
     exportVisual: async () => ({ ok: true })
   };
 }
@@ -160,6 +162,8 @@ function webApi(): DesignCopilotApi {
     runUnderlayCritique: (id, input) => request(`${projectPath(id)}/underlay/critique`, { method: 'POST', body: JSON.stringify(input) }),
     repairUnderlay: (id, input) => request(`${projectPath(id)}/underlay/repair`, { method: 'POST', body: JSON.stringify(input) }),
     approveUnderlayWaiver: (id, input) => request(`${projectPath(id)}/underlay/waiver`, { method: 'POST', body: JSON.stringify(input) }),
+    composeVisual: (id, input) => request(`${projectPath(id)}/composition`, { method: 'POST', body: JSON.stringify(input) }),
+    runFidelity: (id) => request(`${projectPath(id)}/fidelity`, { method: 'POST', body: '{}' }),
     exportVisual: async (id, variationId) => {
       const anchor = document.createElement('a');
       anchor.href = `${projectPath(id)}/visual/${encodeURIComponent(variationId)}`;
@@ -207,13 +211,15 @@ export const copilotApi = {
   runStage: (id: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject> => api().runStage(id, stage, input),
   draftRequirement: (id: string): Promise<DesignProject> => api().draftRequirement(id),
   cancelStage: (id: string, stage: PipelineStage): Promise<DesignProject> => api().cancelStage(id, stage),
-  approveArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
+  approveArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'composition-manifest' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
   updateArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => api().updateArtifact(id, kind, patch),
   generateUnderlayContract: (id: string) => api().generateUnderlayContract(id),
   generateLayoutGuide: (id: string) => api().generateLayoutGuide(id),
   runUnderlayCritique: (id: string, input: Record<string, unknown>) => api().runUnderlayCritique(id, input),
   repairUnderlay: (id: string, input: Record<string, unknown>) => api().repairUnderlay(id, input),
   approveUnderlayWaiver: (id: string, input: { issueId: string; reason: string }) => api().approveUnderlayWaiver(id, input),
+  composeVisual: (id: string, input: { variationId?: string; mode: 'preview' | 'final' }) => api().composeVisual(id, input),
+  runFidelity: (id: string) => api().runFidelity(id),
   exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId),
   logout: () => api().logout ? api().logout!() : Promise.resolve({ ok: true })
 };

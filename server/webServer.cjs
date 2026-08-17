@@ -398,6 +398,8 @@ function createApplication(environment = process.env) {
       else if (request.method === 'POST' && suffix === '/underlay/critique') value = await designPipeline.critiqueUnderlay(projectId, body);
       else if (request.method === 'POST' && suffix === '/underlay/repair') value = await designPipeline.repairUnderlay(projectId, body);
       else if (request.method === 'POST' && suffix === '/underlay/waiver') value = await designPipeline.waiveUnderlayIssue(projectId, body);
+      else if (request.method === 'POST' && suffix === '/composition') value = await designPipeline.composeVisual(projectId, body);
+      else if (request.method === 'POST' && suffix === '/fidelity') value = await designPipeline.runFidelity(projectId);
       else if (request.method === 'GET' && suffix.startsWith('/visual/')) {
         const variationId = decodeURIComponent(suffix.slice('/visual/'.length));
         const project = await projectStore.open(projectId, { includePreviews: false });

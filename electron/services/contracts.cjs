@@ -1,4 +1,4 @@
-const ARTIFACT_STATUS = new Set(['draft', 'generated', 'reviewed', 'approved', 'rejected', 'stale']);
+const ARTIFACT_STATUS = new Set(['draft', 'generated', 'reviewed', 'approved', 'rejected', 'stale', 'passed']);
 const { validateFontManifest } = require('./typographyAssets.cjs');
 const { validateComponentContract } = require('./componentKit.cjs');
 

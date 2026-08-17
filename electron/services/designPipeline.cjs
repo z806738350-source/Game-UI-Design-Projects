@@ -11,6 +11,8 @@ const { generateUnderlayContract } = require('./underlayContract.cjs');
 const { writeLayoutGuide } = require('./layoutGuideRenderer.cjs');
 const { buildUnderlayCritique, reviewGate } = require('./underlayCritique.cjs');
 const { planRepairTask } = require('./underlayRepair.cjs');
+const { createCompositionManifest } = require('./compositor.cjs');
+const { finalApprovalGate, runFidelityChecks } = require('./fidelity.cjs');
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
@@ -311,6 +313,14 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       await invalidateArtifacts(projectId, 'underlay-contract');
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'underlay_specification', 'approved', `screens/${project.screen_id}/underlay-contract.json`);
+    } else if (kind === 'composition-manifest') {
+      const manifest = project.artifacts.compositionManifest;
+      const report = project.artifacts.fidelityReport;
+      if (!manifest || manifest.mode !== 'final') throw new Error('A final Composition Manifest is required.');
+      const gate = finalApprovalGate(report);
+      if (!gate.passed) throw Object.assign(new Error(`Final Fidelity Gate failed: ${gate.blocking.map((item) => item.message).join('; ')}`), { code: 'FIDELITY_GATE_FAILED' });
+      await projectStore.saveArtifact(projectId, 'composition-manifest', { ...manifest, status: 'approved', approved_at: new Date().toISOString() });
+      await projectStore.updateWorkflow(projectId, 'fidelity_review', 'approved', `screens/${project.screen_id}/composition-manifest.json`);
     } else if (kind === 'approved-layout') {
       const proposals = project.artifacts.layouts?.proposals || [];
       const selected = proposals.find((proposal) => proposal.id === input.proposalId);
@@ -389,6 +399,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       'component-contract': { artifact: project.artifacts.componentContract, stage: 'component_resolution' },
       'component-bindings': { artifact: project.artifacts.bindings, stage: 'component_binding' },
       'underlay-contract': { artifact: project.artifacts.underlayContract, stage: 'underlay_specification' },
+      'composition-manifest': { artifact: project.artifacts.compositionManifest, stage: 'composition' },
+      'fidelity-report': { artifact: project.artifacts.fidelityReport, stage: 'fidelity_review' },
       'visual-results': { artifact: project.artifacts.visualResults, stage: 'visual_exploration' }
     };
     const definition = definitions[kind];
@@ -511,7 +523,32 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  return { addComponentAsset, addFontAsset, approveArtifact, cancelStage, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runStage, updateArtifact, waiveUnderlayIssue };
+  async function composeVisual(projectId, input = {}) {
+    const project = await openProject(projectId);
+    const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === input.variationId) || (project.artifacts.visualResults?.variations || [])[0];
+    if (!variation?.image_url) throw new Error('Select a generated underlay before composition.');
+    const manifest = createCompositionManifest({
+      project, underlay: { source: 'provider-result', variation_id: variation.id, image_url: variation.image_url, provider_task_id: variation.provider_task_id, critique_id: project.artifacts.underlayCritique?.id },
+      layout: project.artifacts.approvedLayout, bindings: project.artifacts.bindings, componentContract: project.artifacts.componentContract,
+      fontManifest: project.artifacts.fontManifest, styleContract: project.artifacts.styleContract,
+      critique: project.artifacts.underlayCritique, mode: input.mode === 'final' ? 'final' : 'preview'
+    });
+    await projectStore.saveArtifact(projectId, 'composition-manifest', manifest);
+    await projectStore.updateWorkflow(projectId, 'composition', 'reviewed', `screens/${project.screen_id}/composition-manifest.json`);
+    return openProject(projectId);
+  }
+
+  async function runFidelity(projectId) {
+    const project = await openProject(projectId);
+    if (!project.artifacts.compositionManifest) throw new Error('Composition Manifest is required.');
+    const dependencies = [project.artifacts.styleContract, project.artifacts.fontManifest, project.artifacts.componentContract, project.artifacts.screenContract, project.artifacts.bindings, project.artifacts.approvedLayout, project.artifacts.underlayContract, project.artifacts.underlayCritique, project.artifacts.compositionManifest];
+    const report = runFidelityChecks({ project, manifest: project.artifacts.compositionManifest, bindings: project.artifacts.bindings, fontManifest: project.artifacts.fontManifest, critique: project.artifacts.underlayCritique, dependencies });
+    await projectStore.saveArtifact(projectId, 'fidelity-report', report);
+    await projectStore.updateWorkflow(projectId, 'fidelity_review', report.status === 'passed' ? 'reviewed' : 'blocked', `screens/${project.screen_id}/fidelity-report.json`, { blocking_issues: report.issues.filter((issue) => ['blocker', 'critical', 'major'].includes(issue.severity)).length });
+    return openProject(projectId);
+  }
+
+  return { addComponentAsset, addFontAsset, approveArtifact, cancelStage, composeVisual, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
 }
 
 module.exports = { createDesignPipeline };

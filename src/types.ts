@@ -1,4 +1,4 @@
-export type ArtifactStatus = 'draft' | 'generated' | 'reviewed' | 'approved' | 'rejected' | 'stale';
+export type ArtifactStatus = 'draft' | 'generated' | 'reviewed' | 'approved' | 'rejected' | 'stale' | 'passed';
 export type ContinuationMode = 'exploration' | 'existing-strict' | 'existing-guided' | 'locked-continuation';
 
 export type CanvasSpec = {
@@ -105,6 +105,8 @@ export type DesignProject = {
     underlayContract?: Artifact | null;
     underlayCritique?: Artifact | null;
     underlayRepairTask?: Artifact | null;
+    compositionManifest?: Artifact | null;
+    fidelityReport?: Artifact | null;
     styleContract: Artifact | null;
     fontManifest?: Artifact | null;
     componentContract?: Artifact | null;
