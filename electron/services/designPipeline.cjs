@@ -18,6 +18,7 @@ const { computeDeterministicMetrics, hashBuffer: hashEvidence, safePath, writeCo
 const { createCompositionManifest } = require('./compositor.cjs');
 const { renderComposition, verifyCompositionOutput } = require('./compositionRenderer.cjs');
 const { finalApprovalGate, runFidelityChecks } = require('./fidelity.cjs');
+const { inspectFidelityEvidence } = require('./fidelityInspector.cjs');
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
@@ -349,10 +350,12 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         if (manifest.output?.hash !== output?.hash || manifest.output?.path !== output?.path) messages.push('Composition Manifest does not reference the current output.');
         throw Object.assign(new Error(`Composition Output Gate failed: ${messages.join('; ')}`), { code: 'COMPOSITION_OUTPUT_INVALID' });
       }
-      if (report?.source?.composition_output !== output.id || report?.output?.hash !== output.hash) {
+      if (report?.source?.composition_output !== output.id || report?.source?.composition_manifest_version !== manifest.version || report?.source?.composition_output_version !== output.version || report?.source?.composition_output_hash !== output.hash || report?.output?.hash !== output.hash) {
         throw Object.assign(new Error('Final Fidelity Report does not verify the current Composition Output.'), { code: 'FIDELITY_OUTPUT_STALE' });
       }
-      const gate = finalApprovalGate(report);
+      const currentInspection = await inspectFidelityEvidence({ projectPath: resolved.workspacePath, project, manifest, output });
+      if (!currentInspection.passed) throw Object.assign(new Error(`Current pixel evidence failed: ${currentInspection.issues.map((item) => item.message).join('; ')}`), { code: 'FIDELITY_CURRENT_EVIDENCE_FAILED' });
+      const gate = finalApprovalGate(report, { evidenceDigest: currentInspection.evidence_digest });
       if (!gate.passed) throw Object.assign(new Error(`Final Fidelity Gate failed: ${gate.blocking.map((item) => item.message).join('; ')}`), { code: 'FIDELITY_GATE_FAILED' });
       await projectStore.saveArtifact(projectId, 'composition-manifest', { ...manifest, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'fidelity_review', 'approved', `screens/${project.screen_id}/composition-manifest.json`);
@@ -427,6 +430,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
 
   async function updateArtifact(projectId, kind, patch = {}) {
     const project = await openProject(projectId);
+    if (kind === 'composition-manifest' || kind === 'fidelity-report') throw Object.assign(new Error(`${kind} is generated evidence and cannot be edited.`), { code: 'GENERATED_EVIDENCE_READ_ONLY' });
     if (kind === 'font-manifest' && (Object.prototype.hasOwnProperty.call(patch, 'fonts') || Object.prototype.hasOwnProperty.call(patch, 'roles'))) {
       throw Object.assign(new Error('Font files, authorization, and exact roles must be changed through the dedicated import and confirmation actions.'), { code: 'FONT_CONFIRMATION_ACTION_REQUIRED' });
     }
@@ -658,8 +662,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     if (!project.artifacts.compositionManifest) throw new Error('Composition Manifest is required.');
     const resolved = await projectStore.resolveProject(projectId);
     const outputVerification = await verifyCompositionOutput(resolved.workspacePath, project.artifacts.compositionOutput, { requireFinal: project.artifacts.compositionManifest.mode === 'final' });
+    const inspection = await inspectFidelityEvidence({ projectPath: resolved.workspacePath, project, manifest: project.artifacts.compositionManifest, output: project.artifacts.compositionOutput });
     const dependencies = [project.artifacts.styleContract, project.artifacts.fontManifest, project.artifacts.componentContract, project.artifacts.screenContract, project.artifacts.bindings, project.artifacts.approvedLayout, project.artifacts.underlayContract, project.artifacts.underlayCritique, project.artifacts.compositionManifest, project.artifacts.compositionOutput];
-    const report = runFidelityChecks({ project, manifest: project.artifacts.compositionManifest, output: project.artifacts.compositionOutput, outputVerification, bindings: project.artifacts.bindings, fontManifest: project.artifacts.fontManifest, critique: project.artifacts.underlayCritique, dependencies });
+    const report = runFidelityChecks({ project, manifest: project.artifacts.compositionManifest, output: project.artifacts.compositionOutput, outputVerification, inspection, bindings: project.artifacts.bindings, fontManifest: project.artifacts.fontManifest, critique: project.artifacts.underlayCritique, dependencies });
+    report.version = Number(project.artifacts.fidelityReport?.version || 0) + 1;
+    report.checked_at = new Date().toISOString();
     await projectStore.saveArtifact(projectId, 'fidelity-report', report);
     await projectStore.updateWorkflow(projectId, 'fidelity_review', report.status === 'passed' ? 'reviewed' : 'blocked', `screens/${project.screen_id}/fidelity-report.json`, { blocking_issues: report.issues.filter((issue) => ['blocker', 'critical', 'major'].includes(issue.severity)).length });
     return openProject(projectId);

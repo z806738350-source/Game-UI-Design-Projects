@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const fsSync = require('node:fs');
 const sharp = require('sharp');
 const { createDesignPipeline } = require('./designPipeline.cjs');
 const { createProjectStore } = require('./projectStore.cjs');
@@ -15,6 +16,7 @@ const {
   vectorTokenRenderer,
   verifyCompositionOutput
 } = require('./compositionRenderer.cjs');
+const { inspectFont } = require('./typographyAssets.cjs');
 
 async function temporaryProject(prefix) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -159,7 +161,10 @@ test('strict pipeline persists final output and final approval fails when its PN
     await projectStore.saveArtifact(project.id, 'component-contract', { ...base, id: 'components', families: [{ id: 'icon.exact', category: 'icon', status: 'approved', reuse_mode: 'exact', text_policy: 'none', intrinsic_size: [8, 8], scale_policy: { min_scale: 1, max_scale: 1 }, states: { default: { asset_path: 'style/components/icon.png', asset_hash: hashBuffer(component) } } }] });
     await projectStore.saveArtifact(project.id, 'approved-layout', { ...base, id: 'layout', slots: [{ id: 'icon-slot', rect: { x: 0.25, y: 0.25, width: 0.25, height: 0.5 }, z_index: 1, underlay_policy: { keep_clear: true } }] });
     await projectStore.saveArtifact(project.id, 'style-contract', { ...base, id: 'style', typography: {} });
-    await projectStore.saveArtifact(project.id, 'font-manifest', { ...base, id: 'fonts', fonts: [{ id: 'ui', family_name: 'Unused UI', postscript_name: 'UnusedUI-Regular', format: 'ttf', local_path: 'style/fonts/ui.ttf', file_hash: `sha256:${'c'.repeat(64)}`, license_status: 'confirmed', license_confirmation: { confirmed: true }, coverage: {} }], roles: {} });
+    const systemFont = ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf', '/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf'].find((candidate) => fsSync.existsSync(candidate));
+    assert.ok(systemFont, 'a real system TTF is required');
+    const fontPath = path.join(project.workspacePath, 'style', 'fonts', 'ui.ttf'); await fs.mkdir(path.dirname(fontPath), { recursive: true }); await fs.copyFile(systemFont, fontPath); const font = await inspectFont(fontPath);
+    await projectStore.saveArtifact(project.id, 'font-manifest', { ...base, id: 'fonts', fonts: [{ id: 'ui', family_name: font.family_name, postscript_name: font.postscript_name, format: 'ttf', local_path: 'style/fonts/ui.ttf', file_hash: font.file_hash, license_status: 'confirmed', license_confirmation: { confirmed: true }, coverage: font.coverage }], roles: {} });
     await projectStore.saveArtifact(project.id, 'underlay-contract', { ...base, id: 'underlay-contract' });
     await projectStore.saveArtifact(project.id, 'underlay-critique', { ...base, id: 'critique', result: 'passed', issues: [], manual_waivers: [] });
     await projectStore.saveArtifact(project.id, 'visual-results', { ...base, id: 'visuals', variations: [{ id: 'underlay-v1', image_path: relativeUnderlay }] });
@@ -170,6 +175,14 @@ test('strict pipeline persists final output and final approval fails when its PN
     assert.equal((await fs.stat(path.join(project.workspacePath, project.artifacts.compositionOutput.path))).isFile(), true);
     project = await pipeline.runFidelity(project.id);
     assert.equal(project.artifacts.fidelityReport.status, 'passed');
+    assert.equal(project.artifacts.fidelityReport.manifest_consistency.passed, true);
+    assert.equal(project.artifacts.fidelityReport.visual_fidelity.passed, true);
+    assert.equal(project.artifacts.fidelityReport.evidence.check_version, 'pixel-fidelity-v1');
+    await assert.rejects(pipeline.updateArtifact(project.id, 'fidelity-report', { status: 'passed', issues: [] }), (error) => error.code === 'GENERATED_EVIDENCE_READ_ONLY');
+    const tamperedComponent = await sharp({ create: { width: 8, height: 8, channels: 4, background: '#00ff00ff' } }).png().toBuffer();
+    await fs.writeFile(componentPath, tamperedComponent);
+    await assert.rejects(pipeline.approveArtifact(project.id, 'composition-manifest'), (error) => error.code === 'FIDELITY_CURRENT_EVIDENCE_FAILED');
+    await fs.writeFile(componentPath, component);
     await fs.unlink(path.join(project.workspacePath, project.artifacts.compositionOutput.path));
     await assert.rejects(pipeline.approveArtifact(project.id, 'composition-manifest'), (error) => error.code === 'COMPOSITION_OUTPUT_INVALID');
   } finally {

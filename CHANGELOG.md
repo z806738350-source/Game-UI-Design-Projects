@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased — audit remediation PR-4
+## Unreleased — audit remediation PR-5
+
+- Added an asynchronous pixel Fidelity inspector that decodes the persisted final PNG and verifies format, dimensions, alpha, visible pixels, file hash, canvas, and output version.
+- Re-hashes every current component and font file and re-parses font identity instead of trusting Manifest-shaped hashes.
+- Added rendered crop hashes, bbox, overlap, declared safe-area, text ink-boundary, and nine-slice fixed-corner checks.
+- Split reports into Manifest Consistency and Visual Fidelity, with versioned checks, thresholds, evidence files, and a deterministic evidence digest.
+- Made generated Composition Manifest/Fidelity Report artifacts read-only through the edit API.
+- Final Approval now re-runs current pixel/asset inspection and accepts only a passing latest report with an identical evidence digest.
+
+## Audit remediation PR-4
 
 - Added persisted Review Overlay PNGs with slot/protected-region labels and post-review semantic annotations.
 - Added production pixel metrics for edge density, local contrast, color complexity, highlight density, and hard-edge crossings.
