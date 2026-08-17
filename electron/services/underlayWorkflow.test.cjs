@@ -24,12 +24,30 @@ test('underlay contract produces a real grayscale PNG layout guide with provenan
 
 test('critique blocks known UI contamination and bounded repair uses provider capability', () => {
   const contract = contractFixture();
-  const critique = buildUnderlayCritique({ screenId: 'main', underlayId: 'u1', contract, deterministic: { slots: { 'bottom-primary': { edge_density: 0.5 } } }, semantic: { confidence: 0.9, suspected_ui_regions: [{ type: 'navigation-like', confidence: 0.86, bbox: [0, 0.9, 1, 0.1] }] } });
+  const evidence = { underlay: { hash: `sha256:${'a'.repeat(64)}` }, overlay: { hash: `sha256:${'b'.repeat(64)}` }, component_board: { hash: `sha256:${'c'.repeat(64)}` } };
+  const critique = buildUnderlayCritique({ screenId: 'main', underlayId: 'u1', contract, evidence, deterministic: { slots: { 'bottom-primary': { edge_density: 0.5 } } }, semantic: { confidence: 0.9, suspected_ui_regions: [{ type: 'navigation-like', confidence: 0.86, bbox: [0, 0.9, 1, 0.1] }] } });
   assert.equal(critique.result, 'failed');
   assert.equal(reviewGate(critique).passed, false);
   const repair = planRepairTask(critique, { supports_inpaint: true }, { attempt: 1 });
   assert.equal(repair.repair_mode, 'inpaint');
   assert.throws(() => planRepairTask(critique, { supports_inpaint: false }, { attempt: 3, maxAutomaticAttempts: 2 }), /limit reached/);
+});
+
+test('semantic busyness, contrast, hard-edge, and low confidence become blocking issues', () => {
+  const contract = contractFixture();
+  const evidence = { underlay: { hash: 'h' }, overlay: { hash: 'o' }, component_board: { hash: 'c' } };
+  const critique = buildUnderlayCritique({ screenId: 'main', underlayId: 'u2', contract, evidence, semantic: { confidence: 0.4, text_like_regions: [{ type: 'fake-text', confidence: 0.9, bbox: [0.2, 0.8, 0.2, 0.1] }], slot_checks: [{ slot_id: 'bottom-primary', subject_overlap: true, background_busyness: true, contrast_conflict: true, hard_edge_crossing: true }] } });
+  assert.equal(critique.result, 'manual-review');
+  assert.equal(critique.manual_review.required, true);
+  assert.deepEqual(new Set(critique.issues.map((item) => item.type)), new Set(['text-like', 'subject-overlap', 'background-busyness', 'contrast-conflict', 'hard-edge-crossing', 'low-critique-confidence']));
+  assert.equal(reviewGate(critique).passed, false);
+});
+
+test('strict critique cannot pass with only an Underlay and no overlay/component evidence', () => {
+  const critique = buildUnderlayCritique({ screenId: 'main', underlayId: 'u3', contract: contractFixture(), evidence: { underlay: { hash: 'only-underlay' } }, semantic: { confidence: 0.95, suspected_ui_regions: [], text_like_regions: [], slot_checks: [] } });
+  assert.equal(critique.result, 'manual-review');
+  assert.ok(critique.issues.some((item) => item.type === 'incomplete-review-inputs'));
+  assert.equal(reviewGate(critique).passed, false);
 });
 
 test('waiver must be explicit and applies by stable issue id', () => {

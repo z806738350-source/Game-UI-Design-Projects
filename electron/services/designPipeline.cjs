@@ -1,4 +1,7 @@
-const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, visualTask } = require('./prompts.cjs');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const sharp = require('sharp');
+const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask } = require('./prompts.cjs');
 const { providerCapabilities } = require('./providerCapabilities.cjs');
 const { buildReferencePack } = require('./referencePack.cjs');
 const { validateArtifact } = require('./contracts.cjs');
@@ -10,7 +13,8 @@ const { downstreamArtifacts } = require('./artifactDependencies.cjs');
 const { generateUnderlayContract } = require('./underlayContract.cjs');
 const { writeLayoutGuide } = require('./layoutGuideRenderer.cjs');
 const { buildUnderlayCritique, reviewGate } = require('./underlayCritique.cjs');
-const { planRepairTask } = require('./underlayRepair.cjs');
+const { executeRepairTask, planRepairTask } = require('./underlayRepair.cjs');
+const { computeDeterministicMetrics, hashBuffer: hashEvidence, safePath, writeComponentBoard, writeRepairMask, writeReviewOverlay } = require('./underlayReview.cjs');
 const { createCompositionManifest } = require('./compositor.cjs');
 const { renderComposition, verifyCompositionOutput } = require('./compositionRenderer.cjs');
 const { finalApprovalGate, runFidelityChecks } = require('./fidelity.cjs');
@@ -18,6 +22,24 @@ const { finalApprovalGate, runFidelityChecks } = require('./fidelity.cjs');
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
   const openProject = (projectId) => projectStore.open(projectId, { includePreviews: false });
+
+  async function materializeUnderlay(project, resolved, variation) {
+    if (!variation) throw new Error('Underlay variation is required.');
+    const safeId = String(variation.id).replace(/[^A-Za-z0-9_-]/g, '-');
+    const relative = `screens/${project.screen_id}/underlays/${safeId}.png`;
+    const target = safePath(resolved.workspacePath, relative);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    let bytes;
+    if (variation.image_path) bytes = await fs.readFile(safePath(resolved.workspacePath, variation.image_path));
+    else if (variation.image_url) {
+      const response = await fetch(variation.image_url);
+      if (!response.ok) throw new Error(`Unable to download underlay evidence: ${response.status}`);
+      bytes = Buffer.from(await response.arrayBuffer());
+    } else throw new Error('Underlay image is required.');
+    const normalized = await sharp(bytes).png().toBuffer({ resolveWithObject: true });
+    await fs.writeFile(target, normalized.data);
+    return { path: relative, absolute_path: target, hash: hashEvidence(normalized.data), width: normalized.info.width, height: normalized.info.height };
+  }
 
   function inputSource(project) {
     return { input_revisions: { ...(project.input_revisions || {}) }, canvas_spec: project.canvas_spec };
@@ -524,19 +546,19 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const contract = project.artifacts.underlayContract;
     if (contract?.status !== 'approved') throw new Error('Approved Underlay Contract is required.');
     const underlayId = input.underlayId || 'current';
-    let semantic = input.semantic;
-    if (!semantic) {
-      const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === underlayId);
-      if (!variation?.image_url) throw new Error('Underlay image is required for automatic critique.');
-      const resolved = await projectStore.resolveProject(projectId);
-      const fs = require('node:fs/promises'); const path = require('node:path');
-      const response = await fetch(variation.image_url);
-      if (!response.ok) throw new Error(`Unable to download underlay for critique: ${response.status}`);
-      const localPath = path.join(resolved.workspacePath, 'screens', project.screen_id, 'underlays', `${underlayId.replace(/[^A-Za-z0-9_-]/g, '-')}.png`);
-      await fs.writeFile(localPath, Buffer.from(await response.arrayBuffer()));
-      semantic = await kunpoClient.requestJson({ ...kunpoConfig, visionModel: kunpoConfig.critiqueModel || kunpoConfig.visionModel }, { prompt: underlayCritiquePrompt(contract, project.artifacts.componentContract), imagePaths: [localPath] });
-    }
-    const critique = buildUnderlayCritique({ screenId: project.screen_id, underlayId, contract, deterministic: input.deterministic, semantic });
+    const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === underlayId);
+    const resolved = await projectStore.resolveProject(projectId);
+    const underlay = await materializeUnderlay(project, resolved, variation);
+    const deterministic = await computeDeterministicMetrics(underlay.absolute_path, contract);
+    const overlayInput = await writeReviewOverlay(resolved.workspacePath, project.screen_id, underlay.absolute_path, contract, {}, `${underlayId.replace(/[^A-Za-z0-9_-]/g, '-')}-review-input.png`);
+    const componentBoard = await writeComponentBoard(resolved.workspacePath, project.screen_id, project.artifacts.componentContract);
+    const prompt = underlayCritiquePrompt(contract, project.artifacts.componentContract);
+    const model = kunpoConfig.critiqueModel || kunpoConfig.visionModel;
+    const semantic = await kunpoClient.requestJson({ ...kunpoConfig, visionModel: model }, { prompt, imagePaths: [underlay.absolute_path, safePath(resolved.workspacePath, overlayInput.path), safePath(resolved.workspacePath, componentBoard.path)] });
+    const annotatedOverlay = await writeReviewOverlay(resolved.workspacePath, project.screen_id, underlay.absolute_path, contract, semantic, `${underlayId.replace(/[^A-Za-z0-9_-]/g, '-')}-review-overlay.png`);
+    const evidence = { underlay, overlay: overlayInput, annotated_overlay: annotatedOverlay, component_board: componentBoard, prompt_hash: hashEvidence(Buffer.from(prompt)), model };
+    const critique = buildUnderlayCritique({ screenId: project.screen_id, underlayId, contract, deterministic, semantic, evidence, strict: true });
+    await invalidateArtifacts(projectId, 'underlay-critique', 'underlay_recritiqued');
     await projectStore.saveArtifact(projectId, 'underlay-critique', critique);
     const gate = reviewGate(critique);
     await projectStore.updateWorkflow(projectId, 'underlay_review', gate.passed ? 'approved' : 'blocked', `screens/${project.screen_id}/underlay-critique.json`, { blocking_issues: gate.blocking.length });
@@ -546,10 +568,42 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   async function repairUnderlay(projectId, input = {}) {
     const project = await openProject(projectId);
     if (!project.artifacts.underlayCritique) throw new Error('Underlay Critique is required.');
-    const task = planRepairTask(project.artifacts.underlayCritique, providerCapabilities(kunpoConfig.providerCapabilities), input);
-    await projectStore.saveArtifact(projectId, 'underlay-repair-task', task);
+    const critique = project.artifacts.underlayCritique;
+    const capabilities = providerCapabilities(kunpoConfig.providerCapabilities);
+    let task;
+    try { task = planRepairTask(critique, capabilities, input); }
+    catch (error) {
+      if (error.code === 'UNDERLAY_REPAIR_LIMIT') {
+        const blocked = { schema_version: '2.0', id: `${critique.id}-repair-blocked`, version: 1, status: 'blocked', source: { critique: critique.id }, attempt: Number(input.attempt || 1), max_automatic_attempts: Number(input.maxAutomaticAttempts || 2), manual_review: { required: true, reason: error.message } };
+        await projectStore.saveArtifact(projectId, 'underlay-repair-task', blocked);
+        await projectStore.updateWorkflow(projectId, 'underlay_generation', 'blocked', `screens/${project.screen_id}/underlay-repair-task.json`, { manual_review: true });
+      }
+      throw error;
+    }
+    await projectStore.saveArtifact(projectId, 'underlay-repair-task', { ...task, status: 'in_progress', started_at: new Date().toISOString() });
     await projectStore.updateWorkflow(projectId, 'underlay_generation', 'in_progress', `screens/${project.screen_id}/underlay-repair-task.json`);
-    return openProject(projectId);
+    const resolved = await projectStore.resolveProject(projectId);
+    try {
+      const sourcePath = safePath(resolved.workspacePath, critique.evidence?.underlay?.path);
+      const overlayPath = safePath(resolved.workspacePath, critique.evidence?.annotated_overlay?.path || critique.evidence?.overlay?.path);
+      const componentBoardPath = safePath(resolved.workspacePath, critique.evidence?.component_board?.path);
+      const mask = task.repair_mode === 'inpaint' ? await writeRepairMask(resolved.workspacePath, project.screen_id, task, project.artifacts.underlayContract, critique.evidence.underlay.width, critique.evidence.underlay.height) : null;
+      const prompt = underlayRepairPrompt(task, project.artifacts.underlayContract, critique);
+      const result = await executeRepairTask({ task, contract: project.artifacts.underlayContract, critique, capabilities, providerClient: kunpoClient, providerConfig: kunpoConfig, sourcePath, overlayPath, componentBoardPath, maskPath: mask ? safePath(resolved.workspacePath, mask.path) : undefined, size: project.canvas_spec.generation_size, prompt });
+      const repairedId = `${critique.source.underlay}-repair-v${task.attempt}`;
+      const repaired = await materializeUnderlay(project, resolved, { id: repairedId, image_url: result.image_url });
+      const currentResults = project.artifacts.visualResults;
+      const variation = { id: repairedId, strategy: 'underlay-repair', image_url: result.image_url, image_path: repaired.path, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay, repair_task_id: task.id, repair_mode: task.repair_mode, status: 'generated', created_at: new Date().toISOString(), canvas_spec: project.canvas_spec };
+      await invalidateArtifacts(projectId, 'underlay-critique', 'underlay_repaired');
+      await projectStore.saveArtifact(projectId, 'visual-results', { ...currentResults, version: Number(currentResults.version || 1) + 1, status: 'generated', variations: [...(currentResults.variations || []), variation] });
+      await projectStore.saveArtifact(projectId, 'underlay-repair-task', { ...task, status: 'completed', completed_at: new Date().toISOString(), output: { underlay_id: repairedId, path: repaired.path, hash: repaired.hash, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay } });
+      await projectStore.updateWorkflow(projectId, 'underlay_generation', 'reviewed', `screens/${project.screen_id}/underlay-repair-task.json`);
+      return critiqueUnderlay(projectId, { underlayId: repairedId });
+    } catch (error) {
+      await projectStore.saveArtifact(projectId, 'underlay-repair-task', { ...task, status: 'failed', failed_at: new Date().toISOString(), error: { code: error.code || 'UNDERLAY_REPAIR_FAILED', message: error.message }, manual_review: { required: true } }).catch(() => undefined);
+      await projectStore.updateWorkflow(projectId, 'underlay_generation', 'blocked', `screens/${project.screen_id}/underlay-repair-task.json`, { manual_review: true }).catch(() => undefined);
+      throw error;
+    }
   }
 
   async function waiveUnderlayIssue(projectId, input = {}) {

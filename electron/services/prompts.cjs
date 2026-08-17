@@ -149,11 +149,19 @@ function visualTask(project, approvedLayout, styleContract, variation, feedback 
 }
 
 function underlayCritiquePrompt(contract, componentContract) {
-  return `You are an independent game UI underlay reviewer. Inspect the attached underlay before any shared UI is composed.\n` +
+  return `You are an independent game UI underlay reviewer. Three images are attached in order: raw Underlay, labeled Review Overlay, and approved component board. Inspect the raw pixels before any shared UI is composed.\n` +
     `Underlay contract: ${JSON.stringify(contract)}\nComponent thumbnails and categories: ${JSON.stringify((componentContract?.families || []).map((family) => ({ id: family.id, category: family.category, intrinsic_size: family.intrinsic_size })))}\n` +
     `Return one JSON object with confidence number 0..1, suspected_ui_regions[], text_like_regions[], and slot_checks[]. ` +
-    `Every region needs bbox [x,y,w,h], type, confidence, and reason. Every slot check needs slot_id, subject_overlap boolean, background_busyness, contrast_conflict, and ui_like_contamination{detected,type,confidence}. ` +
+    `Every region needs bbox [x,y,w,h], type, confidence, and reason. Every slot check needs slot_id, subject_overlap boolean, background_busyness, contrast_conflict, hard_edge_crossing, and ui_like_contamination{detected,type,confidence}. ` +
     `Scan the whole canvas and every reserved slot. Treat button/tab/navigation silhouettes, fake text or numbers, subject/weapon/building crossings, and visually busy slot backgrounds as evidence. Do not return only a score.`;
 }
 
-module.exports = { continuationMode, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, visualTask };
+function underlayRepairPrompt(task, contract, critique) {
+  return `Repair an underlay-only game UI scene. The first image is the contaminated parent Underlay, the second is its labeled Review Overlay, and the third is the approved component board.\n` +
+    `Repair mode: ${task.repair_mode}. Target reserved regions: ${JSON.stringify(task.target_regions)}. Preserve regions: ${JSON.stringify(task.preserve_regions)}.\n` +
+    `Underlay Contract: ${JSON.stringify(contract)}\nBlocking Critique evidence: ${JSON.stringify(critique.issues || [])}\n` +
+    `Instructions: ${JSON.stringify(task.instructions)}. Remove UI-like shapes, fake text/numbers, subject crossings, hard edges, excessive detail, and highlight conflicts only where required. ` +
+    `Preserve the scene identity, canvas, composition outside target regions, and all explicitly preserved regions. Return only a repaired underlay: no shared buttons, tabs, navigation, icons, panels, formal text, numbers, or labels.`;
+}
+
+module.exports = { continuationMode, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask };
