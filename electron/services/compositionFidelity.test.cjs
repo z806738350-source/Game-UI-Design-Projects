@@ -45,6 +45,7 @@ test('fidelity passes fresh exact composition and blocks unresolved typography',
   const report = runFidelityChecks({ ...input, manifest, output, outputVerification, dependencies });
   assert.equal(report.status, 'passed');
   assert.equal(finalApprovalGate(report).passed, true);
+  assert.equal(finalApprovalGate({ ...report, status: 'stale' }).passed, false);
   const brokenFont = structuredClone(input.fontManifest); brokenFont.roles['button-label'].fidelity_mode = 'unresolved';
   const broken = runFidelityChecks({ ...input, fontManifest: brokenFont, manifest, output, outputVerification, dependencies });
   assert.ok(broken.issues.some((issue) => issue.code === 'TYPOGRAPHY_GATE_FAILED'));

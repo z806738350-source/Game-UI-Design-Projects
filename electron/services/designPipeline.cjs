@@ -9,7 +9,8 @@ const { confirmFontUsage: confirmFontUsageContract, importFontAsset } = require(
 const { importComponentAsset, importForgeManifest, validateComponentAssets } = require('./componentKit.cjs');
 const { validateBindings, withCoverage } = require('./componentBindings.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
-const { downstreamArtifacts } = require('./artifactDependencies.cjs');
+const { changedKindsForInput, downstreamArtifacts, isGlobalChange } = require('./artifactDependencies.cjs');
+const { GLOBAL_ARTIFACTS } = require('./artifactRegistry.cjs');
 const { generateUnderlayContract } = require('./underlayContract.cjs');
 const { writeLayoutGuide } = require('./layoutGuideRenderer.cjs');
 const { buildUnderlayCritique, reviewGate } = require('./underlayCritique.cjs');
@@ -63,16 +64,6 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return { functional_load: functionalLoad, warnings };
   }
 
-  async function staleArtifact(projectId, kind, artifact, reason = 'upstream_artifact_regenerated') {
-    if (!artifact || artifact.status === 'stale') return;
-    await projectStore.saveArtifact(projectId, kind, {
-      ...artifact,
-      status: 'stale',
-      stale_at: new Date().toISOString(),
-      stale_reason: reason
-    });
-  }
-
   function artifactValue(project, kind) {
     const keys = {
       'screen-contract': 'screenContract', 'component-bindings': 'bindings', 'layout-proposals': 'layouts',
@@ -85,62 +76,57 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return project.artifacts[keys[kind]];
   }
 
-  async function invalidateArtifacts(projectId, changedKind, reason = `${changedKind}_changed`) {
+  const artifactStages = {
+    'reference-inventory': 'reference_analysis', 'reference-pack': 'reference_analysis',
+    'style-contract': 'style_resolution', 'font-manifest': 'typography_resolution', 'component-contract': 'component_resolution',
+    'screen-contract': 'wireframe_interpretation', 'component-bindings': 'component_binding',
+    'layout-proposals': 'layout_design', 'approved-layout': 'layout_design',
+    'underlay-contract': 'underlay_specification', 'visual-task': 'visual_exploration', 'visual-results': 'visual_exploration',
+    'underlay-critique': 'underlay_review', 'composition-manifest': 'composition', 'composition-output': 'composition',
+    'fidelity-report': 'fidelity_review'
+  };
+
+  async function invalidateArtifacts(projectId, changedKind, reason = `${changedKind}_changed`, options = {}) {
     const downstream = downstreamArtifacts(changedKind);
-    if (!downstream.length) return;
+    if (!downstream.length) return { changed_kind: changedKind, affected_screens: [], stale_artifacts: [] };
     const root = await openProject(projectId);
-    const screenIds = ['reference-inventory', 'style-contract', 'font-manifest', 'component-contract'].includes(changedKind)
+    const screenIds = isGlobalChange(changedKind)
       ? (root.screens || [{ id: root.screen_id }]).filter((screen) => screen.status !== 'archived').map((screen) => screen.id)
-      : [root.screen_id];
+      : [options.screenId || root.screen_id];
     const processed = new Set();
+    const staleArtifacts = [];
     for (const screenId of screenIds) {
       const screenProject = await projectStore.open(projectId, { includePreviews: false, screenId });
       for (const kind of downstream) {
-        const global = ['reference-inventory', 'style-contract', 'font-manifest', 'component-contract'].includes(kind);
+        const global = Boolean(GLOBAL_ARTIFACTS[kind]);
         const key = `${kind}:${global ? 'global' : screenId}`;
         if (processed.has(key)) continue;
         processed.add(key);
         const artifact = artifactValue(screenProject, kind);
-        if (artifact && artifact.status !== 'stale') await projectStore.saveArtifact(projectId, kind, { ...artifact, status: 'stale', stale_at: new Date().toISOString(), stale_reason: reason }, { screenId });
+        if (artifact && artifact.status !== 'stale') {
+          await projectStore.saveArtifact(projectId, kind, { ...artifact, status: 'stale', stale_at: new Date().toISOString(), stale_reason: reason }, { screenId });
+          const stage = artifactStages[kind];
+          if (stage) await projectStore.updateWorkflow(projectId, stage, 'stale', undefined, { screenId, progress: undefined });
+          staleArtifacts.push({ kind, scope: global ? 'global' : 'screen', ...(global ? {} : { screen_id: screenId }) });
+        }
       }
     }
-  }
-
-  async function invalidateDownstream(project, stage, reason) {
-    if (stage === 'wireframe_interpretation') {
-      await staleArtifact(project.id, 'layout-proposals', project.artifacts.layouts, reason);
-      await staleArtifact(project.id, 'approved-layout', project.artifacts.approvedLayout, reason);
-      await staleArtifact(project.id, 'style-contract', project.artifacts.styleContract, reason);
-      await staleArtifact(project.id, 'visual-task', project.artifacts.visualTask, reason);
-      await staleArtifact(project.id, 'visual-results', project.artifacts.visualResults?.variations?.length ? project.artifacts.visualResults : null, reason);
-    } else if (stage === 'layout_design') {
-      await staleArtifact(project.id, 'approved-layout', project.artifacts.approvedLayout, reason);
-      await staleArtifact(project.id, 'style-contract', project.artifacts.styleContract, reason);
-      await staleArtifact(project.id, 'visual-task', project.artifacts.visualTask, reason);
-      await staleArtifact(project.id, 'visual-results', project.artifacts.visualResults?.variations?.length ? project.artifacts.visualResults : null, reason);
-    } else if (stage === 'style_resolution') {
-      await staleArtifact(project.id, 'visual-task', project.artifacts.visualTask, reason);
-      await staleArtifact(project.id, 'visual-results', project.artifacts.visualResults?.variations?.length ? project.artifacts.visualResults : null, reason);
-    }
+    return { changed_kind: changedKind, affected_screens: screenIds, stale_artifacts: staleArtifacts };
   }
 
   async function invalidateFromInputChange(projectId, changes = {}) {
     const project = await openProject(projectId);
-    if (changes.requirement || changes.wireframe) {
-      await staleArtifact(project.id, 'screen-contract', project.artifacts.screenContract, 'project_input_changed');
-      await invalidateDownstream(project, 'wireframe_interpretation', 'project_input_changed');
-      for (const stage of ['visual_exploration', 'style_resolution', 'layout_design', 'wireframe_interpretation']) {
-        await projectStore.updateWorkflow(projectId, stage, 'stale', undefined, { progress: undefined });
-      }
-      await projectStore.updateWorkflow(projectId, 'input', project.requirement ? (project.requirement_confirmed ? 'approved' : 'reviewed') : 'draft');
-    } else if (changes.artDirection || changes.projectType || changes.references) {
-      await staleArtifact(project.id, 'style-contract', project.artifacts.styleContract, 'style_input_changed');
-      await invalidateDownstream(project, 'style_resolution', 'style_input_changed');
-      for (const stage of ['visual_exploration', 'style_resolution']) {
-        await projectStore.updateWorkflow(projectId, stage, 'stale', undefined, { progress: undefined });
-      }
+    const changedKinds = changedKindsForInput(changes);
+    const effects = [];
+    for (const changedKind of changedKinds) {
+      effects.push(await invalidateArtifacts(projectId, changedKind, `${changedKind}_changed`, { screenId: changes.screenId || project.screen_id }));
     }
-    return openProject(projectId);
+    if (changes.requirement || changes.wireframe) {
+      await projectStore.updateWorkflow(projectId, 'input', project.requirement ? (project.requirement_confirmed ? 'approved' : 'reviewed') : 'draft', undefined, { screenId: changes.screenId || project.screen_id });
+    }
+    const refreshed = await openProject(projectId, changes.screenId || project.screen_id);
+    refreshed.invalidation = { changed_kinds: changedKinds, effects };
+    return refreshed;
   }
 
   async function runStageUnsafe(projectId, stage, input = {}) {
@@ -153,7 +139,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const intentConfirmed = project.requirement_confirmed ?? Boolean(project.requirement.trim());
       if (!project.requirement.trim() || !intentConfirmed) throw new Error('请先在项目输入中确认 AI 预填的设计意图，或填写自己的补充说明。');
       await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, { keepCurrentStage: Boolean(input.stayOnInputUntilComplete) });
-      await invalidateDownstream(project, stage);
+      await invalidateArtifacts(projectId, 'screen-contract', 'screen_contract_regenerated', { screenId: project.screen_id });
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
         kind: 'screen-contract', prompt: screenContractPrompt(project), imagePaths: [project.wireframe_path],
         id: `${project.screen_id}-screen-contract`, source: { requirement: 'inputs/requirement.md', wireframe: 'inputs/wireframe', ...inputSource(project) }
@@ -173,7 +159,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         if (project.artifacts.bindings?.status !== 'approved' || bindingResult.errors.length) throw Object.assign(new Error(`Strict layout requires complete approved bindings: ${bindingResult.errors.join('; ')}`), { code: 'BINDING_COVERAGE_INCOMPLETE' });
       }
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
-      await invalidateDownstream(project, stage);
+      await invalidateArtifacts(projectId, 'layout-proposals', 'layout_proposals_regenerated', { screenId: project.screen_id });
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
         kind: 'layout-proposals', prompt: layoutPrompt(project, screen, { fontManifest: project.artifacts.fontManifest, componentContract: project.artifacts.componentContract, bindings: project.artifacts.bindings }), imagePaths: [project.wireframe_path],
         id: `${project.screen_id}-layout-proposals`, source: { screen_contract: screen.id, wireframe: 'inputs/wireframe', ...inputSource(project) }
@@ -188,7 +174,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!approved || approved.status !== 'approved') throw new Error(strict ? '请先批准 Functional Screen Contract。' : '请先选择并批准布局方案。');
       if (project.project_type === 'existing' && !(project.reference_paths || []).length) throw new Error('旧项目风格重建至少需要一张已批准参考页。');
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
-      await invalidateDownstream(project, stage);
+      await invalidateArtifacts(projectId, 'style-contract', 'style_contract_regenerated');
       const capabilities = providerCapabilities(stageConfig.providerCapabilities);
       const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'style-resolution', omissionsConfirmed: input.confirmReferenceOmissions === true });
       await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
@@ -306,7 +292,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         intentAnalysis: { ...analysis, generated_at: new Date().toISOString() }
       });
       if (project.requirement !== analysis.requirement_draft.trim()) {
-        await invalidateFromInputChange(projectId, { requirement: true });
+        await invalidateFromInputChange(projectId, { requirement: true, screenId: project.screen_id });
       }
       await projectStore.updateWorkflow(projectId, 'input', 'reviewed');
       return openProject(projectId);
@@ -385,7 +371,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!selected) throw new Error('请选择一个有效的布局方案。');
       const manualAdjustments = Array.isArray(input.manualAdjustments) ? input.manualAdjustments.map(String).filter(Boolean) : [];
       if (project.artifacts.approvedLayout?.source_proposal !== selected.id || JSON.stringify(project.artifacts.approvedLayout?.manual_adjustments || []) !== JSON.stringify(manualAdjustments)) {
-        await invalidateDownstream(project, 'layout_design');
+        await invalidateArtifacts(projectId, 'approved-layout', 'approved_layout_changed', { screenId: project.screen_id });
       }
       const artifact = {
         schema_version: '1.0', id: `${project.screen_id}-approved-layout-v1`, version: 1, status: 'approved',
@@ -478,9 +464,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       Object.prototype.hasOwnProperty.call(artifactPatch, key)
       && JSON.stringify(artifactPatch[key]) !== JSON.stringify(definition.artifact[key])
     ));
-    if (screenContractContentChanged) await invalidateDownstream(project, 'wireframe_interpretation');
-    if (kind === 'style-contract') await invalidateDownstream(project, 'style_resolution');
-    if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind);
+    if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
     const nextStatus = artifactPatch.status === 'rejected'
       ? 'rejected'
       : kind === 'screen-contract' && !screenContractContentChanged
@@ -547,6 +531,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       states: { ...(previous?.states || {}), [stateAsset.state]: stateAsset }
     };
     const families = [...(current.families || []).filter((item) => item.id !== family.id), family];
+    await invalidateArtifacts(projectId, 'component-contract', 'component_asset_imported');
     await projectStore.saveArtifact(projectId, 'component-contract', { ...current, version: Number(current.version || 0) + 1, status: 'reviewed', families, source: { ...(current.source || {}), last_import: `${family.id}:${stateAsset.state}` } });
     await projectStore.updateWorkflow(projectId, 'component_resolution', 'reviewed', 'style/component-contract.json');
     return openProject(projectId);

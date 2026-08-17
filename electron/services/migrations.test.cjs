@@ -1,15 +1,33 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { writeJson, readJson } = require('./jsonStore.cjs');
-const { migrateProjectV2 } = require('./migrations.cjs');
+const { MIGRATION_FAULT_POINTS, migrateProjectV2 } = require('./migrations.cjs');
 const { createProjectStore } = require('./projectStore.cjs');
 
 function pngHeader(width, height) {
   const bytes = Buffer.alloc(24); Buffer.from('89504e470d0a1a0a', 'hex').copy(bytes);
   bytes.writeUInt32BE(width, 16); bytes.writeUInt32BE(height, 20); return bytes;
+}
+
+async function treeDigest(root) {
+  const hash = crypto.createHash('sha256');
+  async function visit(directory, relative = '') {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      const nextRelative = path.join(relative, entry.name);
+      const absolute = path.join(directory, entry.name);
+      hash.update(`${entry.isDirectory() ? 'd' : 'f'}:${nextRelative}\0`);
+      if (entry.isDirectory()) await visit(absolute, nextRelative);
+      else hash.update(await fs.readFile(absolute));
+    }
+  }
+  await visit(root);
+  return hash.digest('hex');
 }
 
 test('schema 1 project migrates to schema 2 without inventing font or component contracts', async () => {
@@ -18,7 +36,9 @@ test('schema 1 project migrates to schema 2 without inventing font or component 
   try {
     await writeJson(path.join(projectPath, 'project.json'), { schema_version: '1.0', id: 'legacy', name: 'Legacy', project_type: 'existing', screen_id: 'main', created_at: '2025-01-01T00:00:00.000Z' });
     await writeJson(path.join(projectPath, 'workflow', 'state.json'), { schema_version: '1.0', stages: { input: { status: 'approved' }, visual_exploration: { status: 'approved' } } });
-    const result = await migrateProjectV2(projectPath);
+    await fs.mkdir(path.join(projectPath, 'legacy-assets'), { recursive: true });
+    await fs.writeFile(path.join(projectPath, 'legacy-assets', 'preserved.bin'), Buffer.from([1, 2, 3, 4]));
+    const result = await migrateProjectV2(projectPath, { transactionId: 'success' });
     assert.equal(result.migrated, true);
     const project = await readJson(path.join(projectPath, 'project.json'));
     assert.equal(project.schema_version, '2.0');
@@ -28,9 +48,50 @@ test('schema 1 project migrates to schema 2 without inventing font or component 
     const state = await readJson(path.join(projectPath, 'workflow', 'state.json'));
     assert.equal(state.global_stages.typography_resolution.status, 'blocked');
     assert.equal(state.screen_stages.main.component_binding.status, 'blocked');
-    assert.ok(await readJson(path.join(projectPath, 'workflow', 'migration-backup-v1.json')));
+    const backupPointer = await readJson(path.join(projectPath, 'workflow', 'migration-backup-v1.json'));
+    assert.equal(backupPointer.type, 'full-project-directory');
+    assert.deepEqual(await fs.readFile(path.join(result.backupPath, 'legacy-assets', 'preserved.bin')), Buffer.from([1, 2, 3, 4]));
+    const log = await readJson(path.join(projectPath, 'workflow', 'migration-log.json'));
+    assert.equal(log[0].status, 'completed');
+    assert.equal(log[0].backup, path.basename(result.backupPath));
+    const backupsBeforeRepeat = (await fs.readdir(root)).filter((name) => name.includes('.backup-v1-')).length;
+    const repeated = await migrateProjectV2(projectPath, { transactionId: 'must-not-run' });
+    assert.equal(repeated.migrated, false);
+    assert.equal((await fs.readdir(root)).filter((name) => name.includes('.backup-v1-')).length, backupsBeforeRepeat);
+    assert.deepEqual((await createProjectStore({ workspaceRoot: root }).list()).map((item) => item.id), ['legacy']);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+test('every migration write point restores the exact original tree and supports retry', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-migration-faults-'));
+  try {
+    for (const faultPoint of MIGRATION_FAULT_POINTS) {
+      const safePoint = faultPoint.replaceAll('-', '_');
+      const projectPath = path.join(root, `legacy-${safePoint}`);
+      await writeJson(path.join(projectPath, 'project.json'), { schema_version: '1.0', id: safePoint, name: safePoint, project_type: 'existing', screen_id: 'main' });
+      await writeJson(path.join(projectPath, 'workflow', 'state.json'), { schema_version: '1.0', stages: { input: { status: 'approved' } } });
+      await fs.mkdir(path.join(projectPath, 'nested'), { recursive: true });
+      await fs.writeFile(path.join(projectPath, 'nested', 'evidence.bin'), Buffer.from(`evidence:${faultPoint}`));
+      const before = await treeDigest(projectPath);
+      await assert.rejects(
+        migrateProjectV2(projectPath, { transactionId: `fault-${safePoint}`, faultAt: faultPoint }),
+        (error) => error.code === 'MIGRATION_FAULT_INJECTED' && error.migration?.restored === true
+      );
+      assert.equal(await treeDigest(projectPath), before, `${faultPoint} changed the original project tree`);
+      assert.equal((await readJson(path.join(projectPath, 'project.json'))).schema_version, '1.0');
+      const failedLog = await readJson(`${projectPath}.migration-failed.json`);
+      assert.equal(failedLog.status, 'failed');
+      assert.equal(failedLog.fault_point, faultPoint);
+      assert.equal(failedLog.recovery.restored, true);
+      assert.equal(await pathExists(path.join(root, failedLog.backup, 'nested', 'evidence.bin')), true);
+      const retried = await migrateProjectV2(projectPath, { transactionId: `retry-${safePoint}` });
+      assert.equal(retried.migrated, true);
+      assert.equal((await migrateProjectV2(projectPath)).migrated, false);
+    }
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+async function pathExists(filePath) { return Boolean(await fs.stat(filePath).catch(() => null)); }
 
 test('screen registry creates and switches independent screens', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-screens-'));
