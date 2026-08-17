@@ -1,13 +1,17 @@
 # Game UI Design Copilot
 
-面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。第一版覆盖：
+面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。0.2.0 覆盖：
 
 1. 策划需求 + UE Wireframe 输入
 2. Functional Screen Contract 生成与人工批准
 3. 三套 Layout Proposal 生成、比较与人工批准
 4. 新项目风格探索 / 已有项目风格重建
 5. Style Contract 批准与 Style Lock
-6. 2–4 个视觉探索方向生成与版本溯源
+6. 已有项目默认 `existing-strict`，新项目保留探索模式
+7. Font Manifest、Component Contract 与必要控件 100% Binding
+8. 多 Screen、Schema 2.0 安全迁移与细粒度 stale 传播
+9. Underlay Contract、结构 Guide、自动 Critique 与有限修复
+10. Canvas 2D 确定性组件/文字合成与 Final Fidelity Gate
 
 ## 本地运行
 
@@ -78,15 +82,25 @@ project/
 ├── inputs/
 │   ├── requirement.md
 │   └── wireframe.png
+├── screens/index.json
 ├── screens/main/
 │   ├── screen-contract.json
 │   ├── layout-proposals.json
 │   ├── approved-layout.json
-│   ├── visual-task.json
+│   ├── component-bindings.json
+│   ├── underlay-contract.json
+│   ├── underlay-layout-guide.png
+│   ├── underlay-critique.json
+│   ├── composition-manifest.json
+│   ├── fidelity-report.json
 │   └── explorations/results.json
 ├── style/
 │   ├── style-contract.json
-│   └── references/
+│   ├── font-manifest.json
+│   ├── component-contract.json
+│   ├── references/
+│   ├── fonts/
+│   └── components/
 └── workflow/state.json
 ```
 
@@ -108,9 +122,11 @@ Game UI Forge 负责后半段：
 
 后续合并时应共享 Project Store、Provider Client、Task Runner 和 Artifact Registry，但保留两个独立 Feature Workbench，避免形成一个巨型组件。
 
-## 暂未纳入第一版
+专项说明见 `docs/EXISTING-PROJECT-WORKFLOW.md`，执行拆分见 `docs/PR-MILESTONES.md`。
+
+## 暂未纳入 0.2.0
 
 - 正式 Figma 生产
-- 自动组件拆解、Sprite Sheet、9-slice、Atlas、引擎 JSON（由 Game UI Forge 侧承接）
+- 自动 Sprite Sheet、Atlas 与引擎 JSON（由 Game UI Forge 侧承接）
 - Seedance 视频生成（接口边界已审阅，等动效探索进入范围后接入）
 - 多租户服务器部署与任务恢复队列

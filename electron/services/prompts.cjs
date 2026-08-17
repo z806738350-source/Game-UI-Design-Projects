@@ -5,6 +5,11 @@ function commonEnvelope(id) {
     `Keep JSON keys in English, but write every human-readable value in Simplified Chinese.`;
 }
 
+function continuationMode(project) {
+  if (project.continuation_mode) return project.continuation_mode;
+  return project.project_type === 'existing' ? 'existing-strict' : 'exploration';
+}
+
 function canvasInstruction(project) {
   const spec = project.canvas_spec || { width: 1920, height: 1080, orientation: 'landscape', aspect_ratio: '16:9', generation_size: '1536x864' };
   return `Target canvas is ${spec.width}x${spec.height}, ${spec.orientation}, aspect ratio ${spec.aspect_ratio}. ` +
@@ -40,15 +45,18 @@ function intentDraftPrompt(project) {
     `Mark genuinely unknown hidden rules as needing designer confirmation instead of guessing. Do not add markdown or commentary outside JSON.`;
 }
 
-function layoutPrompt(project, screenContract) {
+function layoutPrompt(project, screenContract, context = {}) {
+  const strict = continuationMode(project) === 'existing-strict' || continuationMode(project) === 'locked-continuation';
   return `${commonEnvelope(`${project.screen_id}-layout-proposals`)}\n\n` +
     `You are a principal game UI/UX layout designer. Produce three meaningfully different layout proposals while preserving the functional contract. ` +
     `One should prioritize information efficiency, one visual impact, and one balance.\n\n` +
     `${canvasInstruction(project)} The region structure must be feasible inside this exact canvas.\n` +
     `Screen contract:\n${JSON.stringify(screenContract)}\n\n` +
+    (strict ? `Approved font roles:\n${JSON.stringify(context.fontManifest?.roles || {})}\nApproved component contract:\n${JSON.stringify(context.componentContract || {})}\nApproved bindings:\n${JSON.stringify(context.bindings || {})}\n\n` : '') +
     `Return "screen_id", "canvas_spec":${JSON.stringify(project.canvas_spec || {})} and "proposals" with exactly three objects. Each proposal needs: ` +
     `id, name, strategy, designer_fit, visual_hierarchy string[], regions object whose values have label and recommended_ratio number, ` +
     `interaction_flow string[], tradeoffs string[], and rationale array of {change,reason,impact}. ` +
+    (strict ? `Each proposal must also include slots[]. Every bound control needs exactly one slot with id matching binding.slot_id, binding_id, normalized rect{x,y,width,height}, anchor, z_index, resize_mode, safe_area_compliant, keep_clear_margin, and underlay_policy{keep_clear:true,detail_level,subject_overlap,hard_edge_overlap,text_like_shape,preferred_treatment,contrast_role,visual_noise_budget}. Respect intrinsic size, exact uniform scaling, 9-slice margins, text width, and safe areas. ` : '') +
     `Recommended ratios are directional and should total approximately 1.0. Include "designer_summary". ` +
     `Every option must use a genuinely different region structure and interaction flow, not merely different wording.`;
 }
@@ -71,7 +79,34 @@ function stylePrompt(project, approvedLayout) {
     `Descriptions must be concrete enough to reproduce across multiple screens.`;
 }
 
-function visualTask(project, approvedLayout, styleContract, variation, feedback = '') {
+function visualTask(project, approvedLayout, styleContract, variation, feedback = '', context = {}) {
+  const mode = continuationMode(project);
+  if (mode === 'existing-strict' || mode === 'existing-guided' || mode === 'locked-continuation') {
+    const strict = mode !== 'existing-guided';
+    const underlayContract = context.underlayContract || null;
+    const prompt = [
+      `Create an underlay-only game UI scene for ${project.name}.`,
+      `Continuation mode: ${mode}.`,
+      `Approved layout: ${JSON.stringify(approvedLayout)}`,
+      `Approved style contract: ${JSON.stringify(styleContract)}`,
+      underlayContract ? `Underlay contract: ${JSON.stringify(underlayContract)}` : '',
+      canvasInstruction(project),
+      `Generate only background, character, scene, and page-specific decoration.`,
+      `Do not generate shared buttons, tabs, navigation, shared icons, panels that resemble reusable controls, formal UI text, numbers, labels, or placeholder copy.`,
+      `Reserved component regions must remain visually quiet: no subject overlap, hard-edge crossing, text-like marks, or UI-like geometry.`,
+      strict ? `Shared component silhouettes and typography will be composed deterministically after generation; never redraw or reinterpret them.` : `Do not invent new shared component families; guided continuation may vary only page-specific decoration.`,
+      feedback ? `Designer feedback: ${feedback}` : ''
+    ].filter(Boolean).join('\n');
+    return {
+      schema_version: '2.0', id: `${project.screen_id}-${variation}-underlay-task`, version: 1, status: 'approved',
+      source: { approved_layout: approvedLayout.id, style_contract: styleContract.id, ...(underlayContract ? { underlay_contract: underlayContract.id } : {}) },
+      task_id: `${project.screen_id}-${variation}-underlay-v1`, screen_id: project.screen_id,
+      continuation_mode: mode, production_mode: 'underlay-only', variation_strategy: variation,
+      generate: ['background', 'character', 'scene', 'page-specific-decoration'],
+      must_not_generate: ['shared-buttons', 'shared-tabs', 'shared-navigation', 'shared-icons', 'formal-ui-text'],
+      canvas_spec: project.canvas_spec, prompt
+    };
+  }
   const strategies = {
     conservative: 'Conservative inheritance: strict grid, restrained decoration, familiar component shapes, highest readability and production feasibility.',
     expressive: 'Expressive enhancement: dramatically stronger character focal area, layered depth, bolder hierarchy, motion-ready accents and presentation impact while staying inside the style lock.',
@@ -113,4 +148,12 @@ function visualTask(project, approvedLayout, styleContract, variation, feedback 
   };
 }
 
-module.exports = { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, visualTask };
+function underlayCritiquePrompt(contract, componentContract) {
+  return `You are an independent game UI underlay reviewer. Inspect the attached underlay before any shared UI is composed.\n` +
+    `Underlay contract: ${JSON.stringify(contract)}\nComponent thumbnails and categories: ${JSON.stringify((componentContract?.families || []).map((family) => ({ id: family.id, category: family.category, intrinsic_size: family.intrinsic_size })))}\n` +
+    `Return one JSON object with confidence number 0..1, suspected_ui_regions[], text_like_regions[], and slot_checks[]. ` +
+    `Every region needs bbox [x,y,w,h], type, confidence, and reason. Every slot check needs slot_id, subject_overlap boolean, background_busyness, contrast_conflict, and ui_like_contamination{detected,type,confidence}. ` +
+    `Scan the whole canvas and every reserved slot. Treat button/tab/navigation silhouettes, fake text or numbers, subject/weapon/building crossings, and visually busy slot backgrounds as evidence. Do not return only a score.`;
+}
+
+module.exports = { continuationMode, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, visualTask };

@@ -252,10 +252,16 @@ async function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function generateImage(config, { prompt, imagePaths = [], size = '1536x864', model }) {
+async function generateImage(config, { prompt, imagePaths = [], size = '1536x864', model, maxReferenceImages = 6 }) {
   if (!config.configured) throw new Error('Kunpo is not configured.');
   const selectedModel = model || config.imageModel;
-  const references = await Promise.all(imagePaths.filter(Boolean).slice(0, 6).map(fileDataUrl));
+  const paths = imagePaths.filter(Boolean);
+  if (paths.length > maxReferenceImages) {
+    const error = new Error(`Reference pack contains ${paths.length} images but provider limit is ${maxReferenceImages}. Build an explicit reference pack and review omitted assets.`);
+    error.code = 'REFERENCE_CAPACITY_EXCEEDED';
+    throw error;
+  }
+  const references = await Promise.all(paths.map(fileDataUrl));
   const body = { model: selectedModel, prompt, size };
   if (selectedModel === 'Image-GPT2') body.output_format = 'png';
   else body.metadata = { quality: 'medium' };
@@ -298,6 +304,7 @@ function safeConfig(config) {
     envSource: config.envSource,
     modelSource: config.modelSource,
     visionModel: config.visionModel,
+    critiqueModel: config.critiqueModel,
     imageModel: config.imageModel
   };
 }

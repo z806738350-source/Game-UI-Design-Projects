@@ -15,7 +15,7 @@ function previewApi(): DesignCopilotApi {
     createProject: async (input) => {
       const id = `preview-${Date.now()}`;
       const project: DesignProject = {
-        id, name: input.name, project_type: input.projectType, art_direction: input.artDirection,
+        id, name: input.name, project_type: input.projectType, continuation_mode: input.projectType === 'existing' ? (input.continuationMode === 'existing-guided' ? 'existing-guided' : 'existing-strict') : 'exploration', art_direction: input.artDirection,
         requirement: input.requirement, screen_id: 'main', workspacePath: `/preview/${id}`,
         updated_at: new Date().toISOString(),
         workflow: { current_stage: 'input', stages: { input: { status: 'draft' }, wireframe_interpretation: { status: 'draft' }, layout_design: { status: 'draft' }, style_resolution: { status: 'draft' }, visual_exploration: { status: 'draft' } } },
@@ -32,6 +32,10 @@ function previewApi(): DesignCopilotApi {
       return copy;
     },
     openProject: async (id) => find(id),
+    listScreens: async (id) => ({ active_screen_id: find(id).active_screen_id || 'main', screens: find(id).screens || [] }),
+    createScreen: async (id, input) => { const project = find(id); const now = new Date().toISOString(); const screen = { id: input.id || `screen-${(project.screens?.length || 0) + 1}`, name: input.name, status: 'active' as const, created_at: now, updated_at: now }; project.screens = [...(project.screens || []), screen]; return screen; },
+    setActiveScreen: async (id, screenId) => Object.assign(find(id), { active_screen_id: screenId, screen_id: screenId }),
+    updateScreen: async (id, screenId, patch) => { const project = find(id); const screen = project.screens?.find((item) => item.id === screenId); if (!screen) throw new Error('Screen not found.'); Object.assign(screen, patch, { updated_at: new Date().toISOString() }); return screen; },
     saveProject: async (id, patch) => Object.assign(find(id), { requirement: patch.requirement ?? find(id).requirement, art_direction: patch.artDirection ?? find(id).art_direction }),
     importFile: async (id, kind) => {
       const project = find(id);
@@ -45,6 +49,8 @@ function previewApi(): DesignCopilotApi {
       project.reference_paths = project.reference_assets.map((item) => item.path);
       return project;
     },
+    importFontAsset: async (id) => find(id),
+    importComponentAsset: async (id) => find(id),
     revealProject: async () => ({ ok: true }),
     runStage: async (id, stage) => {
       const project = find(id);
@@ -74,6 +80,13 @@ function previewApi(): DesignCopilotApi {
       project.artifacts[key] = { ...(project.artifacts[key] || {}), ...patch, status: 'reviewed' } as never;
       return project;
     },
+    generateUnderlayContract: async (id) => find(id),
+    generateLayoutGuide: async (id) => find(id),
+    runUnderlayCritique: async (id) => find(id),
+    repairUnderlay: async (id) => find(id),
+    approveUnderlayWaiver: async (id) => find(id),
+    composeVisual: async (id) => find(id),
+    runFidelity: async (id) => find(id),
     exportVisual: async () => ({ ok: true })
   };
 }
@@ -109,6 +122,13 @@ function chooseImages(multiple: boolean): Promise<File[]> {
   });
 }
 
+function chooseAsset(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input'); input.type = 'file'; input.accept = accept;
+    input.addEventListener('change', () => resolve(input.files?.[0] || null), { once: true }); input.click();
+  });
+}
+
 function webApi(): DesignCopilotApi {
   const projectPath = (id: string) => `/api/projects/${encodeURIComponent(id)}`;
   return {
@@ -118,6 +138,10 @@ function webApi(): DesignCopilotApi {
     createProject: (input) => request('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
     duplicateProject: (id) => request(`${projectPath(id)}/duplicate`, { method: 'POST', body: '{}' }),
     openProject: (id, options) => request(`${projectPath(id)}?includePreviews=${options?.includePreviews === false ? 'false' : 'true'}`),
+    listScreens: (id) => request(`${projectPath(id)}/screens`),
+    createScreen: (id, input) => request(`${projectPath(id)}/screens`, { method: 'POST', body: JSON.stringify(input) }),
+    setActiveScreen: (id, screenId) => request(`${projectPath(id)}/screens/active`, { method: 'POST', body: JSON.stringify({ screenId }) }),
+    updateScreen: (id, screenId, patch) => request(`${projectPath(id)}/screens/${encodeURIComponent(screenId)}`, { method: 'PATCH', body: JSON.stringify(patch) }),
     saveProject: (id, patch) => request(projectPath(id), { method: 'PATCH', body: JSON.stringify(patch) }),
     importFile: async (id, kind) => {
       const files = await chooseImages(kind === 'reference');
@@ -132,12 +156,21 @@ function webApi(): DesignCopilotApi {
       return project;
     },
     manageReference: (id, input) => request(`${projectPath(id)}/reference`, { method: 'POST', body: JSON.stringify(input) }),
+    importFontAsset: async (id, input) => { const file = await chooseAsset('.otf,.ttf,.woff,.woff2'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/font?meta=${encodeURIComponent(JSON.stringify(input))}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }); },
+    importComponentAsset: async (id, input) => { const file = await chooseAsset('image/png,image/jpeg,image/webp,image/svg+xml'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/component?meta=${encodeURIComponent(JSON.stringify(input))}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }); },
     revealProject: async () => ({ ok: false }),
     runStage: (id, stage, input) => request(`${projectPath(id)}/pipeline/run`, { method: 'POST', body: JSON.stringify({ stage, input }) }),
     draftRequirement: (id) => request(`${projectPath(id)}/requirement/draft`, { method: 'POST', body: '{}' }),
     cancelStage: (id, stage) => request(`${projectPath(id)}/pipeline/cancel`, { method: 'POST', body: JSON.stringify({ stage }) }),
     approveArtifact: (id, kind, input) => request(`${projectPath(id)}/pipeline/approve`, { method: 'POST', body: JSON.stringify({ kind, input }) }),
     updateArtifact: (id, kind, patch) => request(`${projectPath(id)}/artifact`, { method: 'PATCH', body: JSON.stringify({ kind, patch }) }),
+    generateUnderlayContract: (id) => request(`${projectPath(id)}/underlay/contract`, { method: 'POST', body: '{}' }),
+    generateLayoutGuide: (id) => request(`${projectPath(id)}/underlay/guide`, { method: 'POST', body: '{}' }),
+    runUnderlayCritique: (id, input) => request(`${projectPath(id)}/underlay/critique`, { method: 'POST', body: JSON.stringify(input) }),
+    repairUnderlay: (id, input) => request(`${projectPath(id)}/underlay/repair`, { method: 'POST', body: JSON.stringify(input) }),
+    approveUnderlayWaiver: (id, input) => request(`${projectPath(id)}/underlay/waiver`, { method: 'POST', body: JSON.stringify(input) }),
+    composeVisual: (id, input) => request(`${projectPath(id)}/composition`, { method: 'POST', body: JSON.stringify(input) }),
+    runFidelity: (id) => request(`${projectPath(id)}/fidelity`, { method: 'POST', body: '{}' }),
     exportVisual: async (id, variationId) => {
       const anchor = document.createElement('a');
       anchor.href = `${projectPath(id)}/visual/${encodeURIComponent(variationId)}`;
@@ -167,20 +200,33 @@ function api() {
 
 export const copilotApi = {
   getConfig: (): Promise<AppConfig> => api().getConfig(),
-  saveModelConfig: (input: { visionModel: string; imageModel: string }): Promise<AppConfig> => api().saveModelConfig(input),
+  saveModelConfig: (input: { visionModel: string; critiqueModel?: string; imageModel: string }): Promise<AppConfig> => api().saveModelConfig(input),
   listProjects: (): Promise<ProjectSummary[]> => api().listProjects(),
   createProject: (input: CreateProjectInput): Promise<DesignProject> => api().createProject(input),
   duplicateProject: (id: string): Promise<DesignProject> => api().duplicateProject(id),
   openProject: (id: string, options?: { includePreviews?: boolean }): Promise<DesignProject> => api().openProject(id, options),
+  listScreens: (id: string) => api().listScreens(id),
+  createScreen: (id: string, input: { id?: string; name: string }) => api().createScreen(id, input),
+  setActiveScreen: (id: string, screenId: string) => api().setActiveScreen(id, screenId),
+  updateScreen: (id: string, screenId: string, patch: { name?: string; status?: 'archived' }) => api().updateScreen(id, screenId, patch),
   saveProject: (id: string, patch: Partial<CreateProjectInput>): Promise<DesignProject> => api().saveProject(id, patch),
   importFile: (id: string, kind: 'wireframe' | 'reference'): Promise<DesignProject> => api().importFile(id, kind),
   manageReference: (id: string, input: { id: string; action: 'remove' | 'move' | 'role'; direction?: 'up' | 'down'; role?: string }): Promise<DesignProject> => api().manageReference(id, input),
+  importFontAsset: (id: string, input: Record<string, unknown>) => api().importFontAsset(id, input),
+  importComponentAsset: (id: string, input: Record<string, unknown>) => api().importComponentAsset(id, input),
   revealProject: (id: string) => api().revealProject(id),
   runStage: (id: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject> => api().runStage(id, stage, input),
   draftRequirement: (id: string): Promise<DesignProject> => api().draftRequirement(id),
   cancelStage: (id: string, stage: PipelineStage): Promise<DesignProject> => api().cancelStage(id, stage),
-  approveArtifact: (id: string, kind: 'screen-contract' | 'approved-layout' | 'style-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
-  updateArtifact: (id: string, kind: 'screen-contract' | 'style-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => api().updateArtifact(id, kind, patch),
+  approveArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'composition-manifest' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
+  updateArtifact: (id: string, kind: 'screen-contract' | 'component-bindings' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => api().updateArtifact(id, kind, patch),
+  generateUnderlayContract: (id: string) => api().generateUnderlayContract(id),
+  generateLayoutGuide: (id: string) => api().generateLayoutGuide(id),
+  runUnderlayCritique: (id: string, input: Record<string, unknown>) => api().runUnderlayCritique(id, input),
+  repairUnderlay: (id: string, input: Record<string, unknown>) => api().repairUnderlay(id, input),
+  approveUnderlayWaiver: (id: string, input: { issueId: string; reason: string }) => api().approveUnderlayWaiver(id, input),
+  composeVisual: (id: string, input: { variationId?: string; mode: 'preview' | 'final' }) => api().composeVisual(id, input),
+  runFidelity: (id: string) => api().runFidelity(id),
   exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId),
   logout: () => api().logout ? api().logout!() : Promise.resolve({ ok: true })
 };

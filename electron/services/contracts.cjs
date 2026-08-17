@@ -1,4 +1,6 @@
-const ARTIFACT_STATUS = new Set(['draft', 'generated', 'reviewed', 'approved', 'rejected', 'stale']);
+const ARTIFACT_STATUS = new Set(['draft', 'generated', 'reviewed', 'approved', 'rejected', 'stale', 'passed']);
+const { validateFontManifest } = require('./typographyAssets.cjs');
+const { validateComponentContract } = require('./componentKit.cjs');
 
 function isObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -141,6 +143,13 @@ function validateArtifact(kind, value) {
     });
     requireArray(value, 'materials', errors);
     requireArray(value, 'reference_ids', errors);
+  } else if (kind === 'font-manifest') {
+    requireArray(value, 'fonts', errors);
+    if (!isObject(value.roles)) errors.push('roles must be an object');
+    errors.push(...validateFontManifest(value, { strict: value.status === 'approved' }));
+  } else if (kind === 'component-contract') {
+    requireArray(value, 'families', errors);
+    errors.push(...validateComponentContract(value, { strict: value.status === 'approved' }));
   }
   return errors;
 }

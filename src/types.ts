@@ -1,4 +1,5 @@
-export type ArtifactStatus = 'draft' | 'generated' | 'reviewed' | 'approved' | 'rejected' | 'stale';
+export type ArtifactStatus = 'draft' | 'generated' | 'reviewed' | 'approved' | 'rejected' | 'stale' | 'passed';
+export type ContinuationMode = 'exploration' | 'existing-strict' | 'existing-guided' | 'locked-continuation';
 
 export type CanvasSpec = {
   width: number;
@@ -64,18 +65,25 @@ export type VisualVariation = {
 export type WorkflowState = {
   current_stage: string;
   stages: Record<string, { status: string; output?: string; updated_at?: string; progress?: { completed: number; total: number; message?: string } }>;
+  global_stages?: Record<string, { status: string; output?: string; updated_at?: string }>;
+  screen_stages?: Record<string, Record<string, { status: string; output?: string; updated_at?: string }>>;
 };
+
+export type ScreenEntry = { id: string; name: string; status: 'active' | 'archived'; created_at: string; updated_at: string };
 
 export type DesignProject = {
   id: string;
   name: string;
   project_type: ProjectType;
+  continuation_mode: ContinuationMode;
   art_direction: string;
   requirement: string;
   requirement_source?: 'none' | 'user' | 'ai';
   requirement_confirmed?: boolean;
   intent_analysis?: { requirement_draft?: string; inferred_page_type?: string; inferred_rules?: string[]; uncertainties?: string[]; generated_at?: string };
   screen_id: string;
+  active_screen_id?: string;
+  screens?: ScreenEntry[];
   workspacePath: string;
   wireframe_path?: string;
   wireframe_name?: string;
@@ -91,9 +99,17 @@ export type DesignProject = {
   workflow: WorkflowState;
   artifacts: {
     screenContract: Artifact | null;
+    bindings?: Artifact | null;
     layouts: (Artifact & { proposals?: LayoutProposal[] }) | null;
     approvedLayout: Artifact | null;
+    underlayContract?: Artifact | null;
+    underlayCritique?: Artifact | null;
+    underlayRepairTask?: Artifact | null;
+    compositionManifest?: Artifact | null;
+    fidelityReport?: Artifact | null;
     styleContract: Artifact | null;
+    fontManifest?: Artifact | null;
+    componentContract?: Artifact | null;
     visualTask: Artifact | null;
     visualResults: Artifact & { variations?: VisualVariation[] };
   };
@@ -109,6 +125,7 @@ export type CreateProjectInput = {
   requirementSource?: 'none' | 'user' | 'ai';
   requirementConfirmed?: boolean;
   intentAnalysis?: Record<string, unknown>;
+  continuationMode?: ContinuationMode;
 };
 
 export type AppConfig = {
@@ -120,6 +137,7 @@ export type AppConfig = {
     envSource: string;
     modelSource?: string;
     visionModel: string;
+    critiqueModel?: string;
     imageModel: string;
   };
 };

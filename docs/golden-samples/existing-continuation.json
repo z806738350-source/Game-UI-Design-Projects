@@ -1,0 +1,1 @@
+{"id":"existing-continuation","required_controls":8,"font_roles":4,"known_issues":["button-residue","fake-bottom-navigation"],"expected":{"unbound_controls":0,"critical_auto_pass":0,"identity_fonts_unresolved":0,"component_fidelity_min":4,"underlay_fit_min":4}}

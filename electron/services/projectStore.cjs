@@ -3,6 +3,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { ensureDir, readJson, writeJson } = require('./jsonStore.cjs');
 const { readImageMetadata } = require('./imageMetadata.cjs');
+const { artifactRelativePath, GLOBAL_ARTIFACTS, SCREEN_ARTIFACTS } = require('./artifactRegistry.cjs');
+const { migrateProjectV2 } = require('./migrations.cjs');
 
 function nextRevisions(project, keys) {
   const revisions = { requirement: 0, wireframe: 0, art_direction: 0, references: 0, ...(project.input_revisions || {}) };
@@ -23,9 +25,15 @@ function slugify(value) {
 }
 
 function defaultWorkflow(projectId) {
+  const screenStages = {
+    screen_definition: { status: 'draft' }, component_binding: { status: 'draft' }, layout_design: { status: 'draft' },
+    underlay_specification: { status: 'draft' }, underlay_generation: { status: 'draft' }, underlay_review: { status: 'draft' },
+    composition: { status: 'draft' }, fidelity_review: { status: 'draft' }, visual_exploration: { status: 'draft' }
+  };
   return {
-    schema_version: '1.0',
+    schema_version: '2.0',
     project_id: projectId,
+    active_screen_id: 'main',
     current_stage: 'input',
     stages: {
       input: { status: 'draft' },
@@ -34,6 +42,8 @@ function defaultWorkflow(projectId) {
       style_resolution: { status: 'draft' },
       visual_exploration: { status: 'draft' }
     },
+    global_stages: { input: { status: 'draft' }, reference_analysis: { status: 'draft' }, style_resolution: { status: 'draft' }, typography_resolution: { status: 'draft' }, component_resolution: { status: 'draft' } },
+    screen_stages: { main: screenStages },
     updated_at: new Date().toISOString()
   };
 }
@@ -64,15 +74,22 @@ function createProjectStore(options = {}) {
     await Promise.all([
       ensureDir(path.join(projectPath, 'inputs')),
       ensureDir(path.join(projectPath, 'screens', 'main', 'explorations')),
+      ensureDir(path.join(projectPath, 'screens', 'main', 'underlays')),
+      ensureDir(path.join(projectPath, 'screens', 'main', 'compositions')),
       ensureDir(path.join(projectPath, 'style', 'references')),
+      ensureDir(path.join(projectPath, 'style', 'fonts')),
+      ensureDir(path.join(projectPath, 'style', 'components')),
       ensureDir(path.join(projectPath, 'workflow'))
     ]);
     const project = {
-      schema_version: '1.0',
+      schema_version: '2.0',
       id,
       name,
       screen_id: 'main',
       project_type: input.projectType === 'existing' ? 'existing' : 'new',
+      continuation_mode: input.projectType === 'existing'
+        ? (input.continuationMode === 'existing-guided' ? 'existing-guided' : 'existing-strict')
+        : 'exploration',
       art_direction: String(input.artDirection || '').trim(),
       requirement: String(input.requirement || '').trim(),
       requirement_source: String(input.requirement || '').trim() ? 'user' : 'none',
@@ -85,6 +102,7 @@ function createProjectStore(options = {}) {
     };
     await fs.writeFile(path.join(projectPath, 'inputs', 'requirement.md'), `${project.requirement}\n`, 'utf8');
     await writeJson(path.join(projectPath, 'project.json'), project);
+    await writeJson(path.join(projectPath, 'screens', 'index.json'), { schema_version: '2.0', active_screen_id: 'main', screens: [{ id: 'main', name: '主页面', status: 'active', created_at: now, updated_at: now }] });
     await writeJson(path.join(projectPath, 'workflow', 'state.json'), defaultWorkflow(id));
     return hydrate(projectPath);
   }
@@ -97,16 +115,26 @@ function createProjectStore(options = {}) {
   }
 
   async function hydrate(projectPath, options = {}) {
+    await migrateProjectV2(projectPath);
     const includePreviews = options.includePreviews !== false;
     const project = await readJson(path.join(projectPath, 'project.json'), null);
     if (!project) throw new Error('Invalid project folder.');
-    const screenPath = path.join(projectPath, 'screens', project.screen_id || 'main');
-    const [workflow, screenContract, layouts, approvedLayout, styleContract, visualTask, visualResults, artifactHistory] = await Promise.all([
+    const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
+    const screenPath = path.join(projectPath, 'screens', screenId);
+    const [workflow, screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
       readJson(path.join(projectPath, 'workflow', 'state.json'), defaultWorkflow(project.id)),
       readJson(path.join(screenPath, 'screen-contract.json'), null),
+      readJson(path.join(screenPath, 'component-bindings.json'), null),
       readJson(path.join(screenPath, 'layout-proposals.json'), null),
       readJson(path.join(screenPath, 'approved-layout.json'), null),
+      readJson(path.join(screenPath, 'underlay-contract.json'), null),
+      readJson(path.join(screenPath, 'underlay-critique.json'), null),
+      readJson(path.join(screenPath, 'underlay-repair-task.json'), null),
+      readJson(path.join(screenPath, 'composition-manifest.json'), null),
+      readJson(path.join(screenPath, 'fidelity-report.json'), null),
       readJson(path.join(projectPath, 'style', 'style-contract.json'), null),
+      readJson(path.join(projectPath, 'style', 'font-manifest.json'), null),
+      readJson(path.join(projectPath, 'style', 'component-contract.json'), null),
       readJson(path.join(screenPath, 'visual-task.json'), null),
       readJson(path.join(screenPath, 'explorations', 'results.json'), { variations: [] }),
       readArtifactHistory(projectPath)
@@ -134,8 +162,12 @@ function createProjectStore(options = {}) {
         preview: metadata && includePreviews ? await imagePreview(asset.path, metadata.mime) : undefined
       };
     }));
+    const screens = await readJson(path.join(projectPath, 'screens', 'index.json'), { active_screen_id: screenId, screens: [] });
     return {
       ...project,
+      screen_id: screenId,
+      active_screen_id: screenId,
+      screens: screens.screens || [],
       workspacePath: projectPath,
       wireframe_preview,
       wireframe_metadata,
@@ -144,7 +176,7 @@ function createProjectStore(options = {}) {
       reference_paths: reference_assets.map((asset) => asset.path),
       workflow,
       artifactHistory,
-      artifacts: { screenContract, layouts, approvedLayout, styleContract, visualTask, visualResults }
+      artifacts: { screenContract, bindings, layouts, approvedLayout, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults }
     };
   }
 
@@ -157,6 +189,12 @@ function createProjectStore(options = {}) {
     const project = await resolveProject(projectId);
     const requirement = typeof patch.requirement === 'string' ? patch.requirement : project.requirement;
     const projectType = patch.projectType === 'existing' ? 'existing' : patch.projectType === 'new' ? 'new' : project.project_type;
+    const requestedMode = ['exploration', 'existing-strict', 'existing-guided', 'locked-continuation'].includes(patch.continuationMode)
+      ? patch.continuationMode
+      : project.continuation_mode;
+    const continuationMode = projectType === 'existing'
+      ? (requestedMode === 'existing-guided' ? 'existing-guided' : 'existing-strict')
+      : (requestedMode === 'locked-continuation' ? 'locked-continuation' : 'exploration');
     const artDirection = typeof patch.artDirection === 'string' ? patch.artDirection : project.art_direction;
     const requirementChanged = requirement !== project.requirement;
     const requirementSource = ['none', 'user', 'ai'].includes(patch.requirementSource)
@@ -176,6 +214,7 @@ function createProjectStore(options = {}) {
       requirement_confirmed: requirement ? Boolean(requirementConfirmed) : false,
       intent_analysis: patch.intentAnalysis && typeof patch.intentAnalysis === 'object' ? patch.intentAnalysis : project.intent_analysis,
       project_type: projectType,
+      continuation_mode: continuationMode,
       art_direction: artDirection,
       input_revisions: nextRevisions(project, revisionKeys),
       status: patch.status === 'archived' ? 'archived' : patch.status === 'draft' ? 'draft' : project.status,
@@ -254,19 +293,11 @@ function createProjectStore(options = {}) {
     return hydrate(project.workspacePath);
   }
 
-  async function saveArtifact(projectId, kind, artifact) {
+  async function saveArtifact(projectId, kind, artifact, options = {}) {
     const project = await resolveProject(projectId);
-    const screenPath = path.join(project.workspacePath, 'screens', project.screen_id || 'main');
-    const paths = {
-      'screen-contract': path.join(screenPath, 'screen-contract.json'),
-      'layout-proposals': path.join(screenPath, 'layout-proposals.json'),
-      'approved-layout': path.join(screenPath, 'approved-layout.json'),
-      'style-contract': path.join(project.workspacePath, 'style', 'style-contract.json'),
-      'visual-task': path.join(screenPath, 'visual-task.json'),
-      'visual-results': path.join(screenPath, 'explorations', 'results.json')
-    };
-    if (!paths[kind]) throw new Error(`Unknown artifact kind: ${kind}`);
-    const previous = await readJson(paths[kind], null);
+    const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
+    const artifactPath = path.join(project.workspacePath, artifactRelativePath(kind, screenId));
+    const previous = await readJson(artifactPath, null);
     if (previous) {
       const historyDir = path.join(project.workspacePath, 'workflow', 'history');
       await ensureDir(historyDir);
@@ -284,7 +315,7 @@ function createProjectStore(options = {}) {
       });
       await writeJson(historyPath, history.slice(0, 100));
     }
-    await writeJson(paths[kind], artifact);
+    await writeJson(artifactPath, artifact);
     return artifact;
   }
 
@@ -293,6 +324,8 @@ function createProjectStore(options = {}) {
     const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
     const state = await readJson(statePath, defaultWorkflow(projectId));
     const { keepCurrentStage = false, ...stageDetails } = details;
+    const screenId = project.active_screen_id || project.screen_id || 'main';
+    const globalStage = ['input', 'reference_analysis', 'style_resolution', 'typography_resolution', 'component_resolution'].includes(stage);
     const next = {
       ...state,
       current_stage: keepCurrentStage ? state.current_stage : stage,
@@ -300,6 +333,8 @@ function createProjectStore(options = {}) {
         ...state.stages,
         [stage]: { status, ...(output ? { output } : {}), ...stageDetails, updated_at: new Date().toISOString() }
       },
+      global_stages: globalStage ? { ...(state.global_stages || {}), [stage]: { status, ...(output ? { output } : {}), ...stageDetails, updated_at: new Date().toISOString() } } : state.global_stages,
+      screen_stages: globalStage ? state.screen_stages : { ...(state.screen_stages || {}), [screenId]: { ...(state.screen_stages?.[screenId] || {}), [stage]: { status, ...(output ? { output } : {}), ...stageDetails, updated_at: new Date().toISOString() } } },
       updated_at: new Date().toISOString()
     };
     await writeJson(statePath, next);
@@ -341,7 +376,57 @@ function createProjectStore(options = {}) {
     return hydrate(destination);
   }
 
-  return { workspaceRoot, list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow, resolveProject, hydrate };
+  async function listScreens(projectId) {
+    const project = await resolveProject(projectId);
+    await migrateProjectV2(project.workspacePath);
+    return readJson(path.join(project.workspacePath, 'screens', 'index.json'), { active_screen_id: 'main', screens: [] });
+  }
+
+  async function createScreen(projectId, input = {}) {
+    const project = await resolveProject(projectId);
+    const registry = await listScreens(projectId);
+    const id = slugify(input.id || input.name || `screen-${registry.screens.length + 1}`);
+    if (registry.screens.some((screen) => screen.id === id)) throw new Error(`Screen already exists: ${id}`);
+    const now = new Date().toISOString();
+    const entry = { id, name: String(input.name || id), status: 'active', created_at: now, updated_at: now };
+    await ensureDir(path.join(project.workspacePath, 'screens', id, 'explorations'));
+    await ensureDir(path.join(project.workspacePath, 'screens', id, 'underlays'));
+    await ensureDir(path.join(project.workspacePath, 'screens', id, 'compositions'));
+    await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens: [...registry.screens, entry] });
+    const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
+    const state = await readJson(statePath, defaultWorkflow(projectId));
+    await writeJson(statePath, { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: defaultWorkflow(projectId).screen_stages.main }, updated_at: now });
+    return entry;
+  }
+
+  async function setActiveScreen(projectId, screenId) {
+    const project = await resolveProject(projectId);
+    const registry = await listScreens(projectId);
+    const screen = registry.screens.find((item) => item.id === screenId && item.status !== 'archived');
+    if (!screen) throw new Error(`Screen not found or archived: ${screenId}`);
+    const now = new Date().toISOString();
+    await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, active_screen_id: screenId });
+    const stored = await readJson(path.join(project.workspacePath, 'project.json'), {});
+    await writeJson(path.join(project.workspacePath, 'project.json'), { ...stored, active_screen_id: screenId, screen_id: screenId, updated_at: now });
+    const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
+    const state = await readJson(statePath, defaultWorkflow(projectId));
+    await writeJson(statePath, { ...state, active_screen_id: screenId, updated_at: now });
+    return hydrate(project.workspacePath, { screenId });
+  }
+
+  async function updateScreen(projectId, screenId, patch = {}) {
+    const project = await resolveProject(projectId);
+    const registry = await listScreens(projectId);
+    const index = registry.screens.findIndex((screen) => screen.id === screenId);
+    if (index < 0) throw new Error(`Screen not found: ${screenId}`);
+    const screens = [...registry.screens];
+    screens[index] = { ...screens[index], ...(typeof patch.name === 'string' ? { name: patch.name.trim() || screens[index].name } : {}), ...(patch.status === 'archived' ? { status: 'archived' } : {}), updated_at: new Date().toISOString() };
+    if (screens[index].status === 'archived' && registry.active_screen_id === screenId) throw new Error('Cannot archive the active screen. Switch screens first.');
+    await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens });
+    return screens[index];
+  }
+
+  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow, resolveProject, hydrate, listScreens, createScreen, setActiveScreen, updateScreen };
 }
 
 module.exports = { createProjectStore };

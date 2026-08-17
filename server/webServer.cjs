@@ -338,13 +338,15 @@ function createApplication(environment = process.env) {
     enforceOrigin(request);
     const context = tenantContext(session.tenant_id);
     const { projectStore, designPipeline, kunpoConfig } = context;
-    const body = ['POST', 'PUT', 'PATCH'].includes(request.method) && !url.pathname.endsWith('/import') ? await readJsonBody(request) : {};
+    const binaryUpload = url.pathname.endsWith('/import') || /\/assets\/(font|component)$/.test(url.pathname);
+    const body = ['POST', 'PUT', 'PATCH'].includes(request.method) && !binaryUpload ? await readJsonBody(request) : {};
     let value;
     if (request.method === 'GET' && url.pathname === '/api/config') {
       value = { kunpo: kunpoClient.safeConfig(kunpoConfig), workspaceRoot: '在线工作区（当前飞书账号）', platform: 'web' };
     } else if (request.method === 'POST' && url.pathname === '/api/config/models') {
       const saved = saveModelConfig(context.projectRoot, body, environment, { modelConfigPath: context.modelConfigPath });
       kunpoConfig.visionModel = saved.visionModel;
+      kunpoConfig.critiqueModel = saved.critiqueModel;
       kunpoConfig.imageModel = saved.imageModel;
       kunpoConfig.modelSource = path.basename(saved.modelConfigPath);
       value = { kunpo: kunpoClient.safeConfig(kunpoConfig), workspaceRoot: '在线工作区（当前飞书账号）', platform: 'web' };
@@ -384,11 +386,36 @@ function createApplication(environment = process.env) {
         await projectStore.manageReference(projectId, body);
         await designPipeline.invalidateFromInputChange(projectId, { references: true });
         value = await projectStore.open(projectId);
-      } else if (request.method === 'POST' && suffix === '/pipeline/run') value = await designPipeline.runStage(projectId, body.stage, body.input);
+      } else if (request.method === 'POST' && (suffix === '/assets/font' || suffix === '/assets/component')) {
+        const assetKind = suffix.endsWith('/font') ? 'font' : 'component';
+        const fileName = decodeURIComponent(String(request.headers['x-file-name'] || 'asset.bin'));
+        const allowed = assetKind === 'font' ? /\.(otf|ttf|woff2?)$/i : /\.(png|jpe?g|webp|svg)$/i;
+        if (!allowed.test(fileName)) throw Object.assign(new Error(`Invalid ${assetKind} asset type.`), { status: 415 });
+        let metadata = {};
+        try { metadata = JSON.parse(url.searchParams.get('meta') || '{}'); } catch { throw Object.assign(new Error('Invalid asset metadata.'), { status: 400 }); }
+        const bytes = await readBody(request, MAX_IMAGE_BYTES);
+        const uploadRoot = path.join(context.tenantRoot, 'data', 'uploads', '.incoming');
+        await fs.mkdir(uploadRoot, { recursive: true, mode: 0o700 });
+        const temporary = path.join(uploadRoot, `${crypto.randomUUID()}${path.extname(fileName).toLowerCase()}`);
+        await fs.writeFile(temporary, bytes, { mode: 0o600 });
+        try { value = assetKind === 'font' ? await designPipeline.addFontAsset(projectId, temporary, metadata) : await designPipeline.addComponentAsset(projectId, temporary, metadata); }
+        finally { await fs.unlink(temporary).catch(() => undefined); }
+      } else if (request.method === 'GET' && suffix === '/screens') value = await projectStore.listScreens(projectId);
+      else if (request.method === 'POST' && suffix === '/screens') value = await projectStore.createScreen(projectId, body);
+      else if (request.method === 'POST' && suffix === '/screens/active') value = await projectStore.setActiveScreen(projectId, body.screenId);
+      else if (request.method === 'PATCH' && suffix.startsWith('/screens/')) value = await projectStore.updateScreen(projectId, decodeURIComponent(suffix.slice('/screens/'.length)), body);
+      else if (request.method === 'POST' && suffix === '/pipeline/run') value = await designPipeline.runStage(projectId, body.stage, body.input);
       else if (request.method === 'POST' && suffix === '/requirement/draft') value = await designPipeline.draftRequirement(projectId);
       else if (request.method === 'POST' && suffix === '/pipeline/cancel') value = await designPipeline.cancelStage(projectId, body.stage);
       else if (request.method === 'POST' && suffix === '/pipeline/approve') value = await designPipeline.approveArtifact(projectId, body.kind, body.input);
       else if (request.method === 'PATCH' && suffix === '/artifact') value = await designPipeline.updateArtifact(projectId, body.kind, body.patch);
+      else if (request.method === 'POST' && suffix === '/underlay/contract') value = await designPipeline.createUnderlayContract(projectId);
+      else if (request.method === 'POST' && suffix === '/underlay/guide') value = await designPipeline.createLayoutGuide(projectId);
+      else if (request.method === 'POST' && suffix === '/underlay/critique') value = await designPipeline.critiqueUnderlay(projectId, body);
+      else if (request.method === 'POST' && suffix === '/underlay/repair') value = await designPipeline.repairUnderlay(projectId, body);
+      else if (request.method === 'POST' && suffix === '/underlay/waiver') value = await designPipeline.waiveUnderlayIssue(projectId, body);
+      else if (request.method === 'POST' && suffix === '/composition') value = await designPipeline.composeVisual(projectId, body);
+      else if (request.method === 'POST' && suffix === '/fidelity') value = await designPipeline.runFidelity(projectId);
       else if (request.method === 'GET' && suffix.startsWith('/visual/')) {
         const variationId = decodeURIComponent(suffix.slice('/visual/'.length));
         const project = await projectStore.open(projectId, { includePreviews: false });
@@ -443,7 +470,7 @@ function createApplication(environment = process.env) {
       response.end(await fs.readFile(filePath));
     } catch (error) {
       const status = Number(error.status) || 500;
-      if (!response.headersSent) sendJson(response, status, { error: status >= 500 ? 'internal_error' : error.message });
+      if (!response.headersSent) sendJson(response, status, { error: status >= 500 && !error.code ? 'internal_error' : error.message, ...(error.code ? { code: error.code } : {}), ...(error.stage ? { stage: error.stage } : {}), ...(error.missing_requirements ? { missing_requirements: error.missing_requirements } : {}) });
       else response.destroy();
       const safeMessage = String(error?.message || 'unknown error').replace(/[?&](code|state|token)=[^&\s]+/gi, '$1=[redacted]');
       console.error(`[web] ${request.method} ${url.pathname} ${status}: ${safeMessage}`);
