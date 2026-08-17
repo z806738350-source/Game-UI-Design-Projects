@@ -181,10 +181,101 @@ test('input invalidation marks every dependent artifact stale', async () => {
     assert.equal(project.artifacts.screenContract.status, 'stale');
     assert.equal(project.artifacts.layouts.status, 'stale');
     assert.equal(project.artifacts.approvedLayout.status, 'stale');
-    assert.equal(project.artifacts.styleContract.status, 'stale');
+    assert.equal(project.artifacts.styleContract.status, 'approved');
     assert.equal(project.artifacts.visualResults.status, 'stale');
     assert.equal(project.workflow.current_stage, 'input');
     assert.equal(project.workflow.stages.input.status, 'reviewed');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('stale propagation isolates page inputs and fans global inputs across non-archived screens', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-stale-matrix-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const projectStore = createProjectStore();
+    const project = await projectStore.create({ name: 'Stale Matrix', projectType: 'existing', requirement: 'Main.' });
+    await projectStore.createScreen(project.id, { id: 'inventory', name: 'Inventory' });
+    await projectStore.createScreen(project.id, { id: 'archive', name: 'Archive' });
+    for (const [kind, id] of [['reference-inventory', 'inventory-global'], ['style-contract', 'style-global'], ['font-manifest', 'font-global'], ['component-contract', 'component-global']]) {
+      await projectStore.saveArtifact(project.id, kind, { schema_version: '2.0', id, version: 1, status: 'approved', source: {} });
+    }
+    const screenKinds = [
+      'reference-pack', 'screen-contract', 'component-bindings', 'layout-proposals', 'approved-layout',
+      'underlay-contract', 'visual-task', 'visual-results', 'underlay-critique',
+      'composition-manifest', 'composition-output', 'fidelity-report'
+    ];
+    for (const screenId of ['main', 'inventory', 'archive']) {
+      for (const kind of screenKinds) {
+        await projectStore.saveArtifact(project.id, kind, {
+          schema_version: '2.0', id: `${screenId}-${kind}`, version: 1, status: 'approved', source: {},
+          ...(kind === 'visual-results' ? { variations: [{ id: `${screenId}-v1` }] } : {}),
+          ...(kind === 'layout-proposals' ? { proposals: [] } : {})
+        }, { screenId });
+      }
+    }
+    await projectStore.updateScreen(project.id, 'archive', { status: 'archived' });
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    const pageResult = await pipeline.invalidateFromInputChange(project.id, { requirement: true, screenId: 'inventory' });
+    assert.deepEqual(pageResult.invalidation.changed_kinds, ['input-requirement']);
+    assert.deepEqual(pageResult.invalidation.effects[0].affected_screens, ['inventory']);
+    const mainAfterPage = await projectStore.open(project.id, { screenId: 'main' });
+    const inventoryAfterPage = await projectStore.open(project.id, { screenId: 'inventory' });
+    const archiveAfterPage = await projectStore.open(project.id, { screenId: 'archive' });
+    assert.equal(mainAfterPage.artifacts.screenContract.status, 'approved');
+    assert.equal(mainAfterPage.artifacts.fidelityReport.status, 'approved');
+    assert.equal(inventoryAfterPage.artifacts.screenContract.status, 'stale');
+    assert.equal(inventoryAfterPage.artifacts.fidelityReport.status, 'stale');
+    assert.equal(archiveAfterPage.artifacts.fidelityReport.status, 'approved');
+    assert.equal(mainAfterPage.artifacts.styleContract.status, 'approved');
+
+    const globalResult = await pipeline.invalidateFromInputChange(project.id, { references: true, screenId: 'inventory' });
+    assert.deepEqual(new Set(globalResult.invalidation.effects[0].affected_screens), new Set(['main', 'inventory']));
+    const mainAfterGlobal = await projectStore.open(project.id, { screenId: 'main' });
+    const archiveAfterGlobal = await projectStore.open(project.id, { screenId: 'archive' });
+    assert.equal(mainAfterGlobal.artifacts.referencePack.status, 'stale');
+    assert.equal(mainAfterGlobal.artifacts.styleContract.status, 'stale');
+    assert.equal(mainAfterGlobal.artifacts.fidelityReport.status, 'stale');
+    assert.equal(archiveAfterGlobal.artifacts.referencePack.status, 'approved');
+    assert.equal(archiveAfterGlobal.artifacts.fidelityReport.status, 'approved');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('continuation mode changes stale incompatible production artifacts on every active screen', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-mode-stale-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const projectStore = createProjectStore();
+    const project = await projectStore.create({ name: 'Mode Matrix', projectType: 'existing', requirement: 'Main.' });
+    await projectStore.createScreen(project.id, { id: 'shop', name: 'Shop' });
+    await projectStore.saveArtifact(project.id, 'style-contract', { schema_version: '2.0', id: 'style', version: 1, status: 'approved', source: {} });
+    for (const screenId of ['main', 'shop']) {
+      for (const kind of ['visual-task', 'visual-results', 'underlay-critique', 'composition-manifest', 'composition-output', 'fidelity-report']) {
+        await projectStore.saveArtifact(project.id, kind, {
+          schema_version: '2.0', id: `${screenId}-${kind}`, version: 1, status: 'approved', source: {},
+          ...(kind === 'visual-results' ? { variations: [{ id: `${screenId}-v1` }] } : {})
+        }, { screenId });
+      }
+    }
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    const result = await pipeline.invalidateFromInputChange(project.id, { continuationMode: true, screenId: 'main' });
+    assert.deepEqual(result.invalidation.changed_kinds, ['input-continuation-mode']);
+    for (const screenId of ['main', 'shop']) {
+      const screen = await projectStore.open(project.id, { screenId });
+      assert.equal(screen.artifacts.visualResults.status, 'stale');
+      assert.equal(screen.artifacts.underlayCritique.status, 'stale');
+      assert.equal(screen.artifacts.compositionOutput.status, 'stale');
+      assert.equal(screen.artifacts.fidelityReport.status, 'stale');
+    }
   } finally {
     if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
     else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;

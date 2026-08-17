@@ -89,12 +89,14 @@ function registerIpc() {
   ipcMain.handle('copilot:screens:active', (_event, projectId, screenId) => projectStore.setActiveScreen(projectId, screenId));
   ipcMain.handle('copilot:screens:update', (_event, projectId, screenId, patch) => projectStore.updateScreen(projectId, screenId, patch));
   ipcMain.handle('copilot:projects:save', async (_event, projectId, patch) => {
-    const before = await projectStore.open(projectId);
+    const before = await projectStore.open(projectId, { screenId: patch.screenId });
     const saved = await projectStore.saveProject(projectId, patch);
     return pipeline.invalidateFromInputChange(projectId, {
       requirement: before.requirement !== saved.requirement,
       artDirection: before.art_direction !== saved.art_direction,
-      projectType: before.project_type !== saved.project_type
+      projectType: before.project_type !== saved.project_type,
+      continuationMode: before.continuation_mode !== saved.continuation_mode,
+      screenId: patch.screenId || saved.screen_id
     });
   });
   ipcMain.handle('copilot:projects:reveal', async (_event, projectId) => {
@@ -113,7 +115,7 @@ function registerIpc() {
     let result;
     for (const filePath of selection.filePaths) result = await projectStore.importFile(projectId, filePath, kind, { screenId });
     if (!result) return before;
-    await pipeline.invalidateFromInputChange(projectId, { wireframe: kind === 'wireframe', references: kind === 'reference' });
+    await pipeline.invalidateFromInputChange(projectId, { wireframe: kind === 'wireframe', references: kind === 'reference', screenId: screenId || result.screen_id });
     return projectStore.open(projectId, { screenId });
   });
   ipcMain.handle('copilot:projects:reference', async (_event, projectId, input) => {

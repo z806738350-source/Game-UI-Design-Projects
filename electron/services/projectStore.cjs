@@ -81,7 +81,7 @@ function createProjectStore(options = {}) {
   async function list() {
     await ensureDir(workspaceRoot);
     const entries = await fs.readdir(workspaceRoot, { withFileTypes: true }).catch(() => []);
-    const projects = await Promise.all(entries.filter((entry) => entry.isDirectory()).map(async (entry) => {
+    const projects = await Promise.all(entries.filter((entry) => entry.isDirectory() && !entry.name.startsWith('.')).map(async (entry) => {
       const projectPath = path.join(workspaceRoot, entry.name);
       const project = await readJson(path.join(projectPath, 'project.json'), null);
       return project ? { ...project, workspacePath: projectPath } : null;
@@ -421,8 +421,8 @@ function createProjectStore(options = {}) {
     const project = await resolveProject(projectId);
     const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
     const state = await readJson(statePath, defaultWorkflow(projectId));
-    const { keepCurrentStage = false, ...stageDetails } = details;
-    const screenId = project.active_screen_id || project.screen_id || 'main';
+    const { keepCurrentStage = false, screenId: requestedScreenId, ...stageDetails } = details;
+    const screenId = requestedScreenId || project.active_screen_id || project.screen_id || 'main';
     const globalStage = ['input', 'reference_analysis', 'style_resolution', 'typography_resolution', 'component_resolution'].includes(stage);
     const next = {
       ...state,

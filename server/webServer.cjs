@@ -360,12 +360,14 @@ function createApplication(environment = process.env) {
       const suffix = match[2];
       if (request.method === 'GET' && suffix === '') value = await projectStore.open(projectId, { includePreviews: url.searchParams.get('includePreviews') !== 'false' });
       else if (request.method === 'PATCH' && suffix === '') {
-        const before = await projectStore.open(projectId);
+        const before = await projectStore.open(projectId, { screenId: body.screenId });
         const saved = await projectStore.saveProject(projectId, body);
         value = await designPipeline.invalidateFromInputChange(projectId, {
           requirement: before.requirement !== saved.requirement,
           artDirection: before.art_direction !== saved.art_direction,
-          projectType: before.project_type !== saved.project_type
+          projectType: before.project_type !== saved.project_type,
+          continuationMode: before.continuation_mode !== saved.continuation_mode,
+          screenId: body.screenId || saved.screen_id
         });
       } else if (request.method === 'POST' && suffix === '/duplicate') value = await projectStore.duplicate(projectId);
       else if (request.method === 'POST' && suffix === '/import') {
@@ -380,7 +382,7 @@ function createApplication(environment = process.env) {
         await fs.writeFile(temporary, bytes, { mode: 0o600 });
         try {
           await projectStore.importFile(projectId, temporary, kind, { screenId: url.searchParams.get('screenId') });
-          await designPipeline.invalidateFromInputChange(projectId, { wireframe: kind === 'wireframe', references: kind === 'reference' });
+          await designPipeline.invalidateFromInputChange(projectId, { wireframe: kind === 'wireframe', references: kind === 'reference', screenId: url.searchParams.get('screenId') || undefined });
           value = await projectStore.open(projectId);
         } finally { await fs.unlink(temporary).catch(() => undefined); }
       } else if (request.method === 'POST' && suffix === '/reference') {
