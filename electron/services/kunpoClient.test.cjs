@@ -1,6 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { generateImage, isTrustedKunpoCdnUrl, requestArtifact, taskId } = require('./kunpoClient.cjs');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const { generateImage, isTrustedKunpoCdnUrl, repairImage, requestArtifact, taskId } = require('./kunpoClient.cjs');
 
 function pngHeader(width, height) {
   const bytes = Buffer.alloc(24);
@@ -98,4 +101,22 @@ test('generateImage verifies the returned bitmap matches the requested portrait 
   } finally {
     global.fetch = originalFetch;
   }
+});
+
+test('repairImage submits distinct inpaint and regenerate payloads with real evidence files', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-provider-repair-'));
+  const originalFetch = global.fetch; const bodies = [];
+  try {
+    const files = {};
+    for (const name of ['source.png', 'overlay.png', 'board.png', 'mask.png']) { files[name] = path.join(root, name); await fs.writeFile(files[name], pngHeader(128, 64)); }
+    global.fetch = async (url, options) => {
+      if (String(url).endsWith('/images/tasks')) { const body = JSON.parse(options.body); bodies.push(body); return new Response(JSON.stringify({ result_url: `https://kunpoapiimg.ziy.cc/output/${bodies.length}.png`, task_id: `repair-${bodies.length}` }), { status: 200 }); }
+      return new Response(pngHeader(128, 64), { status: 200, headers: { 'content-type': 'image/png' } });
+    };
+    const config = { configured: true, baseUrl: 'https://example.test', imageModel: 'Image-GPT2', mode: 'gateway' };
+    await repairImage(config, { mode: 'inpaint', prompt: 'repair', sourcePath: files['source.png'], overlayPath: files['overlay.png'], componentBoardPath: files['board.png'], maskPath: files['mask.png'], size: '128x64', maxReferenceImages: 6 });
+    await repairImage(config, { mode: 'regenerate', prompt: 'repair', sourcePath: files['source.png'], overlayPath: files['overlay.png'], componentBoardPath: files['board.png'], size: '128x64', maxReferenceImages: 6 });
+    assert.equal(bodies[0].operation, 'inpaint'); assert.match(bodies[0].mask, /^data:image\/png;base64,/); assert.equal(bodies[0].reference_images.length, 2);
+    assert.equal(bodies[1].operation, undefined); assert.equal(bodies[1].images.length, 3);
+  } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
 });

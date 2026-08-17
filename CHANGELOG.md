@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased — audit remediation PR-3
+## Unreleased — audit remediation PR-4
+
+- Added persisted Review Overlay PNGs with slot/protected-region labels and post-review semantic annotations.
+- Added production pixel metrics for edge density, local contrast, color complexity, highlight density, and hard-edge crossings.
+- Changed automatic critique to always submit the real Underlay, Review Overlay, and approved component board; callers can no longer inject deterministic or semantic findings.
+- Added prompt/model/input hashes, versioned threshold evidence, complete semantic issue mapping, and mandatory manual review for low confidence or incomplete evidence.
+- Added real provider repair execution for inpaint and regenerate, including a real mask for inpaint, parent/version provenance, saved repaired Underlays, and automatic re-critique.
+- Added bounded-attempt failure handling that ends in blocked/manual-review instead of leaving an in-progress task.
+
+## Audit remediation PR-3
 
 - Split font import from explicit license and exact-role confirmation; imports always start unresolved.
 - Added browser `FontFace` loading with `document.fonts.ready` before strict final composition.

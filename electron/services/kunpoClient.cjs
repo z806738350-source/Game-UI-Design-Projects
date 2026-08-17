@@ -252,7 +252,7 @@ async function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function generateImage(config, { prompt, imagePaths = [], size = '1536x864', model, maxReferenceImages = 6 }) {
+async function generateImage(config, { prompt, imagePaths = [], size = '1536x864', model, maxReferenceImages = 6, operation = 'generate', maskPath }) {
   if (!config.configured) throw new Error('Kunpo is not configured.');
   const selectedModel = model || config.imageModel;
   const paths = imagePaths.filter(Boolean);
@@ -265,7 +265,11 @@ async function generateImage(config, { prompt, imagePaths = [], size = '1536x864
   const body = { model: selectedModel, prompt, size };
   if (selectedModel === 'Image-GPT2') body.output_format = 'png';
   else body.metadata = { quality: 'medium' };
-  if (references.length === 1) body.image = references[0];
+  if (operation === 'inpaint') {
+    if (!references[0] || !maskPath) throw new Error('Inpaint requires a parent image and mask.');
+    body.operation = 'inpaint'; body.image = references[0]; body.mask = await fileDataUrl(maskPath);
+    if (references.length > 1) body.reference_images = references.slice(1);
+  } else if (references.length === 1) body.image = references[0];
   else if (references.length > 1) body.images = references;
   const submitted = await fetchJson(`${config.baseUrl}/images/tasks`, {
     method: 'POST', headers: headers(config), body: JSON.stringify(body)
@@ -297,6 +301,20 @@ async function generateImage(config, { prompt, imagePaths = [], size = '1536x864
   throw new Error(`Kunpo image task ${id} timed out after 20 minutes.`);
 }
 
+async function repairImage(config, input) {
+  const mode = input.mode === 'inpaint' ? 'inpaint' : 'regenerate';
+  if (mode === 'inpaint' && !input.maskPath) throw new Error('Inpaint repair requires a real mask file.');
+  return generateImage(config, {
+    prompt: input.prompt,
+    imagePaths: [input.sourcePath, input.overlayPath, input.componentBoardPath].filter(Boolean),
+    size: input.size,
+    model: input.model,
+    maxReferenceImages: input.maxReferenceImages,
+    operation: mode === 'inpaint' ? 'inpaint' : 'generate',
+    maskPath: input.maskPath
+  });
+}
+
 function safeConfig(config) {
   return {
     configured: config.configured,
@@ -309,4 +327,4 @@ function safeConfig(config) {
   };
 }
 
-module.exports = { generateImage, isTrustedKunpoCdnUrl, requestArtifact, requestJson, safeConfig, taskId };
+module.exports = { generateImage, isTrustedKunpoCdnUrl, repairImage, requestArtifact, requestJson, safeConfig, taskId };
