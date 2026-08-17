@@ -27,6 +27,17 @@ async function colorize(text, typography, width, height) {
   return sharp(text).tint(typography.fill || '#ffffff').png().toBuffer();
 }
 
+async function alphaInkBounds(buffer, width, height) {
+  const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let left = width; let top = height; let right = -1; let bottom = -1;
+  for (let y = 0; y < height; y += 1) for (let x = 0; x < width; x += 1) {
+    if (data[(y * width + x) * info.channels + 3] === 0) continue;
+    left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+  }
+  if (right < left || bottom < top) return { left: 0, top: 0, width: 0, height: 0, touches_boundary: false };
+  return { left, top, width: right - left + 1, height: bottom - top + 1, touches_boundary: left === 0 || top === 0 || right === width - 1 || bottom === height - 1 };
+}
+
 async function renderGlyphs(layer, target, fontfile, family) {
   const typography = layer.typography || {};
   const size = finite(typography.size, 24, 1, 512);
@@ -77,8 +88,10 @@ async function renderGlyphs(layer, target, fontfile, family) {
     });
   }
   overlays.push({ input: glyphs, left, top });
+  const input = await sharp({ create: { width: target.width, height: target.height, channels: 4, background: '#00000000' } }).composite(overlays).png().toBuffer();
   return {
-    input: await sharp({ create: { width: target.width, height: target.height, channels: 4, background: '#00000000' } }).composite(overlays).png().toBuffer(),
+    input,
+    ink_bounds: await alphaInkBounds(input, target.width, target.height),
     effects: { size, weight, letter_spacing: letterSpacing / 1024, line_height: lineHeight, stroke_width: strokeWidth, gradient: Boolean(typography.gradient), shadow: overlays.length > 1, baseline_offset: baselineOffset, numeric_style: tabular ? 'tabular' : 'proportional' }
   };
 }
@@ -104,7 +117,7 @@ async function renderTextLayer({ projectPath, layer, target, resolveProjectPath,
       diagnostic: {
         control_id: layer.control_id, font_role: layer.font_role, renderer: 'sharp-pango-fontfile', target_rect: target,
         requested_font: layer.font_family, actual_font_verified: true, actual_loaded_family: inspected.family_name,
-        actual_postscript_name: inspected.postscript_name, font_hash: inspected.file_hash, effects: rendered.effects
+        actual_postscript_name: inspected.postscript_name, font_hash: inspected.file_hash, effects: rendered.effects, ink_bounds: rendered.ink_bounds, text_overflow: rendered.ink_bounds.touches_boundary
       }
     };
   } catch (caught) {
@@ -114,7 +127,7 @@ async function renderTextLayer({ projectPath, layer, target, resolveProjectPath,
   const rendered = await renderGlyphs(layer, target, undefined, 'sans-serif');
   return {
     input: rendered.input,
-    diagnostic: { control_id: layer.control_id, font_role: layer.font_role, renderer: 'sharp-pango-preview-fallback', target_rect: target, requested_font: layer.font_family || layer.font_path, actual_font_verified: false, fallback_reason: error.message, effects: rendered.effects }
+    diagnostic: { control_id: layer.control_id, font_role: layer.font_role, renderer: 'sharp-pango-preview-fallback', target_rect: target, requested_font: layer.font_family || layer.font_path, actual_font_verified: false, fallback_reason: error.message, effects: rendered.effects, ink_bounds: rendered.ink_bounds, text_overflow: rendered.ink_bounds.touches_boundary }
   };
 }
 

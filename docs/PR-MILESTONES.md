@@ -9,8 +9,9 @@ These review units follow the dependency order required by `Game-UI-Design-Copil
 | PR-1 | Merged | GitHub PR #2; CI passed; `main` merge `a4f1e2b`; v1.1 corrected to prerelease. |
 | PR-2 | Merged | GitHub PR #3; CI passed; `main` merge `59ea5b2`; `docs/baseline/pr2-composition-output.md`. |
 | PR-3 | Merged | GitHub PR #4; CI passed; `main` merge `7e0e38e`; `docs/baseline/pr3-typography-truth.md`. |
-| PR-4 | Implemented on current review branch | `docs/baseline/pr4-critique-repair.md` |
-| PR-5 – PR-8 | Pending | Must follow dependency order below. |
+| PR-4 | Merged | GitHub PR #5; CI passed; `main` merge `5ad6d32`; `docs/baseline/pr4-critique-repair.md`. |
+| PR-5 | Implemented on current review branch | `docs/baseline/pr5-pixel-fidelity.md` |
+| PR-6 – PR-8 | Pending | Must follow dependency order below. |
 
 1. **Release correction, CI, and baseline** — mark the current build as an architecture alpha, preserve the independent audit, add PR/main CI, and freeze reproducible facts without claiming formal acceptance.
 2. **Composition output and renderers** — persist real preview/final PNG output; implement exact, nine-slice, and vector-token renderer dispatch; export the verified final artifact.

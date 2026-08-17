@@ -2,7 +2,7 @@
 
 面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。
 
-> **发布状态：`0.2.0-alpha.1` / 架构型 Alpha。** 整改 PR-4 已接通真实 Review Overlay、低层像素指标、Underlay+Overlay+组件板三路审查输入，以及 inpaint/regenerate 修复、版本父链和自动复审；完整像素级 Fidelity、工作台、真实 Golden Samples 阈值校准与设计师签核仍未全部闭环，因此不得作为正式生产版本验收。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md`。
+> **发布状态：`0.2.0-alpha.1` / 架构型 Alpha。** 整改 PR-5 已接通最终 PNG 解码/Alpha/尺寸、当前组件与字体重哈希、真实裁剪、BBox/重叠/安全区、文字溢出和 9-slice 固定区检查，并让 Final Approval 只接受批准瞬间仍匹配的最新证据；产品工作台、事务化迁移、真实 Golden Samples 阈值校准与设计师签核仍未全部闭环，因此不得作为正式生产版本验收。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md`。
 
 当前 Alpha 已覆盖的控制面包括：
 

@@ -115,12 +115,14 @@ async function nineSliceRenderer({ projectPath, layer, target }) {
     for (let column = 0; column < 3; column += 1) {
       const source = { left: sourceLeft, top: sourceTop, width: sourceColumns[column], height: sourceRows[row] };
       const destination = { left: targetLeft, top: targetTop, width: targetColumns[column], height: targetRows[row] };
-      let patch = sharp(asset.bytes).extract(source);
+      const sourcePatch = await sharp(asset.bytes).extract(source).png().toBuffer();
+      let patch = sharp(sourcePatch);
       if (source.width !== destination.width || source.height !== destination.height) {
         patch = patch.resize(destination.width, destination.height, { fit: 'fill' });
       }
-      patches.push({ input: await patch.png().toBuffer(), left: destination.left, top: destination.top });
-      patchDiagnostics.push({ source, destination, fixed_corner: row !== 1 && column !== 1 });
+      const renderedPatch = await patch.png().toBuffer();
+      patches.push({ input: renderedPatch, left: destination.left, top: destination.top });
+      patchDiagnostics.push({ source, destination, fixed_corner: row !== 1 && column !== 1, source_hash: hashBuffer(sourcePatch), rendered_hash: hashBuffer(renderedPatch) });
       sourceLeft += source.width;
       targetLeft += destination.width;
     }
