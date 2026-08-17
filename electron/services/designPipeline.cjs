@@ -1,6 +1,9 @@
 const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, visualTask } = require('./prompts.cjs');
 const { providerCapabilities } = require('./providerCapabilities.cjs');
 const { buildReferencePack } = require('./referencePack.cjs');
+const { validateArtifact } = require('./contracts.cjs');
+const { importFontAsset } = require('./typographyAssets.cjs');
+const { importComponentAsset } = require('./componentKit.cjs');
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
@@ -266,6 +269,20 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!current) throw new Error('Style Contract does not exist.');
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', locked_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'style_resolution', 'approved', 'style/style-contract.json');
+    } else if (kind === 'font-manifest' || kind === 'component-contract') {
+      const key = kind === 'font-manifest' ? 'fontManifest' : 'componentContract';
+      const stage = kind === 'font-manifest' ? 'typography_resolution' : 'component_resolution';
+      const current = project.artifacts[key];
+      if (!current) throw new Error(`${kind} does not exist.`);
+      const approved = { ...current, status: 'approved', approved_at: new Date().toISOString() };
+      const errors = validateArtifact(kind, approved);
+      if (errors.length) {
+        const error = new Error(errors.join('; '));
+        error.code = kind === 'font-manifest' ? 'FONT_MANIFEST_INVALID' : 'COMPONENT_CONTRACT_INVALID';
+        throw error;
+      }
+      await projectStore.saveArtifact(projectId, kind, approved);
+      await projectStore.updateWorkflow(projectId, stage, 'approved', `style/${kind}.json`);
     } else if (kind === 'visual-results') {
       const current = project.artifacts.visualResults;
       const selectedIds = Array.isArray(input.selectedIds) ? input.selectedIds : [];
@@ -298,6 +315,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const definitions = {
       'screen-contract': { artifact: project.artifacts.screenContract, stage: 'wireframe_interpretation' },
       'style-contract': { artifact: project.artifacts.styleContract, stage: 'style_resolution' },
+      'font-manifest': { artifact: project.artifacts.fontManifest, stage: 'typography_resolution' },
+      'component-contract': { artifact: project.artifacts.componentContract, stage: 'component_resolution' },
       'visual-results': { artifact: project.artifacts.visualResults, stage: 'visual_exploration' }
     };
     const definition = definitions[kind];
@@ -329,7 +348,40 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  return { approveArtifact, cancelStage, draftRequirement, invalidateFromInputChange, runStage, updateArtifact };
+  async function addFontAsset(projectId, sourcePath, input = {}) {
+    const resolved = await projectStore.resolveProject(projectId);
+    const project = await openProject(projectId);
+    const font = await importFontAsset(resolved.workspacePath, sourcePath, input);
+    const current = project.artifacts.fontManifest || { schema_version: '2.0', id: 'project-font-manifest', version: 0, status: 'draft', source: {}, fonts: [], roles: {} };
+    const fonts = [...(current.fonts || []).filter((item) => item.id !== font.id), font];
+    await projectStore.saveArtifact(projectId, 'font-manifest', { ...current, version: Number(current.version || 0) + 1, status: 'reviewed', fonts, source: { ...(current.source || {}), last_import: font.id } });
+    await projectStore.updateWorkflow(projectId, 'typography_resolution', 'reviewed', 'style/font-manifest.json');
+    return openProject(projectId);
+  }
+
+  async function addComponentAsset(projectId, sourcePath, input = {}) {
+    const resolved = await projectStore.resolveProject(projectId);
+    const project = await openProject(projectId);
+    const stateAsset = await importComponentAsset(resolved.workspacePath, sourcePath, input);
+    const current = project.artifacts.componentContract || { schema_version: '2.0', id: 'project-component-contract', version: 0, status: 'draft', source: {}, families: [] };
+    const previous = (current.families || []).find((family) => family.id === input.componentId);
+    const family = {
+      id: input.componentId, name: input.name || previous?.name || input.componentId, category: input.category || previous?.category || 'page-specific',
+      status: 'reviewed', source: input.source || previous?.source || { type: 'exact-asset' },
+      reuse_mode: input.reuseMode || previous?.reuse_mode || 'exact', text_policy: input.textPolicy || previous?.text_policy || 'none',
+      intrinsic_size: stateAsset.intrinsic_size || previous?.intrinsic_size,
+      scale_policy: input.scalePolicy || previous?.scale_policy || { uniform_only: true, min_scale: 1, max_scale: 1 },
+      ...(input.slice || previous?.slice ? { slice: input.slice || previous.slice } : {}),
+      locked_properties: input.lockedProperties || previous?.locked_properties || [],
+      states: { ...(previous?.states || {}), [stateAsset.state]: stateAsset }
+    };
+    const families = [...(current.families || []).filter((item) => item.id !== family.id), family];
+    await projectStore.saveArtifact(projectId, 'component-contract', { ...current, version: Number(current.version || 0) + 1, status: 'reviewed', families, source: { ...(current.source || {}), last_import: `${family.id}:${stateAsset.state}` } });
+    await projectStore.updateWorkflow(projectId, 'component_resolution', 'reviewed', 'style/component-contract.json');
+    return openProject(projectId);
+  }
+
+  return { addComponentAsset, addFontAsset, approveArtifact, cancelStage, draftRequirement, invalidateFromInputChange, runStage, updateArtifact };
 }
 
 module.exports = { createDesignPipeline };

@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('designCopilot', {
   saveProject: (projectId, patch) => ipcRenderer.invoke('copilot:projects:save', projectId, patch),
   importFile: (projectId, kind) => ipcRenderer.invoke('copilot:projects:import', projectId, kind),
   manageReference: (projectId, input) => ipcRenderer.invoke('copilot:projects:reference', projectId, input),
+  importFontAsset: (projectId, input) => ipcRenderer.invoke('copilot:fonts:import', projectId, input),
+  importComponentAsset: (projectId, input) => ipcRenderer.invoke('copilot:components:import', projectId, input),
   revealProject: (projectId) => ipcRenderer.invoke('copilot:projects:reveal', projectId),
   runStage: (projectId, stage, input) => ipcRenderer.invoke('copilot:pipeline:run', projectId, stage, input),
   draftRequirement: (projectId) => ipcRenderer.invoke('copilot:input:draft-requirement', projectId),

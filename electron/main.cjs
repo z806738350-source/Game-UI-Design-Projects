@@ -118,6 +118,16 @@ function registerIpc() {
     await pipeline.invalidateFromInputChange(projectId, { references: true });
     return projectStore.open(projectId);
   });
+  ipcMain.handle('copilot:fonts:import', async (_event, projectId, input) => {
+    const selection = await dialog.showOpenDialog({ title: '选择字体资产', properties: ['openFile'], filters: [{ name: 'Fonts', extensions: ['otf', 'ttf', 'woff', 'woff2'] }] });
+    if (selection.canceled || !selection.filePaths[0]) return projectStore.open(projectId);
+    return pipeline.addFontAsset(projectId, selection.filePaths[0], input);
+  });
+  ipcMain.handle('copilot:components:import', async (_event, projectId, input) => {
+    const selection = await dialog.showOpenDialog({ title: '选择组件资产', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'svg'] }] });
+    if (selection.canceled || !selection.filePaths[0]) return projectStore.open(projectId);
+    return pipeline.addComponentAsset(projectId, selection.filePaths[0], input);
+  });
   ipcMain.handle('copilot:pipeline:run', (_event, projectId, stage, input) => pipeline.runStage(projectId, stage, input));
   ipcMain.handle('copilot:input:draft-requirement', (_event, projectId) => pipeline.draftRequirement(projectId));
   ipcMain.handle('copilot:pipeline:cancel', (_event, projectId, stage) => pipeline.cancelStage(projectId, stage));

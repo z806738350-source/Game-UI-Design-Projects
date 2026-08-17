@@ -102,6 +102,8 @@ export type DesignProject = {
     layouts: (Artifact & { proposals?: LayoutProposal[] }) | null;
     approvedLayout: Artifact | null;
     styleContract: Artifact | null;
+    fontManifest?: Artifact | null;
+    componentContract?: Artifact | null;
     visualTask: Artifact | null;
     visualResults: Artifact & { variations?: VisualVariation[] };
   };

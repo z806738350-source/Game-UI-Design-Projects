@@ -121,12 +121,14 @@ function createProjectStore(options = {}) {
     if (!project) throw new Error('Invalid project folder.');
     const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const screenPath = path.join(projectPath, 'screens', screenId);
-    const [workflow, screenContract, layouts, approvedLayout, styleContract, visualTask, visualResults, artifactHistory] = await Promise.all([
+    const [workflow, screenContract, layouts, approvedLayout, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
       readJson(path.join(projectPath, 'workflow', 'state.json'), defaultWorkflow(project.id)),
       readJson(path.join(screenPath, 'screen-contract.json'), null),
       readJson(path.join(screenPath, 'layout-proposals.json'), null),
       readJson(path.join(screenPath, 'approved-layout.json'), null),
       readJson(path.join(projectPath, 'style', 'style-contract.json'), null),
+      readJson(path.join(projectPath, 'style', 'font-manifest.json'), null),
+      readJson(path.join(projectPath, 'style', 'component-contract.json'), null),
       readJson(path.join(screenPath, 'visual-task.json'), null),
       readJson(path.join(screenPath, 'explorations', 'results.json'), { variations: [] }),
       readArtifactHistory(projectPath)
@@ -168,7 +170,7 @@ function createProjectStore(options = {}) {
       reference_paths: reference_assets.map((asset) => asset.path),
       workflow,
       artifactHistory,
-      artifacts: { screenContract, layouts, approvedLayout, styleContract, visualTask, visualResults }
+      artifacts: { screenContract, layouts, approvedLayout, styleContract, fontManifest, componentContract, visualTask, visualResults }
     };
   }
 

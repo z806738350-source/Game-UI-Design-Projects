@@ -49,6 +49,8 @@ function previewApi(): DesignCopilotApi {
       project.reference_paths = project.reference_assets.map((item) => item.path);
       return project;
     },
+    importFontAsset: async (id) => find(id),
+    importComponentAsset: async (id) => find(id),
     revealProject: async () => ({ ok: true }),
     runStage: async (id, stage) => {
       const project = find(id);
@@ -140,6 +142,8 @@ function webApi(): DesignCopilotApi {
       return project;
     },
     manageReference: (id, input) => request(`${projectPath(id)}/reference`, { method: 'POST', body: JSON.stringify(input) }),
+    importFontAsset: async () => { throw new Error('在线字体上传将在选择本地文件后通过安全上传接口执行。'); },
+    importComponentAsset: async () => { throw new Error('在线组件上传将在选择本地文件后通过安全上传接口执行。'); },
     revealProject: async () => ({ ok: false }),
     runStage: (id, stage, input) => request(`${projectPath(id)}/pipeline/run`, { method: 'POST', body: JSON.stringify({ stage, input }) }),
     draftRequirement: (id) => request(`${projectPath(id)}/requirement/draft`, { method: 'POST', body: '{}' }),
@@ -187,12 +191,14 @@ export const copilotApi = {
   saveProject: (id: string, patch: Partial<CreateProjectInput>): Promise<DesignProject> => api().saveProject(id, patch),
   importFile: (id: string, kind: 'wireframe' | 'reference'): Promise<DesignProject> => api().importFile(id, kind),
   manageReference: (id: string, input: { id: string; action: 'remove' | 'move' | 'role'; direction?: 'up' | 'down'; role?: string }): Promise<DesignProject> => api().manageReference(id, input),
+  importFontAsset: (id: string, input: Record<string, unknown>) => api().importFontAsset(id, input),
+  importComponentAsset: (id: string, input: Record<string, unknown>) => api().importComponentAsset(id, input),
   revealProject: (id: string) => api().revealProject(id),
   runStage: (id: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject> => api().runStage(id, stage, input),
   draftRequirement: (id: string): Promise<DesignProject> => api().draftRequirement(id),
   cancelStage: (id: string, stage: PipelineStage): Promise<DesignProject> => api().cancelStage(id, stage),
-  approveArtifact: (id: string, kind: 'screen-contract' | 'approved-layout' | 'style-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
-  updateArtifact: (id: string, kind: 'screen-contract' | 'style-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => api().updateArtifact(id, kind, patch),
+  approveArtifact: (id: string, kind: 'screen-contract' | 'approved-layout' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => api().approveArtifact(id, kind, input),
+  updateArtifact: (id: string, kind: 'screen-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => api().updateArtifact(id, kind, patch),
   exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId),
   logout: () => api().logout ? api().logout!() : Promise.resolve({ ok: true })
 };
