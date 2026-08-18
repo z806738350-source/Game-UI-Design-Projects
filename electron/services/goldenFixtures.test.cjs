@@ -82,6 +82,9 @@ for (const id of sampleIds) {
   if (log.status !== 'pipeline-passed') continue;
 
   test(`${id}: passed sample carries raw semantic responses and a connected repair chain`, () => {
+    // Reserved-set discipline: every published run must name the frozen
+    // threshold version it was gated against.
+    assert.equal(log.threshold_version, 'underlay-metrics-v1', 'execution log must record the frozen threshold version');
     assert.ok(Array.isArray(log.lineage?.semantic_responses) && log.lineage.semantic_responses.length >= 2, 'lineage must include the negative-control and repair critiques');
     for (const response of log.lineage.semantic_responses) {
       assert.match(response.hash, /^sha256:[0-9a-f]{64}$/);
@@ -93,7 +96,9 @@ for (const id of sampleIds) {
       if (index2 === 0) assert.equal(link.parent_underlay_id, 'known-contaminated');
       else assert.equal(link.parent_underlay_id, log.lineage.repair_chain[index2 - 1].output_underlay_id, 'repair chain parent/child must connect');
       assert.match(link.provider_task_id || '', /^.+$/, 'repair must record the provider task id');
+      assert.match(link.output_hash || '', /^sha256:[0-9a-f]{64}$/, 'repair output hash must be recorded');
     }
+    assert.match(log.lineage?.final_underlay?.hash || '', /^sha256:[0-9a-f]{64}$/, 'final underlay hash must be recorded');
   });
 
   test(`${id}: final underlay re-review passed with zero blocking issues`, () => {
@@ -128,4 +133,13 @@ test('golden index status is derived consistently from sample states', () => {
   const anyFailed = states.some((state) => state === 'failed' || state === 'missing');
   const expected = allPassed ? (index.samples.every?.((entry) => entry.designer_signoff === 'approved') ? 'released' : 'pending-signoff') : anyFailed ? 'failed' : 'prepared';
   assert.equal(index.status, expected, `index status must be ${expected} for states ${states.join(',')}`);
+});
+
+test('shared font bundles in the index match the on-disk binaries and licenses', () => {
+  for (const key of ['shared_font', 'zh_font']) {
+    const bundle = index[key];
+    assert.ok(bundle, `index.json must describe ${key}`);
+    assert.equal(sha256(path.join(root, bundle.path)), bundle.hash, `${key} font hash mismatch`);
+    assert.equal(sha256(path.join(root, bundle.license_path)), bundle.license_hash, `${key} license hash mismatch`);
+  }
 });

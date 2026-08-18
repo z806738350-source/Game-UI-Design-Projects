@@ -14,6 +14,8 @@ process.env.FONTCONFIG_FILE = path.join(fontconfigRoot, 'fonts.conf');
 process.env.XDG_CACHE_HOME = path.join(fontconfigRoot, 'cache');
 process.once('exit', () => fsSync.rmSync(fontconfigRoot, { recursive: true, force: true }));
 
+const { deriveSampleStates } = require('./goldenIndex.cjs');
+
 const root = path.resolve(__dirname, '..');
 const evidenceRoot = path.join(root, 'release-evidence', 'golden-samples');
 const canvas = 1024;
@@ -331,6 +333,7 @@ async function prepareSample(sample) {
   if (previousManifest?.outputs) manifest.outputs = previousManifest.outputs;
   if (previousManifest?.last_run) manifest.last_run = previousManifest.last_run;
   if (previousManifest?.layout_revision) manifest.layout_revision = previousManifest.layout_revision;
+  if (previousManifest?.acceptance?.provider_e2e) manifest.acceptance = previousManifest.acceptance;
   await fs.writeFile(path.join(sampleRoot, 'asset-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   const signoffPath = path.join(sampleRoot, 'designer-signoff.md');
   const signoffExists = await fs.access(signoffPath).then(() => true, () => false);
@@ -373,8 +376,11 @@ async function main() {
   const indexPath = path.join(evidenceRoot, 'index.json');
   const previous = await fs.readFile(indexPath, 'utf8').then((text) => JSON.parse(text), () => null);
   const mergedIds = [...new Set([...(previous?.samples || []).map((item) => item.id || item), ...prepared.map((sample) => sample.id)])];
+  // Derive sample states through the same code path the runner and the
+  // fixture E2E gate use; re-prep must never downgrade published results.
+  const derived = await deriveSampleStates(evidenceRoot, mergedIds);
   const index = {
-    schema_version: '1.0', status: 'prepared', samples: mergedIds,
+    schema_version: '1.0', status: derived.status, samples: derived.samples,
     shared_font: { path: path.relative(root, fontPath), hash: await sha256(fontPath), license_path: path.relative(root, licensePath), license_hash: await sha256(licensePath) },
     zh_font: { path: 'release-evidence/golden-samples/_shared/fonts/NotoSansSC-wght.ttf', hash: await sha256(path.join(evidenceRoot, '_shared', 'fonts', 'NotoSansSC-wght.ttf')), license_path: 'release-evidence/golden-samples/_shared/fonts/OFL-NotoSansSC.txt', license_hash: await sha256(path.join(evidenceRoot, '_shared', 'fonts', 'OFL-NotoSansSC.txt')) }
   };

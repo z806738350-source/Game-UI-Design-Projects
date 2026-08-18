@@ -187,5 +187,6 @@
       "media_type": "application/json"
     }
   },
-  "completed_at": "2026-08-18T04:46:59.485Z"
+  "completed_at": "2026-08-18T04:46:59.485Z",
+  "threshold_version": "underlay-metrics-v1"
 }

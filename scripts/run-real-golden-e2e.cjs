@@ -17,6 +17,7 @@ const { buildUnderlayCritique, reviewGate } = require('../electron/services/unde
 const { validateArtifact } = require('../electron/services/contracts.cjs');
 const { validateLayout } = require('../electron/services/layoutValidator.cjs');
 const { METRIC_THRESHOLDS } = require('../electron/services/underlayReview.cjs');
+const { deriveSampleStates } = require('./goldenIndex.cjs');
 
 const root = path.resolve(__dirname, '..');
 const goldenRoot = path.join(root, 'release-evidence', 'golden-samples');
@@ -279,23 +280,12 @@ async function exportEvidence({ sampleRoot, project, manifest, log, initialCriti
 async function refreshGoldenIndex() {
   const indexPath = path.join(goldenRoot, 'index.json');
   const previous = await fs.readFile(indexPath, 'utf8').then((text) => JSON.parse(text), () => ({ schema_version: '1.0' }));
-  const samples = [];
-  let allPassed = true; let anyFailed = false; let allSigned = true;
-  for (const id of sampleIds) {
-    const sampleRoot = path.join(goldenRoot, id);
-    let pipeline = 'missing';
-    try { pipeline = JSON.parse(await fs.readFile(path.join(sampleRoot, 'evidence', 'execution-log.json'), 'utf8')).status || 'missing'; } catch { /* no execution log yet */ }
-    let signoff = 'missing';
-    try { signoff = (await fs.readFile(path.join(sampleRoot, 'designer-signoff.md'), 'utf8')).includes('Decision: APPROVED') ? 'approved' : 'pending'; } catch { /* no signoff file */ }
-    samples.push({ id, pipeline, designer_signoff: signoff });
-    if (pipeline !== 'pipeline-passed') { allPassed = false; if (pipeline === 'failed' || pipeline === 'missing') anyFailed = true; }
-    if (signoff !== 'approved') allSigned = false;
-  }
+  const derived = await deriveSampleStates(goldenRoot, sampleIds);
   const index = {
     ...previous,
     schema_version: previous.schema_version || '1.0',
-    status: allPassed && allSigned ? 'released' : allPassed ? 'pending-signoff' : anyFailed ? 'failed' : 'prepared',
-    samples,
+    status: derived.status,
+    samples: derived.samples,
     updated_at: now()
   };
   await writeJson(indexPath, index);
@@ -504,7 +494,7 @@ function isTransientNetworkError(error) {
   const code = error?.cause?.code || error?.code || '';
   if (['UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_CONNECT', 'ETIMEDOUT', 'ECONNRESET', 'EPIPE', 'ENOTFOUND', 'EAI_AGAIN'].includes(code)) return true;
   // Provider-side gateway hiccups (502/503/504) are transient as well.
-  return /terminated|other side closed|fetch failed|network|\(50[234]\)|bad gateway|service unavailable|gateway timeout/i.test(String(error?.message || ''));
+  return /terminated|other side closed|fetch failed|network (error|timeout)|\(50[234]\)|bad gateway|service unavailable|gateway timeout/i.test(String(error?.message || ''));
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -212,7 +212,10 @@
     "list-row"
   ],
   "acceptance": {
-    "provider_e2e": "pending",
+    "provider_e2e": "passed",
+    "negative_control_critical_detected": true,
+    "negative_control_auto_pass": false,
+    "pipeline_gate": "passed",
     "designer_signoff": "pending",
     "formal_release": "blocked-until-signoff"
   },
