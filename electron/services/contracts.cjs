@@ -2,6 +2,7 @@ const ARTIFACT_STATUS = new Set(['draft', 'generated', 'reviewed', 'approved', '
 const { validateFontManifest } = require('./typographyAssets.cjs');
 const { validateComponentContract } = require('./componentKit.cjs');
 const { normalizeControls, validateControls } = require('./screenControls.cjs');
+const { validateStyleContract } = require('./styleContractSchema.cjs');
 
 function isObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -145,6 +146,7 @@ function validateArtifact(kind, value) {
     });
     requireArray(value, 'materials', errors);
     requireArray(value, 'reference_ids', errors);
+    errors.push(...validateStyleContract(value));
   } else if (kind === 'font-manifest') {
     requireArray(value, 'fonts', errors);
     if (!isObject(value.roles)) errors.push('roles must be an object');
