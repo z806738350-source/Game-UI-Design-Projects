@@ -16,10 +16,14 @@ const kunpoClient = require('../electron/services/kunpoClient.cjs');
 const { buildUnderlayCritique, reviewGate } = require('../electron/services/underlayCritique.cjs');
 const { validateArtifact } = require('../electron/services/contracts.cjs');
 const { validateLayout } = require('../electron/services/layoutValidator.cjs');
+const { METRIC_THRESHOLDS } = require('../electron/services/underlayReview.cjs');
 
 const root = path.resolve(__dirname, '..');
 const goldenRoot = path.join(root, 'release-evidence', 'golden-samples');
-const sampleIds = ['functional-dense', 'visual-hero', 'existing-continuation'];
+// Calibration samples (thresholds were tuned on these) come first; the two
+// reserved samples were never used for calibration and only run after the
+// threshold_version is frozen.
+const sampleIds = ['functional-dense', 'visual-hero', 'existing-continuation', 'jade-shop-zh', 'frontier-campaign'];
 
 function now() { return new Date().toISOString(); }
 
@@ -46,6 +50,24 @@ function controls() {
     ['badge', 'MAX', 'information'], ['row', 'Row 01', 'information'],
     ['secondary-action', 'Save', 'secondary'], ['icon-b', 'Action B', 'action']
   ].map(([id, label, role]) => ({ id, label, role, required: true }));
+}
+
+function controlsFor(sampleId) {
+  if (sampleId === 'jade-shop-zh') return [
+    ['primary-action', '立即购买', 'primary'], ['navigation', '商店', 'navigation'],
+    ['tab', '礼包', 'navigation'], ['resources', '¥68', 'information'],
+    ['content', '今日特惠 VIP 专享', 'information'], ['icon-a', '领取', 'action'],
+    ['badge', '-25%', 'information'], ['row', '限时礼包 仅剩2天', 'information'],
+    ['secondary-action', '加入购物车', 'secondary'], ['icon-b', '分享', 'action']
+  ].map(([id, label, role]) => ({ id, label, role, required: true }));
+  if (sampleId === 'frontier-campaign') return [
+    ['primary-action', 'Deploy', 'primary'], ['navigation', 'Campaign', 'navigation'],
+    ['tab', 'Missions', 'navigation'], ['resources', '12,480', 'information'],
+    ['content', 'Frontier Report', 'information'], ['icon-a', 'Scout', 'action'],
+    ['badge', '78%', 'information'], ['row', 'Outpost 04 ready', 'information'],
+    ['secondary-action', 'Recall', 'secondary'], ['icon-b', 'Signal', 'action']
+  ].map(([id, label, role]) => ({ id, label, role, required: true }));
+  return controls();
 }
 
 function fontRole(controlId) {
@@ -87,12 +109,12 @@ async function importReferences(store, pipeline, project, manifest, seed) {
 }
 
 async function importFont(pipeline, project, manifest) {
-  project = await pipeline.addFontAsset(project.id, path.join(root, manifest.font.path), { id: 'oxanium', sourceType: 'Google Fonts / SIL OFL 1.1' });
-  const coverage = { display: ['latin'], body: ['latin'], numeric: ['digits'], 'button-label': ['latin'] };
+  const font = manifest.font;
+  project = await pipeline.addFontAsset(project.id, path.join(root, font.path), { id: font.id, sourceType: font.license || 'SIL OFL 1.1' });
   for (const roleId of manifest.required_font_roles) {
     project = await pipeline.confirmFontUsage(project.id, {
-      fontId: 'oxanium', roleId, licenseConfirmed: true, exactConfirmed: true,
-      identityCritical: true, requiredCoverage: coverage[roleId], confirmedBy: 'golden-e2e-license-verifier'
+      fontId: font.id, roleId, licenseConfirmed: true, exactConfirmed: true,
+      identityCritical: true, requiredCoverage: font.coverage, confirmedBy: 'golden-e2e-license-verifier'
     });
   }
   return pipeline.approveArtifact(project.id, 'font-manifest');
@@ -118,15 +140,18 @@ async function importComponents(store, pipeline, project, manifest) {
 }
 
 async function seedContracts(store, pipeline, project, manifest) {
-  const requiredControls = controls();
+  const requiredControls = controlsFor(manifest.id);
   const labels = requiredControls.map((item) => item.label);
+  const primaryLabel = requiredControls.find((item) => item.role === 'primary')?.label || labels[0];
+  const secondaryLabels = requiredControls.filter((item) => item.role === 'secondary').map((item) => item.label);
+  const informationLabels = requiredControls.filter((item) => item.role === 'information').map((item) => item.label);
   const screen = {
     schema_version: '2.0', id: `${manifest.id}-screen-contract`, version: 1, status: 'reviewed', source: { wireframe: manifest.inputs.wireframe.path },
-    screen_id: 'main', screen_name: manifest.id, purpose: 'Exercise the complete strict production path with real bitmap evidence.', primary_action: 'Primary',
-    secondary_actions: ['Save'], required_information: ['88880', 'Golden Sample', 'MAX', 'Row 01'], required_controls: requiredControls,
+    screen_id: 'main', screen_name: manifest.id, purpose: 'Exercise the complete strict production path with real bitmap evidence.', primary_action: primaryLabel,
+    secondary_actions: secondaryLabels, required_information: informationLabels, required_controls: requiredControls,
     states: ['default', 'pressed', 'disabled', 'selected'], edge_cases: ['long labels', 'dense numeric content'], data_dependencies: ['golden fixture'],
     design_constraints: { canvas: [1024, 1024], minimum_controls: 10, exact_assets: true },
-    source_inventory: { requirement_functions: labels, wireframe_controls: labels, wireframe_information: ['88880', 'Golden Sample', 'MAX', 'Row 01'] },
+    source_inventory: { requirement_functions: labels, wireframe_controls: labels, wireframe_information: informationLabels },
     coverage: { covered_items: labels, uncovered_items: [] }
   };
   const screenErrors = validateArtifact('screen-contract', screen);
@@ -203,6 +228,28 @@ async function exportEvidence({ sampleRoot, project, manifest, log, initialCriti
     await normalizeSnapshot(snapshot, project.workspacePath);
   }
   if (initialCritique) await writeJson(path.join(evidenceRoot, 'initial-critique.json'), initialCritique);
+  const critique = finalProject?.artifacts?.underlayCritique || project?.artifacts?.underlayCritique;
+  const semanticResponses = [];
+  if (log.negative_control?.raw_evidence) semanticResponses.push({ stage: 'critique-negative-control', ...log.negative_control.raw_evidence });
+  for (const entry of log.stages) if (entry.critique?.raw_evidence) semanticResponses.push({ stage: entry.id, ...entry.critique.raw_evidence });
+  let finalUnderlay;
+  if (critique?.source?.underlay && project?.workspacePath) {
+    const underlayPath = path.join(project.workspacePath, 'screens', project.screen_id || 'main', 'underlays', `${critique.source.underlay}.png`);
+    finalUnderlay = { id: critique.source.underlay, hash: await sha256(underlayPath).catch(() => undefined) };
+  }
+  log.lineage = {
+    ...(log.lineage || {}),
+    model: critique?.source?.model || critique?.evidence?.model,
+    critique_prompt_hash: critique?.source?.prompt_hash || critique?.evidence?.prompt_hash,
+    input_hashes: {
+      known_contaminated_underlay: manifest.inputs?.known_contaminated_underlay?.hash,
+      wireframe: manifest.inputs?.wireframe?.hash
+    },
+    semantic_responses: semanticResponses,
+    repair_chain: log.lineage?.repair_chain || [],
+    final_underlay: finalUnderlay,
+    final_png: undefined
+  };
   await writeJson(path.join(evidenceRoot, 'execution-log.json'), log);
   if (finalProject?.artifacts?.compositionOutput?.path) {
     const source = path.join(finalProject.workspacePath, finalProject.artifacts.compositionOutput.path);
@@ -222,6 +269,36 @@ async function exportEvidence({ sampleRoot, project, manifest, log, initialCriti
   };
   manifest.last_run = { status: log.status, started_at: log.started_at, completed_at: log.completed_at, safe_provider: log.safe_provider };
   await writeJson(path.join(sampleRoot, 'asset-manifest.json'), manifest);
+  if (log.lineage && manifest.outputs?.final_png?.hash) {
+    log.lineage.final_png = manifest.outputs.final_png.hash;
+    await writeJson(path.join(evidenceRoot, 'execution-log.json'), log);
+  }
+  await refreshGoldenIndex();
+}
+
+async function refreshGoldenIndex() {
+  const indexPath = path.join(goldenRoot, 'index.json');
+  const previous = await fs.readFile(indexPath, 'utf8').then((text) => JSON.parse(text), () => ({ schema_version: '1.0' }));
+  const samples = [];
+  let allPassed = true; let anyFailed = false; let allSigned = true;
+  for (const id of sampleIds) {
+    const sampleRoot = path.join(goldenRoot, id);
+    let pipeline = 'missing';
+    try { pipeline = JSON.parse(await fs.readFile(path.join(sampleRoot, 'evidence', 'execution-log.json'), 'utf8')).status || 'missing'; } catch { /* no execution log yet */ }
+    let signoff = 'missing';
+    try { signoff = (await fs.readFile(path.join(sampleRoot, 'designer-signoff.md'), 'utf8')).includes('Decision: APPROVED') ? 'approved' : 'pending'; } catch { /* no signoff file */ }
+    samples.push({ id, pipeline, designer_signoff: signoff });
+    if (pipeline !== 'pipeline-passed') { allPassed = false; if (pipeline === 'failed' || pipeline === 'missing') anyFailed = true; }
+    if (signoff !== 'approved') allSigned = false;
+  }
+  const index = {
+    ...previous,
+    schema_version: previous.schema_version || '1.0',
+    status: allPassed && allSigned ? 'released' : allPassed ? 'pending-signoff' : anyFailed ? 'failed' : 'prepared',
+    samples,
+    updated_at: now()
+  };
+  await writeJson(indexPath, index);
 }
 
 async function runSample(sampleId, sampleIndex, config) {
@@ -231,7 +308,7 @@ async function runSample(sampleId, sampleIndex, config) {
   const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), `game-ui-golden-${sampleId}-`));
   const store = createProjectStore({ workspaceRoot: temporaryRoot });
   const pipeline = createDesignPipeline({ projectStore: store, kunpoClient, kunpoConfig: config });
-  const log = { schema_version: '1.0', sample_id: sampleId, status: 'running', started_at: now(), safe_provider: kunpoClient.safeConfig(config), stages: [] };
+  const log = { schema_version: '1.0', sample_id: sampleId, status: 'running', started_at: now(), safe_provider: kunpoClient.safeConfig(config), threshold_version: METRIC_THRESHOLDS.version, lineage: { repair_chain: [] }, stages: [] };
   let project; let initialCritique; let finalProject;
   const stage = async (id, action) => {
     const entry = { id, started_at: now(), status: 'running' }; log.stages.push(entry);
@@ -265,6 +342,11 @@ async function runSample(sampleId, sampleIndex, config) {
       project = await stage(`repair-and-recritique-${attempt}`, () => pipeline.repairUnderlay(project.id, { screenId: 'main', attempt, maxAutomaticAttempts: 2 }));
       const gate = reviewGate(project.artifacts.underlayCritique);
       log.stages.at(-1).critique = { id: project.artifacts.underlayCritique.id, result: project.artifacts.underlayCritique.result, blocking: gate.blocking.length, raw_evidence: project.artifacts.underlayCritique.evidence.semantic_raw };
+      const task = project.artifacts.underlayRepairTask;
+      log.lineage.repair_chain.push({
+        attempt, mode: task?.repair_mode, parent_underlay_id: task?.source?.parent_underlay_id,
+        output_underlay_id: task?.output?.underlay_id, provider_task_id: task?.output?.provider_task_id, output_hash: task?.output?.hash
+      });
       if (gate.passed) break;
       if (attempt === 2) throw Object.assign(new Error(`Repair did not pass after ${attempt} real attempts.`), { code: 'REAL_REPAIR_EXHAUSTED' });
     }
@@ -278,7 +360,7 @@ async function runSample(sampleId, sampleIndex, config) {
     await exportEvidence({ sampleRoot, project, manifest, log, initialCritique, finalProject });
     return { sample_id: sampleId, status: log.status, final_hash: manifest.outputs?.final_png?.hash };
   } catch (error) {
-    log.status = 'failed'; log.completed_at = now(); log.error = { code: error.code || 'ERROR', message: error.message, stack: error.stack };
+    log.status = 'failed'; log.completed_at = now(); log.error = { code: error.code || 'ERROR', message: error.message, stack: String(error.stack || '').split(`${root}${path.sep}`).join('') };
     if (project?.id) project = await store.open(project.id, { includePreviews: false }).catch(() => project);
     await exportEvidence({ sampleRoot, project, manifest, log, initialCritique, finalProject }).catch(() => undefined);
     throw error;
@@ -304,7 +386,7 @@ async function resumeSample(sampleId, config, options = {}) {
     resume_source: previousLog.resume_source?.real_model_stages?.length
       ? previousLog.resume_source
       : { status: previousLog.status, completed_at: previousLog.completed_at, error: previousLog.error, real_model_stages: previousLog.stages.filter((item) => item.id.startsWith('critique-') || item.id.startsWith('repair-')) },
-    negative_control: previousLog.negative_control, stages: []
+    negative_control: previousLog.negative_control, lineage: { repair_chain: previousLog.lineage?.repair_chain || [] }, stages: []
   };
   let project; let finalProject;
   const stage = async (id, action) => {
@@ -371,7 +453,7 @@ async function resumeSample(sampleId, config, options = {}) {
     await exportEvidence({ sampleRoot, project, manifest, log, initialCritique, finalProject });
     return { sample_id: sampleId, status: log.status, final_hash: manifest.outputs?.final_png?.hash, resumed_from_real_evidence: true };
   } catch (error) {
-    log.status = 'failed'; log.completed_at = now(); log.error = { code: error.code || 'ERROR', message: error.message, stack: error.stack };
+    log.status = 'failed'; log.completed_at = now(); log.error = { code: error.code || 'ERROR', message: error.message, stack: String(error.stack || '').split(`${root}${path.sep}`).join('') };
     if (project?.id) project = await store.open(project.id, { includePreviews: false }).catch(() => project);
     await exportEvidence({ sampleRoot, project, manifest, log, initialCritique, finalProject }).catch(() => undefined);
     throw error;
@@ -380,6 +462,11 @@ async function resumeSample(sampleId, config, options = {}) {
 
 async function main() {
   const config = loadKunpoConfig(root);
+  if (process.argv.includes('--refresh-index')) {
+    await refreshGoldenIndex();
+    process.stdout.write(`${JSON.stringify({ status: 'index-refreshed' }, null, 2)}\n`);
+    return;
+  }
   if (!config.configured) throw new Error('Kunpo is not configured; a real provider is required for Golden E2E.');
   const resumeFlag = process.argv.indexOf('--resume');
   if (resumeFlag >= 0) {
@@ -401,8 +488,23 @@ async function main() {
   const requested = process.argv.includes('--all') ? sampleIds : sampleFlag >= 0 ? [process.argv[sampleFlag + 1]] : [];
   if (!requested.length || requested.some((id) => !sampleIds.includes(id))) throw new Error(`Use --sample <${sampleIds.join('|')}> or --all.`);
   const results = [];
-  for (const id of requested) results.push(await runSample(id, sampleIds.indexOf(id), config));
+  for (const id of requested) {
+    try {
+      results.push(await runSample(id, sampleIds.indexOf(id), config));
+    } catch (error) {
+      if (!isTransientNetworkError(error)) throw error;
+      process.stderr.write(`[golden] ${id} hit a transient network error (${error.cause?.code || error.code || error.message}); retrying the sample once.\n`);
+      results.push(await runSample(id, sampleIds.indexOf(id), config));
+    }
+  }
   process.stdout.write(`${JSON.stringify({ status: 'completed', results }, null, 2)}\n`);
+}
+
+function isTransientNetworkError(error) {
+  const code = error?.cause?.code || error?.code || '';
+  if (['UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_CONNECT', 'ETIMEDOUT', 'ECONNRESET', 'EPIPE', 'ENOTFOUND', 'EAI_AGAIN'].includes(code)) return true;
+  // Provider-side gateway hiccups (502/503/504) are transient as well.
+  return /terminated|other side closed|fetch failed|network|\(50[234]\)|bad gateway|service unavailable|gateway timeout/i.test(String(error?.message || ''));
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; });

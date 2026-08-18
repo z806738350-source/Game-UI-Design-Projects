@@ -16,9 +16,12 @@
     "start": "electron .",
     "lint": "tsc --noEmit",
     "test": "node --test electron/services/*.test.cjs server/*.test.cjs",
+    "test:fixture-e2e": "node --test electron/services/goldenFixtures.test.cjs",
     "start:web": "node server/webServer.cjs",
     "test:kunpo": "node scripts/smoke-kunpo.cjs",
-    "test:kunpo-image": "node scripts/smoke-kunpo-image.cjs"
+    "test:kunpo-image": "node scripts/smoke-kunpo-image.cjs",
+    "golden:prepare": "node scripts/prepare-real-golden-assets.cjs",
+    "golden:run:real": "node scripts/run-real-golden-e2e.cjs"
   },
   "dependencies": {
     "lucide-react": "1.27.0",

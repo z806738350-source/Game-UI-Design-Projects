@@ -11,3 +11,17 @@ test-artifacts/
 *.key
 *.p12
 *.pfx
+
+# Local tooling / worktrees / backups
+.qoder/
+.wt-style-contract/
+.pr8b-backup/
+
+# Golden evidence tiering: Git keeps reproducible fixtures, JSON evidence,
+# final outputs, and signoff records; bulky intermediate bitmaps, repair
+# attempt archives, and source boards stay local or ship as release assets.
+release-evidence/golden-samples/_sources/
+release-evidence/golden-samples/*/attempts/
+release-evidence/golden-samples/*/evidence/workspace/**/*.png
+release-evidence/golden-samples/*/evidence/workspace/style/fonts/
+release-evidence/golden-samples/*/evidence/workspace/workflow/history/
