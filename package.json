@@ -16,6 +16,7 @@
     "start": "electron .",
     "lint": "tsc --noEmit",
     "test": "node --test electron/services/*.test.cjs server/*.test.cjs",
+    "test:ui-unit": "vitest run",
     "test:fixture-e2e": "node --test electron/services/goldenFixtures.test.cjs",
     "start:web": "node server/webServer.cjs",
     "test:kunpo": "node scripts/smoke-kunpo.cjs",
@@ -30,14 +31,18 @@
     "sharp": "0.35.3"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.4",
     "@types/node": "25.5.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.4",
     "concurrently": "10.0.4",
     "electron": "43.2.0",
+    "jsdom": "^30.0.1",
     "typescript": "7.0.2",
     "vite": "8.1.5",
+    "vitest": "^4.1.10",
     "wait-on": "9.1.0"
   }
 }
