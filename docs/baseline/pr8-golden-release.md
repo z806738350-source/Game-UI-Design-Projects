@@ -61,4 +61,4 @@ Git 保留：`inputs/`（可复现 fixture）、`asset-manifest.json`、`evidenc
 
 正式发布必须满足：五组样本 `pipeline-passed`、fixture E2E 全绿、三组校准样本设计师真人签核（每项 ≥4 分、无未决 blocker/critical/major、签名与日期）、PR-8B/8C 独立 Code Review 通过。版本保持 `0.2.0-alpha.1` prerelease，直到门禁全部关闭。
 
-当前状态（2026-08-18）：五组样本 pipeline-passed，fixture E2E 与单元测试全绿，五组签核均 APPROVED，`index.json` 派生为 `released`；PR-8B 已合并（#12），PR-8C 随签核记录提交中。门禁关闭后的正式版本提升（恢复 `0.2.0`）与发布通道在 PR-8C 合并后由负责人确认。
+当前状态（2026-08-18）：五组样本 pipeline-passed，fixture E2E 与单元测试全绿，五组签核均 APPROVED（韩枫，UI设计师），`index.json` 派生为 `released`；PR-8B/8C 已合并（#12/#13）。门禁全部关闭，版本提升为 `0.2.0` 正式发布。

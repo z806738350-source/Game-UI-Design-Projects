@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased — audit remediation PR-8B/8C (golden fixture E2E, evidence governance, CI, designer signoff)
+## 0.2.0 — 2026-08-18
 
-- Designer signoff completed: all five golden samples APPROVED by human review (every criterion ≥ 4, signer and date recorded); `index.json` derives `released`; signoff export archived at `release-evidence/golden-samples/signoff-results-2026-08-18.json`.
+> Formal release. The remediation Definition of Done is complete: five real-provider golden samples pipeline-passed (three calibrated + two reserved, including a Simplified Chinese font sample), fixture E2E replays the published evidence chain in CI, and designer signoff is APPROVED for every sample (`release-evidence/golden-samples/index.json` derives `released`). This reissues the `0.2.0` line whose first acceptance was withdrawn on 2026-08-17.
+
+- Designer signoff completed: all five golden samples APPROVED by 韩枫（UI设计师） (every criterion scored 5, signer and date recorded); signoff export archived at `release-evidence/golden-samples/signoff-results-2026-08-18.json`.
 - Replaced the synthetic known-issues gate tests with `goldenFixtures.test.cjs`, which replays the published real-provider evidence chain: index consistency, negative-control rejection, input/semantic-response/final-PNG hash recomputation, connected repair chain with provider task ids, zero-blocking final underlay re-review, and component/font coverage including `zh_cn`.
 - Recorded full Model Lineage in every execution log: model, critique prompt hash, input hashes, raw semantic responses, repair parent/child chain with provider task ids and output hashes, final underlay, final PNG hash, and frozen `threshold_version` (`underlay-metrics-v1`).
 - Added two reserved validation samples that never participated in threshold calibration: `jade-shop-zh` (Simplified Chinese copy, currency/percent/mixed CJK-Latin text, Noto Sans SC under SIL OFL 1.1) and `frontier-campaign`; `index.json` now derives `released/pending-signoff/failed/prepared` from execution logs and designer signoff.

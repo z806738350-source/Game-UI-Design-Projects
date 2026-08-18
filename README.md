@@ -2,7 +2,7 @@
 
 面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。
 
-> **发布状态：`0.2.0-alpha.1` / 架构型 Alpha。** 整改 PR-5 已接通最终 PNG 解码/Alpha/尺寸、当前组件与字体重哈希、真实裁剪、BBox/重叠/安全区、文字溢出和 9-slice 固定区检查，并让 Final Approval 只接受批准瞬间仍匹配的最新证据；产品工作台、事务化迁移、真实 Golden Samples 阈值校准与人工评审签核均已闭环（五组样本 pipeline-passed 且签核 APPROVED，`release-evidence/golden-samples/index.json` 派生为 `released`）。正式版本提升与发布通道待确认，在此之前仍按 prerelease 对待。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md` 与 `docs/baseline/pr8-golden-release.md`。
+> **发布状态：`0.2.0` 正式版本（2026-08-18）。** 整改 Definition of Done 已完成：五组真实 provider Golden Samples 全部 pipeline-passed（三组校准 + 两组保留，含简体中文样本），fixture E2E 在 CI 中重放已发布证据链，设计师签核（韩枫，UI设计师）五组全部 APPROVED，`release-evidence/golden-samples/index.json` 派生为 `released`。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md` 与 `docs/baseline/pr8-golden-release.md`。
 
 当前 Alpha 已覆盖的控制面包括：
 
@@ -130,7 +130,7 @@ Game UI Forge 负责后半段：
 
 ## Golden Samples 与发布门禁
 
-真实 Provider 验收采用“校准集 + 保留集”结构：三组校准样本（`functional-dense`、`visual-hero`、`existing-continuation`）与两组未参与调参的保留样本（`jade-shop-zh` 简体中文 + Noto Sans SC、`frontier-campaign`）。阈值固定为 `underlay-metrics-v1`；执行日志记录 Model、Prompt Hash、Input Hash、Provider Task ID、Repair 父子链与 Output Hash；`index.json` 由执行日志与设计师签核派生。证据分层、运行命令与发布门禁见 `docs/baseline/pr8-golden-release.md`。日常 CI 通过 `pnpm test:fixture-e2e` 重放已发布证据链，不调用 Provider。正式发布仍需设计师真人签核，版本保持 `0.2.0-alpha.1` prerelease。
+真实 Provider 验收采用“校准集 + 保留集”结构：三组校准样本（`functional-dense`、`visual-hero`、`existing-continuation`）与两组未参与调参的保留样本（`jade-shop-zh` 简体中文 + Noto Sans SC、`frontier-campaign`）。阈值固定为 `underlay-metrics-v1`；执行日志记录 Model、Prompt Hash、Input Hash、Provider Task ID、Repair 父子链与 Output Hash；`index.json` 由执行日志与设计师签核派生。证据分层、运行命令与发布门禁见 `docs/baseline/pr8-golden-release.md`。日常 CI 通过 `pnpm test:fixture-e2e` 重放已发布证据链，不调用 Provider。正式发布门禁（设计师真人签核）已于 2026-08-18 关闭，版本提升为 `0.2.0`。
 
 ## 当前 Alpha 范围外
 
