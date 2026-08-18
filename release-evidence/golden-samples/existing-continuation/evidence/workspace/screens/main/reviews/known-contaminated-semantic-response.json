@@ -1,0 +1,622 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "underlay_id": "known-contaminated",
+    "prompt_hash": "sha256:095887b0676bd4dc6a0240ea5134b632fbc790c0f15212a5ecf518fa794f2dda",
+    "model": "gpt-5.6-sol",
+    "input_hashes": {
+      "underlay": "sha256:46ae89599e90ee6d94f030af364728ed3843a220561bdb106246a4ba116800ac",
+      "overlay": "sha256:e396de3f7ef1cc3bcf3307ab16d1845e5338f30b049296dde4137ab2f6bd305e",
+      "component_board": "sha256:fe2e443718e9ddaf1b8156132208cb3c62a4ba4456642aa52decd964c2f9ec02"
+    }
+  },
+  "provider": {
+    "response_id": "chatcmpl-EE6Va1zPf0vRl3fr5zTz2x8XlRKXK",
+    "model": "gpt-5.6-sol-2026-07-09",
+    "created": 1787030318
+  },
+  "attempt": 1,
+  "raw_text": "{\n  \"confidence\": 0.99,\n  \"suspected_ui_regions\": [\n    {\n      \"bbox\": [0.027, 0.027, 0.276, 0.148],\n      \"type\": \"status-panel\",\n      \"confidence\": 0.99,\n      \"reason\": \"Large dark rounded rectangular panel with a gold outline and formal status text is already composited into the upper-left underlay.\"\n    },\n    {\n      \"bbox\": [0.02, 0.861, 0.96, 0.109],\n      \"type\": \"bottom-navigation\",\n      \"confidence\": 0.99,\n      \"reason\": \"Wide rounded navigation container with a dark fill, gold border, and five aligned controls is already present.\"\n    },\n    {\n      \"bbox\": [0.045, 0.884, 0.159, 0.065],\n      \"type\": \"button\",\n      \"confidence\": 0.99,\n      \"reason\": \"Outlined rounded button silhouette containing a centered menu label.\"\n    },\n    {\n      \"bbox\": [0.226, 0.884, 0.159, 0.065],\n      \"type\": \"button\",\n      \"confidence\": 0.99,\n      \"reason\": \"Outlined rounded button silhouette containing a centered menu label.\"\n    },\n    {\n      \"bbox\": [0.407, 0.883, 0.159, 0.066],\n      \"type\": \"selected-button\",\n      \"confidence\": 0.99,\n      \"reason\": \"Gold-filled rounded control with centered label, clearly representing a selected navigation item.\"\n    },\n    {\n      \"bbox\": [0.588, 0.884, 0.159, 0.065],\n      \"type\": \"button\",\n      \"confidence\": 0.99,\n      \"reason\": \"Outlined rounded button silhouette containing a centered menu label.\"\n    },\n    {\n      \"bbox\": [0.768, 0.884, 0.159, 0.065],\n      \"type\": \"button\",\n      \"confidence\": 0.99,\n      \"reason\": \"Outlined rounded button silhouette containing a centered menu label.\"\n    }\n  ],\n  \"text_like_regions\": [\n    {\n      \"bbox\": [0.056, 0.066, 0.219, 0.029],\n      \"type\": \"formal-status-text\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible uppercase word and numeric value: POWER 999,999.\"\n    },\n    {\n      \"bbox\": [0.056, 0.115, 0.098, 0.021],\n      \"type\": \"formal-status-text\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible status label: LV. MAX.\"\n    },\n    {\n      \"bbox\": [0.069, 0.906, 0.087, 0.022],\n      \"type\": \"button-label\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible MENU 1 label inside the first navigation button.\"\n    },\n    {\n      \"bbox\": [0.25, 0.906, 0.087, 0.022],\n      \"type\": \"button-label\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible MENU 2 label inside the second navigation button.\"\n    },\n    {\n      \"bbox\": [0.431, 0.906, 0.087, 0.022],\n      \"type\": \"button-label\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible MENU 3 label inside the selected navigation button.\"\n    },\n    {\n      \"bbox\": [0.612, 0.906, 0.087, 0.022],\n      \"type\": \"button-label\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible MENU 4 label inside the fourth navigation button.\"\n    },\n    {\n      \"bbox\": [0.793, 0.906, 0.087, 0.022],\n      \"type\": \"button-label\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible MENU 5 label inside the fifth navigation button.\"\n    }\n  ],\n  \"slot_checks\": [\n    {\n      \"slot_id\": \"slot-primary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"low\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-navigation\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-tab\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-resources\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"bottom-navigation-container-and-button\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-content\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"status-panel-with-formal-text\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-a\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"status-panel-and-numeric-text\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-badge\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-row\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"navigation-buttons-and-labels\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-secondary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"bottom-navigation-container-and-selected-button\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-b\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    }\n  ]\n}",
+  "parsed": {
+    "confidence": 0.99,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.027,
+          0.027,
+          0.276,
+          0.148
+        ],
+        "type": "status-panel",
+        "confidence": 0.99,
+        "reason": "Large dark rounded rectangular panel with a gold outline and formal status text is already composited into the upper-left underlay."
+      },
+      {
+        "bbox": [
+          0.02,
+          0.861,
+          0.96,
+          0.109
+        ],
+        "type": "bottom-navigation",
+        "confidence": 0.99,
+        "reason": "Wide rounded navigation container with a dark fill, gold border, and five aligned controls is already present."
+      },
+      {
+        "bbox": [
+          0.045,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label."
+      },
+      {
+        "bbox": [
+          0.226,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label."
+      },
+      {
+        "bbox": [
+          0.407,
+          0.883,
+          0.159,
+          0.066
+        ],
+        "type": "selected-button",
+        "confidence": 0.99,
+        "reason": "Gold-filled rounded control with centered label, clearly representing a selected navigation item."
+      },
+      {
+        "bbox": [
+          0.588,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label."
+      },
+      {
+        "bbox": [
+          0.768,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label."
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.056,
+          0.066,
+          0.219,
+          0.029
+        ],
+        "type": "formal-status-text",
+        "confidence": 0.99,
+        "reason": "Clearly legible uppercase word and numeric value: POWER 999,999."
+      },
+      {
+        "bbox": [
+          0.056,
+          0.115,
+          0.098,
+          0.021
+        ],
+        "type": "formal-status-text",
+        "confidence": 0.99,
+        "reason": "Clearly legible status label: LV. MAX."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 1 label inside the first navigation button."
+      },
+      {
+        "bbox": [
+          0.25,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 2 label inside the second navigation button."
+      },
+      {
+        "bbox": [
+          0.431,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 3 label inside the selected navigation button."
+      },
+      {
+        "bbox": [
+          0.612,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 4 label inside the fourth navigation button."
+      },
+      {
+        "bbox": [
+          0.793,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 5 label inside the fifth navigation button."
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "low",
+        "contrast_conflict": true,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "bottom-navigation-container-and-button",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "status-panel-with-formal-text",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "status-panel-and-numeric-text",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "navigation-buttons-and-labels",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "bottom-navigation-container-and-selected-button",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      }
+    ]
+  },
+  "normalized": {
+    "confidence": 0.99,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.027,
+          0.027,
+          0.276,
+          0.148
+        ],
+        "type": "status-panel",
+        "confidence": 0.99,
+        "reason": "Large dark rounded rectangular panel with a gold outline and formal status text is already composited into the upper-left underlay.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.02,
+          0.861,
+          0.96,
+          0.109
+        ],
+        "type": "bottom-navigation",
+        "confidence": 0.99,
+        "reason": "Wide rounded navigation container with a dark fill, gold border, and five aligned controls is already present.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.045,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.226,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.407,
+          0.883,
+          0.159,
+          0.066
+        ],
+        "type": "selected-button",
+        "confidence": 0.99,
+        "reason": "Gold-filled rounded control with centered label, clearly representing a selected navigation item.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.588,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.768,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.056,
+          0.066,
+          0.219,
+          0.029
+        ],
+        "type": "formal-status-text",
+        "confidence": 0.99,
+        "reason": "Clearly legible uppercase word and numeric value: POWER 999,999.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.056,
+          0.115,
+          0.098,
+          0.021
+        ],
+        "type": "formal-status-text",
+        "confidence": 0.99,
+        "reason": "Clearly legible status label: LV. MAX.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 1 label inside the first navigation button.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.25,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 2 label inside the second navigation button.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.431,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 3 label inside the selected navigation button.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.612,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 4 label inside the fourth navigation button.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.793,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 5 label inside the fifth navigation button.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "low",
+        "contrast_conflict": true,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "bottom-navigation-container-and-button",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "status-panel-with-formal-text",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "status-panel-and-numeric-text",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "navigation-buttons-and-labels",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "bottom-navigation-container-and-selected-button",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      }
+    ],
+    "coordinate_space": "normalized-0-1"
+  },
+  "captured_at": "2026-08-18T05:19:21.593Z"
+}

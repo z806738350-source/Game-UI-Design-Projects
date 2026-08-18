@@ -1,0 +1,29 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-critique-known-contaminated-repair-v1-repair-2",
+  "version": 1,
+  "status": "completed",
+  "source": {
+    "critique": "main-underlay-critique-known-contaminated-repair-v1",
+    "parent_underlay_id": "known-contaminated-repair-v1",
+    "underlay_contract": "main-underlay-contract"
+  },
+  "repair_mode": "regenerate",
+  "target_regions": [
+    "slot-resources"
+  ],
+  "attempt": 2,
+  "max_automatic_attempts": 2,
+  "instructions": [
+    "remove resource_bar_like_ornamental_roof_strip; resource_bar_like_ornamental_roof_strip"
+  ],
+  "preserve_regions": [],
+  "completed_at": "2026-08-18T05:09:57.847Z",
+  "output": {
+    "underlay_id": "known-contaminated-repair-v1-repair-v2",
+    "path": "screens/main/underlays/known-contaminated-repair-v1-repair-v2.png",
+    "hash": "sha256:060d1e49d2bb3169774d8111e2fac3fa44a535e4fb6b8f00eb47cf59ead32abf",
+    "provider_task_id": "task_NpSxcklf7ieEF8j7l2CURbBtxzRqtGqc",
+    "parent_underlay_id": "known-contaminated-repair-v1"
+  }
+}

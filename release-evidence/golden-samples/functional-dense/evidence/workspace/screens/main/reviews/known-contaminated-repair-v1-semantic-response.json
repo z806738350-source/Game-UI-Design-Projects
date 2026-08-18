@@ -1,0 +1,369 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "underlay_id": "known-contaminated-repair-v1",
+    "prompt_hash": "sha256:cd653865da128f29860fb2f5f0b48ed8907358a4ecf754fe59e6ff79901aba0f",
+    "model": "gpt-5.6-sol",
+    "input_hashes": {
+      "underlay": "sha256:51482e87e986bd6a54efe8d271eed0d4ee6084350dac67d9693ef95f96d540da",
+      "overlay": "sha256:0cbf70668642c1c53fb19e220471f2384d3f08b025d307fff1e4faff0e91a80e",
+      "component_board": "sha256:946b6bae1f6a130955d1049d56b24c7949fea0f0f07154e8f404efce4ca16058"
+    }
+  },
+  "provider": {
+    "response_id": "chatcmpl-EE5xLv74Z8oCZPVOEBOqW84CwJXB2",
+    "model": "gpt-5.6-sol-2026-07-09",
+    "created": 1787028195
+  },
+  "attempt": 1,
+  "raw_text": "{\n  \"confidence\": 0.93,\n  \"suspected_ui_regions\": [\n    {\n      \"bbox\": [0.067, 0.787, 0.562, 0.193],\n      \"type\": \"radial-navigation-like floor ornament\",\n      \"confidence\": 0.62,\n      \"reason\": \"The large circular alchemical diagram has concentric rings, discrete glyphs, and radial divisions that can read like an in-world radial menu or navigation graphic; it contaminates the navigation and tab slots.\"\n    },\n    {\n      \"bbox\": [0.458, 0.203, 0.041, 0.058],\n      \"type\": \"icon-like glowing vial\",\n      \"confidence\": 0.67,\n      \"reason\": \"A compact cyan glass prop forms a bright, isolated icon-like silhouette inside the icon-a reservation.\"\n    }\n  ],\n  \"text_like_regions\": [\n    {\n      \"bbox\": [0.079, 0.805, 0.544, 0.17],\n      \"type\": \"decorative alchemical glyphs\",\n      \"confidence\": 0.73,\n      \"reason\": \"Repeated rune-like marks and symbols around the floor circle resemble stylized characters despite being environmental ornament rather than formal text.\"\n    }\n  ],\n  \"slot_checks\": [\n    {\n      \"slot_id\": \"slot-primary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"low\",\n      \"contrast_conflict\": false,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.95\n      }\n    },\n    {\n      \"slot_id\": \"slot-navigation\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"radial-navigation-like floor circle and glyphs\",\n        \"confidence\": 0.79\n      }\n    },\n    {\n      \"slot_id\": \"slot-tab\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"radial-interface-like linework and glyphs\",\n        \"confidence\": 0.82\n      }\n    },\n    {\n      \"slot_id\": \"slot-resources\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"moderate\",\n      \"contrast_conflict\": false,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.94\n      }\n    },\n    {\n      \"slot_id\": \"slot-content\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.91\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-a\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.98,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"glowing-vial icon-like ambient prop\",\n        \"confidence\": 0.72\n      }\n    },\n    {\n      \"slot_id\": \"slot-badge\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"moderate\",\n      \"contrast_conflict\": false,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.9\n      }\n    },\n    {\n      \"slot_id\": \"slot-row\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"moderate\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"panel-like cabinet frontage\",\n        \"confidence\": 0.46\n      }\n    },\n    {\n      \"slot_id\": \"slot-secondary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"moderate\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.89\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-b\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"moderate\",\n      \"contrast_conflict\": false,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"small bottle silhouettes resembling icon content\",\n        \"confidence\": 0.55\n      }\n    }\n  ]\n}",
+  "parsed": {
+    "confidence": 0.93,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.067,
+          0.787,
+          0.562,
+          0.193
+        ],
+        "type": "radial-navigation-like floor ornament",
+        "confidence": 0.62,
+        "reason": "The large circular alchemical diagram has concentric rings, discrete glyphs, and radial divisions that can read like an in-world radial menu or navigation graphic; it contaminates the navigation and tab slots."
+      },
+      {
+        "bbox": [
+          0.458,
+          0.203,
+          0.041,
+          0.058
+        ],
+        "type": "icon-like glowing vial",
+        "confidence": 0.67,
+        "reason": "A compact cyan glass prop forms a bright, isolated icon-like silhouette inside the icon-a reservation."
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.079,
+          0.805,
+          0.544,
+          0.17
+        ],
+        "type": "decorative alchemical glyphs",
+        "confidence": 0.73,
+        "reason": "Repeated rune-like marks and symbols around the floor circle resemble stylized characters despite being environmental ornament rather than formal text."
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "low",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.95
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "radial-navigation-like floor circle and glyphs",
+          "confidence": 0.79
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "radial-interface-like linework and glyphs",
+          "confidence": 0.82
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.94
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.91
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "glowing-vial icon-like ambient prop",
+          "confidence": 0.72
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.9
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "panel-like cabinet frontage",
+          "confidence": 0.46
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.89
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "small bottle silhouettes resembling icon content",
+          "confidence": 0.55
+        }
+      }
+    ]
+  },
+  "normalized": {
+    "confidence": 0.93,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.067,
+          0.787,
+          0.562,
+          0.193
+        ],
+        "type": "radial-navigation-like floor ornament",
+        "confidence": 0.62,
+        "reason": "The large circular alchemical diagram has concentric rings, discrete glyphs, and radial divisions that can read like an in-world radial menu or navigation graphic; it contaminates the navigation and tab slots.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.458,
+          0.203,
+          0.041,
+          0.058
+        ],
+        "type": "icon-like glowing vial",
+        "confidence": 0.67,
+        "reason": "A compact cyan glass prop forms a bright, isolated icon-like silhouette inside the icon-a reservation.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.079,
+          0.805,
+          0.544,
+          0.17
+        ],
+        "type": "decorative alchemical glyphs",
+        "confidence": 0.73,
+        "reason": "Repeated rune-like marks and symbols around the floor circle resemble stylized characters despite being environmental ornament rather than formal text.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "low",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.95
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "radial-navigation-like floor circle and glyphs",
+          "confidence": 0.79
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "radial-interface-like linework and glyphs",
+          "confidence": 0.82
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.94
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.91
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "glowing-vial icon-like ambient prop",
+          "confidence": 0.72
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.9
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "panel-like cabinet frontage",
+          "confidence": 0.46
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.89
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "small bottle silhouettes resembling icon content",
+          "confidence": 0.55
+        }
+      }
+    ],
+    "coordinate_space": "normalized-0-1"
+  },
+  "captured_at": "2026-08-18T04:44:12.298Z"
+}

@@ -1,0 +1,438 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "underlay_id": "known-contaminated-repair-v1",
+    "prompt_hash": "sha256:2c33071c64d6ccfb6c5885a40915686d164e8e405c60d09562139439f52d3376",
+    "model": "gpt-5.6-sol",
+    "input_hashes": {
+      "underlay": "sha256:975a9429aab25ed2817f8e2f1d2744669174ca1175f5fa3ebaf1592b138f24b9",
+      "overlay": "sha256:615e694f6645cc03e9250dd41c1a707f6db73e1e2e96bad2461881f796d4feea",
+      "component_board": "sha256:b34a690813eecdc1db467816670ce71efa1eb7fc910d507b5c5b736c74c29d2b"
+    }
+  },
+  "provider": {
+    "response_id": "chatcmpl-EE6L1D3mOXyhqeICZXPNIPrPbbJkP",
+    "model": "gpt-5.6-sol-2026-07-09",
+    "created": 1787029663
+  },
+  "attempt": 2,
+  "raw_text": "{\"confidence\":0.93,\"suspected_ui_regions\":[{\"bbox\":[0.366,0.178,0.252,0.306],\"type\":\"icon_or_panel_like_architectural_medallion\",\"confidence\":0.58,\"reason\":\"The dominant circular jade gate has a framed icon/panel silhouette, but inspection identifies it as environmental architecture rather than composed shared UI.\"},{\"bbox\":[0.09,0.0,0.7,0.083],\"type\":\"bar_like_ornamental_roof_band\",\"confidence\":0.52,\"reason\":\"Parallel dark horizontal bands with gold ornament resemble a resource bar or tab strip at a glance, though they are part of the pavilion roof.\"},{\"bbox\":[0.313,0.568,0.37,0.12],\"type\":\"badge_or_icon_like_floor_medallion\",\"confidence\":0.39,\"reason\":\"The framed circular floor inlay has a badge-like silhouette but remains integrated into the floor perspective.\"},{\"bbox\":[0.082,0.374,0.078,0.151],\"type\":\"icon_like_ambient_prop\",\"confidence\":0.47,\"reason\":\"The high-contrast framed lantern can read as an icon tile, but it is an ordinary environmental prop.\"}],\"text_like_regions\":[{\"bbox\":[0.202,0.004,0.44,0.052],\"type\":\"decorative_glyph_like_ornament\",\"confidence\":0.29,\"reason\":\"Small repeated gold roof motifs can weakly resemble script at reduced scale; no legible or formal text is present.\"},{\"bbox\":[0.426,0.266,0.132,0.174],\"type\":\"seal_like_ornamental_marks\",\"confidence\":0.31,\"reason\":\"Curving motifs within the central jade medallion resemble seal glyphs, but they are non-legible architectural decoration.\"}],\"slot_checks\":[{\"slot_id\":\"slot-primary-action\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"moderate\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":false,\"type\":\"none\",\"confidence\":0.96}},{\"slot_id\":\"slot-navigation\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"high\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":true,\"type\":\"icon_like_ornate_lantern_and_framed_railing\",\"confidence\":0.61}},{\"slot_id\":\"slot-tab\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"high\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":true,\"type\":\"tab_or_bar_like_roof_band\",\"confidence\":0.68}},{\"slot_id\":\"slot-resources\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"high\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":true,\"type\":\"resource_bar_like_ornamental_roof_strip\",\"confidence\":0.73}},{\"slot_id\":\"slot-content\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"moderate\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":false,\"type\":\"none\",\"confidence\":0.94}},{\"slot_id\":\"slot-icon-a\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.94,\"background_busyness\":\"high\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":true,\"type\":\"icon_like_architectural_crest\",\"confidence\":0.52}},{\"slot_id\":\"slot-badge\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"moderate\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":false,\"type\":\"none\",\"confidence\":0.95}},{\"slot_id\":\"slot-row\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"moderate\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":false,\"type\":\"none\",\"confidence\":0.96}},{\"slot_id\":\"slot-secondary-action\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"high\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":false,\"type\":\"none\",\"confidence\":0.91}},{\"slot_id\":\"slot-icon-b\",\"subject_overlap\":false,\"subject_overlap_confidence\":0.99,\"background_busyness\":\"moderate\",\"contrast_conflict\":true,\"hard_edge_crossing\":true,\"ui_like_contamination\":{\"detected\":false,\"type\":\"none\",\"confidence\":0.96}}]}",
+  "parsed": {
+    "confidence": 0.93,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.366,
+          0.178,
+          0.252,
+          0.306
+        ],
+        "type": "icon_or_panel_like_architectural_medallion",
+        "confidence": 0.58,
+        "reason": "The dominant circular jade gate has a framed icon/panel silhouette, but inspection identifies it as environmental architecture rather than composed shared UI."
+      },
+      {
+        "bbox": [
+          0.09,
+          0,
+          0.7,
+          0.083
+        ],
+        "type": "bar_like_ornamental_roof_band",
+        "confidence": 0.52,
+        "reason": "Parallel dark horizontal bands with gold ornament resemble a resource bar or tab strip at a glance, though they are part of the pavilion roof."
+      },
+      {
+        "bbox": [
+          0.313,
+          0.568,
+          0.37,
+          0.12
+        ],
+        "type": "badge_or_icon_like_floor_medallion",
+        "confidence": 0.39,
+        "reason": "The framed circular floor inlay has a badge-like silhouette but remains integrated into the floor perspective."
+      },
+      {
+        "bbox": [
+          0.082,
+          0.374,
+          0.078,
+          0.151
+        ],
+        "type": "icon_like_ambient_prop",
+        "confidence": 0.47,
+        "reason": "The high-contrast framed lantern can read as an icon tile, but it is an ordinary environmental prop."
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.202,
+          0.004,
+          0.44,
+          0.052
+        ],
+        "type": "decorative_glyph_like_ornament",
+        "confidence": 0.29,
+        "reason": "Small repeated gold roof motifs can weakly resemble script at reduced scale; no legible or formal text is present."
+      },
+      {
+        "bbox": [
+          0.426,
+          0.266,
+          0.132,
+          0.174
+        ],
+        "type": "seal_like_ornamental_marks",
+        "confidence": 0.31,
+        "reason": "Curving motifs within the central jade medallion resemble seal glyphs, but they are non-legible architectural decoration."
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.96
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "icon_like_ornate_lantern_and_framed_railing",
+          "confidence": 0.61
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "tab_or_bar_like_roof_band",
+          "confidence": 0.68
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource_bar_like_ornamental_roof_strip",
+          "confidence": 0.73
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.94
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.94,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "icon_like_architectural_crest",
+          "confidence": 0.52
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.95
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.96
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.91
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.96
+        }
+      }
+    ]
+  },
+  "normalized": {
+    "confidence": 0.93,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.366,
+          0.178,
+          0.252,
+          0.306
+        ],
+        "type": "icon_or_panel_like_architectural_medallion",
+        "confidence": 0.58,
+        "reason": "The dominant circular jade gate has a framed icon/panel silhouette, but inspection identifies it as environmental architecture rather than composed shared UI.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.09,
+          0,
+          0.7,
+          0.083
+        ],
+        "type": "bar_like_ornamental_roof_band",
+        "confidence": 0.52,
+        "reason": "Parallel dark horizontal bands with gold ornament resemble a resource bar or tab strip at a glance, though they are part of the pavilion roof.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.313,
+          0.568,
+          0.37,
+          0.12
+        ],
+        "type": "badge_or_icon_like_floor_medallion",
+        "confidence": 0.39,
+        "reason": "The framed circular floor inlay has a badge-like silhouette but remains integrated into the floor perspective.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.082,
+          0.374,
+          0.078,
+          0.151
+        ],
+        "type": "icon_like_ambient_prop",
+        "confidence": 0.47,
+        "reason": "The high-contrast framed lantern can read as an icon tile, but it is an ordinary environmental prop.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.202,
+          0.004,
+          0.44,
+          0.052
+        ],
+        "type": "decorative_glyph_like_ornament",
+        "confidence": 0.29,
+        "reason": "Small repeated gold roof motifs can weakly resemble script at reduced scale; no legible or formal text is present.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.426,
+          0.266,
+          0.132,
+          0.174
+        ],
+        "type": "seal_like_ornamental_marks",
+        "confidence": 0.31,
+        "reason": "Curving motifs within the central jade medallion resemble seal glyphs, but they are non-legible architectural decoration.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.96
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "icon_like_ornate_lantern_and_framed_railing",
+          "confidence": 0.61
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "tab_or_bar_like_roof_band",
+          "confidence": 0.68
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource_bar_like_ornamental_roof_strip",
+          "confidence": 0.73
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.94
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.94,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "icon_like_architectural_crest",
+          "confidence": 0.52
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.95
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.96
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.91
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.96
+        }
+      }
+    ],
+    "coordinate_space": "normalized-0-1"
+  },
+  "captured_at": "2026-08-18T05:08:24.436Z"
+}

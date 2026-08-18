@@ -1,0 +1,584 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "underlay_id": "known-contaminated-repair-v1",
+    "prompt_hash": "sha256:095887b0676bd4dc6a0240ea5134b632fbc790c0f15212a5ecf518fa794f2dda",
+    "model": "gpt-5.6-sol",
+    "input_hashes": {
+      "underlay": "sha256:65a5b29bd0d18bb8e5e2fb3a065476b49e5549383609a53f3ea611d5aaacfcd4",
+      "overlay": "sha256:ec9f03bf135d9f772de1fed7eed436492b9fdf18b41d075df01c6a676dd340dd",
+      "component_board": "sha256:fe2e443718e9ddaf1b8156132208cb3c62a4ba4456642aa52decd964c2f9ec02"
+    }
+  },
+  "provider": {
+    "response_id": "chatcmpl-EE6XqJUOIQpGyPhnDPR11VKgtCI2K",
+    "model": "gpt-5.6-sol-2026-07-09",
+    "created": 1787030458
+  },
+  "attempt": 1,
+  "raw_text": "{\n  \"confidence\": 0.96,\n  \"suspected_ui_regions\": [\n    {\n      \"bbox\": [0.034, 0.575, 0.943, 0.331],\n      \"type\": \"radial-dial-like-environmental-ornament\",\n      \"confidence\": 0.64,\n      \"reason\": \"The large concentric, segmented paving design resembles a radial menu, gauge, or decorative HUD dial despite being part of the floor.\"\n    },\n    {\n      \"bbox\": [0.398, 0.43, 0.075, 0.119],\n      \"type\": \"icon-like-environmental-ornament\",\n      \"confidence\": 0.34,\n      \"reason\": \"The centered, symmetrical lantern silhouette has an icon-like presentation, but is clearly an in-world architectural prop.\"\n    }\n  ],\n  \"text_like_regions\": [],\n  \"slot_checks\": [\n    {\n      \"slot_id\": \"slot-primary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": {\n        \"level\": \"moderate\",\n        \"confidence\": 0.9,\n        \"reason\": \"Cloud texture and a warm illumination gradient remain visible behind the slot.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.76,\n        \"reason\": \"Bright cloud highlights and darker cloud patches create uneven local contrast.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": false,\n        \"confidence\": 0.91,\n        \"reason\": \"Cloud boundaries are predominantly soft and do not form a strong crossing edge.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-navigation\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.98,\n      \"background_busyness\": {\n        \"level\": \"high\",\n        \"confidence\": 0.96,\n        \"reason\": \"Layered mountains, vegetation, rock texture, and mist occupy the navigation surface.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.94,\n        \"reason\": \"Dark mountain forms alternate with pale mist across the slot.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.93,\n        \"reason\": \"Mountain and vegetation contours cross the slot.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.97\n      }\n    },\n    {\n      \"slot_id\": \"slot-tab\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.98,\n      \"background_busyness\": {\n        \"level\": \"high\",\n        \"confidence\": 0.97,\n        \"reason\": \"The slot contains a dark crag, trees, mist, and portions of architectural scenery.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.96,\n        \"reason\": \"Strong dark-to-light transitions occur between the mountain, foliage, and fog.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.95,\n        \"reason\": \"Jagged mountain and tree-line contours cross the tab footprint.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.96\n      }\n    },\n    {\n      \"slot_id\": \"slot-resources\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": {\n        \"level\": \"high\",\n        \"confidence\": 0.96,\n        \"reason\": \"Numerous curved paving bands, engraved segments, and slab seams pass through the narrow slot.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.88,\n        \"reason\": \"Alternating illuminated grooves and dark stone produce uneven contrast.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.98,\n        \"reason\": \"Several strong curved and diagonal paving edges cross the slot.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"segmented-ring-or-gauge-like-paving\",\n        \"confidence\": 0.55\n      }\n    },\n    {\n      \"slot_id\": \"slot-content\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.98,\n      \"background_busyness\": {\n        \"level\": \"high\",\n        \"confidence\": 0.95,\n        \"reason\": \"Cloud layers and multiple detailed mountain silhouettes occupy much of the panel area.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.93,\n        \"reason\": \"Dark mountain peaks sit against luminous clouds, creating substantial tonal variation.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.94,\n        \"reason\": \"Several mountain ridges and peaks cross the intended panel surface.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-a\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": {\n        \"level\": \"high\",\n        \"confidence\": 0.95,\n        \"reason\": \"A textured cliff, foliage, and mist fill the small icon footprint.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.91,\n        \"reason\": \"Dark foliage and rock contrast sharply with the pale atmospheric background.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.95,\n        \"reason\": \"The cliff silhouette and foliage contours cross the icon area.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-badge\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": {\n        \"level\": \"moderate\",\n        \"confidence\": 0.91,\n        \"reason\": \"Mist is interrupted by a rocky mountain contour and subtle vegetation detail.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.86,\n        \"reason\": \"The dark ridge against pale fog creates a local contrast transition.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.9,\n        \"reason\": \"A mountain edge crosses the compact badge footprint.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-row\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": {\n        \"level\": \"moderate\",\n        \"confidence\": 0.94,\n        \"reason\": \"Dark stone slabs contain multiple long seams and tonal variations.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.79,\n        \"reason\": \"Stone seams and intermittent highlights create nonuniform contrast across the row.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.97,\n        \"reason\": \"Several diagonal and near-horizontal slab boundaries cross the row.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.94\n      }\n    },\n    {\n      \"slot_id\": \"slot-secondary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": {\n        \"level\": \"high\",\n        \"confidence\": 0.97,\n        \"reason\": \"Ornate concentric paving bands, engraved markings, and radial seams fill the button footprint.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.91,\n        \"reason\": \"Bright engraved edges alternate with dark stone segments.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.98,\n        \"reason\": \"Multiple curved ring edges and radial seams cross the slot.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"radial-dial-like-floor-pattern\",\n        \"confidence\": 0.66\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-b\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": {\n        \"level\": \"high\",\n        \"confidence\": 0.94,\n        \"reason\": \"A detailed mountain ridge, rock texture, and atmospheric layers occupy the icon area.\"\n      },\n      \"contrast_conflict\": {\n        \"detected\": true,\n        \"confidence\": 0.92,\n        \"reason\": \"The dark ridge contrasts strongly against pale mist.\"\n      },\n      \"hard_edge_crossing\": {\n        \"detected\": true,\n        \"confidence\": 0.95,\n        \"reason\": \"A prominent jagged mountain contour crosses the icon footprint.\"\n      },\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    }\n  ]\n}",
+  "parsed": {
+    "confidence": 0.96,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.034,
+          0.575,
+          0.943,
+          0.331
+        ],
+        "type": "radial-dial-like-environmental-ornament",
+        "confidence": 0.64,
+        "reason": "The large concentric, segmented paving design resembles a radial menu, gauge, or decorative HUD dial despite being part of the floor."
+      },
+      {
+        "bbox": [
+          0.398,
+          0.43,
+          0.075,
+          0.119
+        ],
+        "type": "icon-like-environmental-ornament",
+        "confidence": 0.34,
+        "reason": "The centered, symmetrical lantern silhouette has an icon-like presentation, but is clearly an in-world architectural prop."
+      }
+    ],
+    "text_like_regions": [],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "moderate",
+          "confidence": 0.9,
+          "reason": "Cloud texture and a warm illumination gradient remain visible behind the slot."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.76,
+          "reason": "Bright cloud highlights and darker cloud patches create uneven local contrast."
+        },
+        "hard_edge_crossing": {
+          "detected": false,
+          "confidence": 0.91,
+          "reason": "Cloud boundaries are predominantly soft and do not form a strong crossing edge."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.96,
+          "reason": "Layered mountains, vegetation, rock texture, and mist occupy the navigation surface."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.94,
+          "reason": "Dark mountain forms alternate with pale mist across the slot."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.93,
+          "reason": "Mountain and vegetation contours cross the slot."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.97
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.97,
+          "reason": "The slot contains a dark crag, trees, mist, and portions of architectural scenery."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.96,
+          "reason": "Strong dark-to-light transitions occur between the mountain, foliage, and fog."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.95,
+          "reason": "Jagged mountain and tree-line contours cross the tab footprint."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.96
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.96,
+          "reason": "Numerous curved paving bands, engraved segments, and slab seams pass through the narrow slot."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.88,
+          "reason": "Alternating illuminated grooves and dark stone produce uneven contrast."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.98,
+          "reason": "Several strong curved and diagonal paving edges cross the slot."
+        },
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "segmented-ring-or-gauge-like-paving",
+          "confidence": 0.55
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.95,
+          "reason": "Cloud layers and multiple detailed mountain silhouettes occupy much of the panel area."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.93,
+          "reason": "Dark mountain peaks sit against luminous clouds, creating substantial tonal variation."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.94,
+          "reason": "Several mountain ridges and peaks cross the intended panel surface."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.95,
+          "reason": "A textured cliff, foliage, and mist fill the small icon footprint."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.91,
+          "reason": "Dark foliage and rock contrast sharply with the pale atmospheric background."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.95,
+          "reason": "The cliff silhouette and foliage contours cross the icon area."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "moderate",
+          "confidence": 0.91,
+          "reason": "Mist is interrupted by a rocky mountain contour and subtle vegetation detail."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.86,
+          "reason": "The dark ridge against pale fog creates a local contrast transition."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.9,
+          "reason": "A mountain edge crosses the compact badge footprint."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "moderate",
+          "confidence": 0.94,
+          "reason": "Dark stone slabs contain multiple long seams and tonal variations."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.79,
+          "reason": "Stone seams and intermittent highlights create nonuniform contrast across the row."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.97,
+          "reason": "Several diagonal and near-horizontal slab boundaries cross the row."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.94
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.97,
+          "reason": "Ornate concentric paving bands, engraved markings, and radial seams fill the button footprint."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.91,
+          "reason": "Bright engraved edges alternate with dark stone segments."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.98,
+          "reason": "Multiple curved ring edges and radial seams cross the slot."
+        },
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "radial-dial-like-floor-pattern",
+          "confidence": 0.66
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.94,
+          "reason": "A detailed mountain ridge, rock texture, and atmospheric layers occupy the icon area."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.92,
+          "reason": "The dark ridge contrasts strongly against pale mist."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.95,
+          "reason": "A prominent jagged mountain contour crosses the icon footprint."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      }
+    ]
+  },
+  "normalized": {
+    "confidence": 0.96,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.034,
+          0.575,
+          0.943,
+          0.331
+        ],
+        "type": "radial-dial-like-environmental-ornament",
+        "confidence": 0.64,
+        "reason": "The large concentric, segmented paving design resembles a radial menu, gauge, or decorative HUD dial despite being part of the floor.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.398,
+          0.43,
+          0.075,
+          0.119
+        ],
+        "type": "icon-like-environmental-ornament",
+        "confidence": 0.34,
+        "reason": "The centered, symmetrical lantern silhouette has an icon-like presentation, but is clearly an in-world architectural prop.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "moderate",
+          "confidence": 0.9,
+          "reason": "Cloud texture and a warm illumination gradient remain visible behind the slot."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.76,
+          "reason": "Bright cloud highlights and darker cloud patches create uneven local contrast."
+        },
+        "hard_edge_crossing": {
+          "detected": false,
+          "confidence": 0.91,
+          "reason": "Cloud boundaries are predominantly soft and do not form a strong crossing edge."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.96,
+          "reason": "Layered mountains, vegetation, rock texture, and mist occupy the navigation surface."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.94,
+          "reason": "Dark mountain forms alternate with pale mist across the slot."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.93,
+          "reason": "Mountain and vegetation contours cross the slot."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.97
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.97,
+          "reason": "The slot contains a dark crag, trees, mist, and portions of architectural scenery."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.96,
+          "reason": "Strong dark-to-light transitions occur between the mountain, foliage, and fog."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.95,
+          "reason": "Jagged mountain and tree-line contours cross the tab footprint."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.96
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.96,
+          "reason": "Numerous curved paving bands, engraved segments, and slab seams pass through the narrow slot."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.88,
+          "reason": "Alternating illuminated grooves and dark stone produce uneven contrast."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.98,
+          "reason": "Several strong curved and diagonal paving edges cross the slot."
+        },
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "segmented-ring-or-gauge-like-paving",
+          "confidence": 0.55
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.95,
+          "reason": "Cloud layers and multiple detailed mountain silhouettes occupy much of the panel area."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.93,
+          "reason": "Dark mountain peaks sit against luminous clouds, creating substantial tonal variation."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.94,
+          "reason": "Several mountain ridges and peaks cross the intended panel surface."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.95,
+          "reason": "A textured cliff, foliage, and mist fill the small icon footprint."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.91,
+          "reason": "Dark foliage and rock contrast sharply with the pale atmospheric background."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.95,
+          "reason": "The cliff silhouette and foliage contours cross the icon area."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "moderate",
+          "confidence": 0.91,
+          "reason": "Mist is interrupted by a rocky mountain contour and subtle vegetation detail."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.86,
+          "reason": "The dark ridge against pale fog creates a local contrast transition."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.9,
+          "reason": "A mountain edge crosses the compact badge footprint."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "moderate",
+          "confidence": 0.94,
+          "reason": "Dark stone slabs contain multiple long seams and tonal variations."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.79,
+          "reason": "Stone seams and intermittent highlights create nonuniform contrast across the row."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.97,
+          "reason": "Several diagonal and near-horizontal slab boundaries cross the row."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.94
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.97,
+          "reason": "Ornate concentric paving bands, engraved markings, and radial seams fill the button footprint."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.91,
+          "reason": "Bright engraved edges alternate with dark stone segments."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.98,
+          "reason": "Multiple curved ring edges and radial seams cross the slot."
+        },
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "radial-dial-like-floor-pattern",
+          "confidence": 0.66
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": {
+          "level": "high",
+          "confidence": 0.94,
+          "reason": "A detailed mountain ridge, rock texture, and atmospheric layers occupy the icon area."
+        },
+        "contrast_conflict": {
+          "detected": true,
+          "confidence": 0.92,
+          "reason": "The dark ridge contrasts strongly against pale mist."
+        },
+        "hard_edge_crossing": {
+          "detected": true,
+          "confidence": 0.95,
+          "reason": "A prominent jagged mountain contour crosses the icon footprint."
+        },
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      }
+    ],
+    "coordinate_space": "normalized-0-1"
+  },
+  "captured_at": "2026-08-18T05:21:45.822Z"
+}

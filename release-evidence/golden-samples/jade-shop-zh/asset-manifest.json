@@ -1,0 +1,252 @@
+{
+  "schema_version": "1.0",
+  "id": "jade-shop-zh",
+  "status": "prepared",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "provenance": {
+    "source_board": {
+      "path": "release-evidence/golden-samples/_sources/jade-shop-zh-board.png",
+      "hash": "sha256:b7871d7e4c853f74d1b5a6c3c589b7bd3935026649239b33f34ca284a1429ccc"
+    },
+    "source_prompt": "Privacy-safe original game UI source board: two equal panels; left a polished Chinese-language fantasy game shop and gift screen with Simplified Chinese labels and at least ten controls, right the matching UI-free jade pavilion courtyard. No brand, franchise, watermark, or real person.",
+    "generation_mode": "OpenAI built-in image generation",
+    "privacy": "original synthetic artwork; no personal data, real person, franchise, logo, or watermark requested",
+    "prepared_by": "scripts/prepare-real-golden-assets.cjs"
+  },
+  "inputs": {
+    "references": [
+      {
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/references/reference-1.png",
+        "hash": "sha256:6fba425c89e151175e7ac94f1f93452489d7d9167b092cc32928d5b5848a37a8"
+      },
+      {
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/references/reference-2.png",
+        "hash": "sha256:c9c2e7e82fd4f5d01cafe1305f5bba73ebdd4dcacea74819b05cfba0dc864f15"
+      },
+      {
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/references/reference-3.png",
+        "hash": "sha256:cd5b742a5b3def6d6ac1031be7ac5043537440d742396abf5e28bd9298206e87"
+      }
+    ],
+    "clean_underlay": {
+      "path": "release-evidence/golden-samples/jade-shop-zh/inputs/clean-underlay.png",
+      "hash": "sha256:f34f00d5c8d92a39908c951039abda82075fa77681970a95c6b621589a3ddd1c"
+    },
+    "wireframe": {
+      "path": "release-evidence/golden-samples/jade-shop-zh/inputs/wireframe.png",
+      "hash": "sha256:fc1cc370bb830403980e155cd6953e4b93b4d2682f2dd2daea3d113c7a09f4f8"
+    },
+    "known_contaminated_underlay": {
+      "path": "release-evidence/golden-samples/jade-shop-zh/inputs/known-contaminated-underlay.png",
+      "hash": "sha256:48306f828b8866a5d6e1baba5de2320ef7a24567d9950cb9036ade8b250706dd"
+    },
+    "components": [
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/primary-button/default.png",
+        "hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "pressed",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/primary-button/pressed.png",
+        "hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/primary-button/disabled.png",
+        "hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/bottom-navigation/default.png",
+        "hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/bottom-navigation/selected.png",
+        "hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/bottom-navigation/disabled.png",
+        "hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/section-tab/default.png",
+        "hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/section-tab/selected.png",
+        "hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/section-tab/disabled.png",
+        "hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d"
+      },
+      {
+        "family_id": "resource-bar",
+        "category": "resource-bar",
+        "state": "default",
+        "width": 220,
+        "height": 48,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/resource-bar/default.png",
+        "hash": "sha256:5f460ada6c255d2a1b784ef58fd766900efb4055d817bc0315a1dd62adbe1bf2"
+      },
+      {
+        "family_id": "content-panel",
+        "category": "panel",
+        "state": "default",
+        "width": 256,
+        "height": 128,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/content-panel/default.png",
+        "hash": "sha256:7cad31af87f2842b08832d30e4870d40a01d09559916f4bc62aefcc9c037a8f8"
+      },
+      {
+        "family_id": "action-icon",
+        "category": "icon",
+        "state": "default",
+        "width": 64,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/action-icon/default.png",
+        "hash": "sha256:70f8960a4a9f7063b98ac08c9f6bea77f442f96194fad7f9d6d6dbef960f8749"
+      },
+      {
+        "family_id": "status-badge",
+        "category": "badge",
+        "state": "default",
+        "width": 96,
+        "height": 40,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/status-badge/default.png",
+        "hash": "sha256:2df013997e56471e7e3977171e851991770a96df248a98f32539197eadf2008d"
+      },
+      {
+        "family_id": "list-row",
+        "category": "list-row",
+        "state": "default",
+        "width": 280,
+        "height": 56,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/jade-shop-zh/inputs/components/list-row/default.png",
+        "hash": "sha256:d6f126f77a0f1cc8b42a60e3fed30808e5bc222ae3b5a9776341adf9543f1bc9"
+      }
+    ]
+  },
+  "font": {
+    "id": "noto-sans-sc",
+    "path": "release-evidence/golden-samples/_shared/fonts/NotoSansSC-wght.ttf",
+    "license_path": "release-evidence/golden-samples/_shared/fonts/OFL-NotoSansSC.txt",
+    "license": "SIL OFL 1.1 (Noto Sans SC)",
+    "coverage": [
+      "zh_cn"
+    ]
+  },
+  "required_font_roles": [
+    "display",
+    "body",
+    "numeric",
+    "button-label"
+  ],
+  "required_component_families": [
+    "primary-button",
+    "bottom-navigation",
+    "section-tab",
+    "resource-bar",
+    "content-panel",
+    "action-icon",
+    "status-badge",
+    "list-row"
+  ],
+  "acceptance": {
+    "provider_e2e": "passed",
+    "negative_control_critical_detected": true,
+    "negative_control_auto_pass": false,
+    "pipeline_gate": "passed",
+    "designer_signoff": "pending",
+    "formal_release": "blocked-until-signoff"
+  },
+  "outputs": {
+    "final_png": {
+      "path": "release-evidence/golden-samples/jade-shop-zh/final.png",
+      "hash": "sha256:d56324947d7d0e051299c4ba82cbeb3c6d867eff5d7af6c0e4eb7616e0084312"
+    },
+    "critique": {
+      "id": "main-underlay-critique-known-contaminated-repair-v1-repair-v2",
+      "result": "passed",
+      "raw_hash": "sha256:1522e840454f9f05b5114254d0562134c9b9ae0b0d454c260d03d8758f95cf15"
+    },
+    "fidelity": {
+      "id": "main-fidelity-report",
+      "status": "passed",
+      "evidence_digest": "sha256:d6097e3a26ab5fdfc7642fa981de0490127e94dc555c9106214c988757df86b3"
+    }
+  },
+  "last_run": {
+    "status": "pipeline-passed",
+    "started_at": "2026-08-18T05:00:58.333Z",
+    "completed_at": "2026-08-18T05:10:48.437Z",
+    "safe_provider": {
+      "configured": true,
+      "mode": "direct",
+      "envSource": ".env",
+      "modelSource": ".env",
+      "visionModel": "gpt-5.6-sol",
+      "critiqueModel": "gpt-5.6-sol",
+      "imageModel": "Image-GPT2"
+    }
+  }
+}

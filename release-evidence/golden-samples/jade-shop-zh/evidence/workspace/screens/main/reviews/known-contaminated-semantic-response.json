@@ -1,0 +1,484 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "underlay_id": "known-contaminated",
+    "prompt_hash": "sha256:2c33071c64d6ccfb6c5885a40915686d164e8e405c60d09562139439f52d3376",
+    "model": "gpt-5.6-sol",
+    "input_hashes": {
+      "underlay": "sha256:48306f828b8866a5d6e1baba5de2320ef7a24567d9950cb9036ade8b250706dd",
+      "overlay": "sha256:d79e1452b59b7ebad62afd69d769058db8f0d3a7d436fba19c462aaa3edb41af",
+      "component_board": "sha256:b34a690813eecdc1db467816670ce71efa1eb7fc910d507b5c5b736c74c29d2b"
+    }
+  },
+  "provider": {
+    "response_id": "chatcmpl-EE6EgQNaxwd8frwJ2zGrCs6xt1url",
+    "model": "gpt-5.6-sol-2026-07-09",
+    "created": 1787029270
+  },
+  "attempt": 1,
+  "raw_text": "{\n  \"confidence\": 0.998,\n  \"suspected_ui_regions\": [\n    {\n      \"bbox\": [0.0313, 0.0247, 0.2969, 0.3958],\n      \"type\": \"content-panel\",\n      \"confidence\": 0.999,\n      \"reason\": \"Large dark framed shop panel with a formal heading and repeated outlined offer rows is already rendered into the raw underlay.\"\n    },\n    {\n      \"bbox\": [0.0559, 0.0859, 0.2448, 0.2917],\n      \"type\": \"list-row-stack\",\n      \"confidence\": 0.999,\n      \"reason\": \"Five repeated rounded rectangular controls containing price-like labels form an unmistakable shared-UI list.\"\n    },\n    {\n      \"bbox\": [0.7174, 0.0286, 0.2513, 0.0625],\n      \"type\": \"resource-bar\",\n      \"confidence\": 0.999,\n      \"reason\": \"Dark rounded resource/currency display with gold outline and numeric value is embedded in the upper-right underlay.\"\n    },\n    {\n      \"bbox\": [0.6823, 0.8581, 0.2773, 0.0742],\n      \"type\": \"primary-button\",\n      \"confidence\": 0.999,\n      \"reason\": \"Large dark rounded purchase control with gold border, action text, and discount value is embedded in the lower-right underlay.\"\n    }\n  ],\n  \"text_like_regions\": [\n    {\n      \"bbox\": [0.0586, 0.0586, 0.1328, 0.0352],\n      \"type\": \"formal-heading-text\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible Chinese shop heading inside the upper-left panel.\"\n    },\n    {\n      \"bbox\": [0.0684, 0.1237, 0.172, 0.2448],\n      \"type\": \"multi-line-offer-text\",\n      \"confidence\": 0.999,\n      \"reason\": \"Five lines of legible Chinese offer labels with currency values and quantity multipliers.\"\n    },\n    {\n      \"bbox\": [0.741, 0.0495, 0.1458, 0.026],\n      \"type\": \"currency-label-and-number\",\n      \"confidence\": 0.999,\n      \"reason\": \"Legible currency label followed by the formatted number 88,880.\"\n    },\n    {\n      \"bbox\": [0.724, 0.879, 0.1966, 0.0313],\n      \"type\": \"action-and-discount-text\",\n      \"confidence\": 0.999,\n      \"reason\": \"Legible purchase action text and percentage discount inside the lower-right button.\"\n    }\n  ],\n  \"slot_checks\": [\n    {\n      \"slot_id\": \"slot-primary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.998,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": null,\n        \"confidence\": 0.991\n      }\n    },\n    {\n      \"slot_id\": \"slot-navigation\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"content-panel-border\",\n        \"confidence\": 0.997\n      }\n    },\n    {\n      \"slot_id\": \"slot-tab\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"resource-bar\",\n        \"confidence\": 0.999\n      }\n    },\n    {\n      \"slot_id\": \"slot-resources\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": null,\n        \"confidence\": 0.986\n      }\n    },\n    {\n      \"slot_id\": \"slot-content\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"primary-button\",\n        \"confidence\": 0.999\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-a\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": false,\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": null,\n        \"confidence\": 0.995\n      }\n    },\n    {\n      \"slot_id\": \"slot-badge\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": null,\n        \"confidence\": 0.995\n      }\n    },\n    {\n      \"slot_id\": \"slot-row\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": null,\n        \"confidence\": 0.994\n      }\n    },\n    {\n      \"slot_id\": \"slot-secondary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": null,\n        \"confidence\": 0.994\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-b\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": null,\n        \"confidence\": 0.994\n      }\n    }\n  ]\n}",
+  "parsed": {
+    "confidence": 0.998,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.0313,
+          0.0247,
+          0.2969,
+          0.3958
+        ],
+        "type": "content-panel",
+        "confidence": 0.999,
+        "reason": "Large dark framed shop panel with a formal heading and repeated outlined offer rows is already rendered into the raw underlay."
+      },
+      {
+        "bbox": [
+          0.0559,
+          0.0859,
+          0.2448,
+          0.2917
+        ],
+        "type": "list-row-stack",
+        "confidence": 0.999,
+        "reason": "Five repeated rounded rectangular controls containing price-like labels form an unmistakable shared-UI list."
+      },
+      {
+        "bbox": [
+          0.7174,
+          0.0286,
+          0.2513,
+          0.0625
+        ],
+        "type": "resource-bar",
+        "confidence": 0.999,
+        "reason": "Dark rounded resource/currency display with gold outline and numeric value is embedded in the upper-right underlay."
+      },
+      {
+        "bbox": [
+          0.6823,
+          0.8581,
+          0.2773,
+          0.0742
+        ],
+        "type": "primary-button",
+        "confidence": 0.999,
+        "reason": "Large dark rounded purchase control with gold border, action text, and discount value is embedded in the lower-right underlay."
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.0586,
+          0.0586,
+          0.1328,
+          0.0352
+        ],
+        "type": "formal-heading-text",
+        "confidence": 0.999,
+        "reason": "Clearly legible Chinese shop heading inside the upper-left panel."
+      },
+      {
+        "bbox": [
+          0.0684,
+          0.1237,
+          0.172,
+          0.2448
+        ],
+        "type": "multi-line-offer-text",
+        "confidence": 0.999,
+        "reason": "Five lines of legible Chinese offer labels with currency values and quantity multipliers."
+      },
+      {
+        "bbox": [
+          0.741,
+          0.0495,
+          0.1458,
+          0.026
+        ],
+        "type": "currency-label-and-number",
+        "confidence": 0.999,
+        "reason": "Legible currency label followed by the formatted number 88,880."
+      },
+      {
+        "bbox": [
+          0.724,
+          0.879,
+          0.1966,
+          0.0313
+        ],
+        "type": "action-and-discount-text",
+        "confidence": 0.999,
+        "reason": "Legible purchase action text and percentage discount inside the lower-right button."
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.991
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "content-panel-border",
+          "confidence": 0.997
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource-bar",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.986
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "primary-button",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "medium",
+        "contrast_conflict": false,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.995
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.995
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.994
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.994
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.994
+        }
+      }
+    ]
+  },
+  "normalized": {
+    "confidence": 0.998,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.0313,
+          0.0247,
+          0.2969,
+          0.3958
+        ],
+        "type": "content-panel",
+        "confidence": 0.999,
+        "reason": "Large dark framed shop panel with a formal heading and repeated outlined offer rows is already rendered into the raw underlay.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.0559,
+          0.0859,
+          0.2448,
+          0.2917
+        ],
+        "type": "list-row-stack",
+        "confidence": 0.999,
+        "reason": "Five repeated rounded rectangular controls containing price-like labels form an unmistakable shared-UI list.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.7174,
+          0.0286,
+          0.2513,
+          0.0625
+        ],
+        "type": "resource-bar",
+        "confidence": 0.999,
+        "reason": "Dark rounded resource/currency display with gold outline and numeric value is embedded in the upper-right underlay.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.6823,
+          0.8581,
+          0.2773,
+          0.0742
+        ],
+        "type": "primary-button",
+        "confidence": 0.999,
+        "reason": "Large dark rounded purchase control with gold border, action text, and discount value is embedded in the lower-right underlay.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.0586,
+          0.0586,
+          0.1328,
+          0.0352
+        ],
+        "type": "formal-heading-text",
+        "confidence": 0.999,
+        "reason": "Clearly legible Chinese shop heading inside the upper-left panel.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.0684,
+          0.1237,
+          0.172,
+          0.2448
+        ],
+        "type": "multi-line-offer-text",
+        "confidence": 0.999,
+        "reason": "Five lines of legible Chinese offer labels with currency values and quantity multipliers.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.741,
+          0.0495,
+          0.1458,
+          0.026
+        ],
+        "type": "currency-label-and-number",
+        "confidence": 0.999,
+        "reason": "Legible currency label followed by the formatted number 88,880.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.724,
+          0.879,
+          0.1966,
+          0.0313
+        ],
+        "type": "action-and-discount-text",
+        "confidence": 0.999,
+        "reason": "Legible purchase action text and percentage discount inside the lower-right button.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.991
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "content-panel-border",
+          "confidence": 0.997
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource-bar",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.986
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "primary-button",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "medium",
+        "contrast_conflict": false,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.995
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.995
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.994
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.994
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": null,
+          "confidence": 0.994
+        }
+      }
+    ],
+    "coordinate_space": "normalized-0-1"
+  },
+  "captured_at": "2026-08-18T05:01:56.856Z"
+}

@@ -1,0 +1,103 @@
+{
+  "schema_version": "2.0",
+  "id": "project-reference-inventory",
+  "version": 9,
+  "status": "approved",
+  "source": {
+    "managed_by": "reference-workbench"
+  },
+  "updated_at": "2026-08-18T04:37:17.076Z",
+  "assets": [
+    {
+      "id": "reference-mywpl21s-1",
+      "path": "style/references/mywpl21s.png",
+      "name": "reference-1.png",
+      "role": "primary",
+      "approved": true,
+      "screen_type": "functional-dense",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 1",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1702813,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 0
+    },
+    {
+      "id": "reference-mywpl21t-2",
+      "path": "style/references/mywpl21t.png",
+      "name": "reference-2.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "functional-dense",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 2",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1694483,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 1
+    },
+    {
+      "id": "reference-mywpl21u-3",
+      "path": "style/references/mywpl21u.png",
+      "name": "reference-3.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "functional-dense",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 3",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1676701,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 2
+    }
+  ],
+  "approved_at": "2026-08-18T04:37:17.081Z"
+}

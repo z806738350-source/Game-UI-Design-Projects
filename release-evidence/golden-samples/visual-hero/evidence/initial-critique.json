@@ -1,0 +1,931 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-critique-known-contaminated",
+  "version": 1,
+  "status": "reviewed",
+  "source": {
+    "underlay": "known-contaminated",
+    "underlay_contract": "main-underlay-contract",
+    "prompt_hash": "sha256:b382bfe0384c7f00fedbea5dc764ab6f8e8d305dfabae79b61ce08b6b157707b",
+    "model": "gpt-5.6-sol"
+  },
+  "global_scan": {
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.323,
+          0.108,
+          0.354,
+          0.66
+        ],
+        "type": "large_framed_card_panel",
+        "confidence": 0.99,
+        "reason": "Dominant dark rectangular card with rounded corners, a gold outline, an inset focal graphic, and a caption; this is composed UI rather than underlay scenery.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.382,
+          0.193,
+          0.236,
+          0.495
+        ],
+        "type": "hero_placeholder_icon",
+        "confidence": 0.99,
+        "reason": "Large outlined circle-and-triangle symbol forms a deliberate foreground icon or placeholder silhouette inside the card.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.783,
+          0.877,
+          0.181,
+          0.07
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Rounded dark rectangle with a gold border and centered action label closely matches a shared button silhouette.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.386,
+          0.713,
+          0.235,
+          0.031
+        ],
+        "type": "formal_text",
+        "confidence": 0.99,
+        "reason": "Clearly legible uppercase caption reading LIMITED HERO inside the central card.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.815,
+          0.899,
+          0.135,
+          0.03
+        ],
+        "type": "formal_text_and_number",
+        "confidence": 0.99,
+        "reason": "Clearly legible action text reading DRAW ×10 inside the bottom-right button.",
+        "bbox_normalization": "already-normalized"
+      }
+    ]
+  },
+  "slot_checks": [
+    {
+      "slot_id": "slot-primary-action",
+      "subject_overlap": true,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "framed_card_and_large_circular_focal_icon",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-navigation",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.97,
+      "background_busyness": "moderate",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "rounded_card_border",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-tab",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-resources",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.98,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "large_card_edge",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-content",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.94,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "large_framed_card",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-icon-a",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "moderate",
+      "contrast_conflict": false,
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-badge",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "moderate",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-row",
+      "subject_overlap": true,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "framed_card_and_large_triangular_focal_icon",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-secondary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-icon-b",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.99
+      }
+    }
+  ],
+  "deterministic_metrics": {
+    "threshold_version": "underlay-metrics-v1",
+    "thresholds": {
+      "version": "underlay-metrics-v1",
+      "edge_density": 0.22,
+      "local_contrast": 0.32,
+      "color_complexity": 0.42,
+      "highlight_density": 0.18,
+      "hard_edge_crossing": 0.2
+    },
+    "image_hash": "sha256:411c2d92a7e3b26d9625c9dbfb2e169375a1cece26c15ee1e99c0e1c6f67ecd6",
+    "width": 1024,
+    "height": 1024,
+    "slots": {
+      "slot-primary-action": {
+        "edge_density": 0.014388489208633094,
+        "local_contrast": 0.2861588579412435,
+        "color_complexity": 0.28125,
+        "highlight_density": 0.025086805555555557,
+        "hard_edge_crossing": 0.012396694214876033,
+        "pixel_count": 11520
+      },
+      "slot-navigation": {
+        "edge_density": 0.016055448324267415,
+        "local_contrast": 0.24639435108952748,
+        "color_complexity": 0.3854166666666667,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.022727272727272728,
+        "pixel_count": 11520
+      },
+      "slot-tab": {
+        "edge_density": 0.001052816283558519,
+        "local_contrast": 0.1298513069233558,
+        "color_complexity": 0.16666666666666666,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-resources": {
+        "edge_density": 0.008056781124112795,
+        "local_contrast": 0.312959286063895,
+        "color_complexity": 0.16666666666666666,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.013157894736842105,
+        "pixel_count": 10560
+      },
+      "slot-content": {
+        "edge_density": 0.00856458742632613,
+        "local_contrast": 0.27187985483691,
+        "color_complexity": 0.2916666666666667,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.013089005235602094,
+        "pixel_count": 32768
+      },
+      "slot-icon-a": {
+        "edge_density": 0,
+        "local_contrast": 0.036399684462858115,
+        "color_complexity": 0.052083333333333336,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 4096
+      },
+      "slot-badge": {
+        "edge_density": 0,
+        "local_contrast": 0.029838019356858383,
+        "color_complexity": 0.07291666666666667,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 3840
+      },
+      "slot-row": {
+        "edge_density": 0.024303764827230533,
+        "local_contrast": 0.44105586178095274,
+        "color_complexity": 0.3229166666666667,
+        "highlight_density": 0.03176020408163265,
+        "hard_edge_crossing": 0.03293413173652695,
+        "pixel_count": 15680
+      },
+      "slot-secondary-action": {
+        "edge_density": 0.00008773469029654326,
+        "local_contrast": 0.09862912239063715,
+        "color_complexity": 0.16666666666666666,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.002066115702479339,
+        "pixel_count": 11520
+      },
+      "slot-icon-b": {
+        "edge_density": 0,
+        "local_contrast": 0.048906466506748424,
+        "color_complexity": 0.0625,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 4096
+      }
+    }
+  },
+  "evidence": {
+    "underlay": {
+      "path": "screens/main/underlays/known-contaminated.png",
+      "absolute_path": "/var/folders/qc/58d4jj9x3mzgmr6j4kzphy9r0000gn/T/game-ui-golden-visual-hero-CPraAQ/golden-visual-hero-mywpiww1/screens/main/underlays/known-contaminated.png",
+      "hash": "sha256:411c2d92a7e3b26d9625c9dbfb2e169375a1cece26c15ee1e99c0e1c6f67ecd6",
+      "width": 1024,
+      "height": 1024
+    },
+    "overlay": {
+      "path": "screens/main/underlays/known-contaminated-review-input.png",
+      "hash": "sha256:424a08bee875e9e3c9f4bde110ee14dbea737ceea1e563422c272e70869bf3b8",
+      "width": 1024,
+      "height": 1024
+    },
+    "annotated_overlay": {
+      "path": "screens/main/underlays/known-contaminated-review-overlay.png",
+      "hash": "sha256:d861221dab6378fd6047df8fac5e7434608754b458bdfba7ec8f9f2216ec8315",
+      "width": 1024,
+      "height": 1024
+    },
+    "component_board": {
+      "path": "screens/main/underlays/component-review-board.png",
+      "hash": "sha256:1f0c6793978dcf1c4f7206cccb1f1783f083759d969680d0d0b4fbfd0302f05d",
+      "count": 8,
+      "width": 800,
+      "height": 280
+    },
+    "semantic_raw": {
+      "path": "screens/main/reviews/known-contaminated-semantic-response.json",
+      "hash": "sha256:e0bd4e6546f694983d6046096ff83e18578145e9c0cf109f2f69575f003c6b7c",
+      "byte_length": 17428,
+      "media_type": "application/json"
+    },
+    "prompt_hash": "sha256:b382bfe0384c7f00fedbea5dc764ab6f8e8d305dfabae79b61ce08b6b157707b",
+    "model": "gpt-5.6-sol"
+  },
+  "issues": [
+    {
+      "severity": "critical",
+      "type": "large_framed_card_panel",
+      "bbox": [
+        0.323,
+        0.108,
+        0.354,
+        0.66
+      ],
+      "confidence": 0.99,
+      "reason": "Dominant dark rectangular card with rounded corners, a gold outline, an inset focal graphic, and a caption; this is composed UI rather than underlay scenery.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-1"
+    },
+    {
+      "severity": "critical",
+      "type": "hero_placeholder_icon",
+      "bbox": [
+        0.382,
+        0.193,
+        0.236,
+        0.495
+      ],
+      "confidence": 0.99,
+      "reason": "Large outlined circle-and-triangle symbol forms a deliberate foreground icon or placeholder silhouette inside the card.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-2"
+    },
+    {
+      "severity": "critical",
+      "type": "button",
+      "bbox": [
+        0.783,
+        0.877,
+        0.181,
+        0.07
+      ],
+      "confidence": 0.99,
+      "reason": "Rounded dark rectangle with a gold border and centered action label closely matches a shared button silhouette.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-3"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.386,
+        0.713,
+        0.235,
+        0.031
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible uppercase caption reading LIMITED HERO inside the central card.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-4"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.815,
+        0.899,
+        0.135,
+        0.03
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible action text reading DRAW ×10 inside the bottom-right button.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-5"
+    },
+    {
+      "severity": "critical",
+      "type": "subject-overlap",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.3515625,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "confidence": 0.99,
+      "reason": "subject-overlap",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-6"
+    },
+    {
+      "severity": "critical",
+      "type": "framed_card_and_large_circular_focal_icon",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.3515625,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "confidence": 0.99,
+      "reason": "framed_card_and_large_circular_focal_icon",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-7"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.3515625,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-8"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.3515625,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-9"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.3515625,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-10"
+    },
+    {
+      "severity": "critical",
+      "type": "rounded_card_border",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.1796875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "confidence": 0.99,
+      "reason": "rounded_card_border",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-11"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.1796875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-12"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.1796875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-13"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.1796875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-14"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.6953125,
+        0.7890625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-15"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.6953125,
+        0.7890625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-16"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.6953125,
+        0.7890625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-17"
+    },
+    {
+      "severity": "critical",
+      "type": "large_card_edge",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.6328125,
+        0.4609375,
+        0.21484375,
+        0.046875
+      ],
+      "confidence": 0.98,
+      "reason": "large_card_edge",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-18"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.6328125,
+        0.4609375,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-19"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.6328125,
+        0.4609375,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-20"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.6328125,
+        0.4609375,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-21"
+    },
+    {
+      "severity": "critical",
+      "type": "large_framed_card",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.6171875,
+        0.3203125,
+        0.25,
+        0.125
+      ],
+      "confidence": 0.99,
+      "reason": "large_framed_card",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-22"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.6171875,
+        0.3203125,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-23"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.6171875,
+        0.3203125,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-24"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.6171875,
+        0.3203125,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-25"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.8046875,
+        0.2265625,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-26"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.7890625,
+        0.0546875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-27"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.7890625,
+        0.0546875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-28"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.7890625,
+        0.0546875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-29"
+    },
+    {
+      "severity": "critical",
+      "type": "subject-overlap",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "confidence": 0.99,
+      "reason": "subject-overlap",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-30"
+    },
+    {
+      "severity": "critical",
+      "type": "framed_card_and_large_triangular_focal_icon",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "confidence": 0.99,
+      "reason": "framed_card_and_large_triangular_focal_icon",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-31"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-32"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-33"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-34"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "edge=0.024303764827230533, contrast=0.44105586178095274, color=0.3229166666666667",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-35"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.0390625,
+        0.9296875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-36"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.0390625,
+        0.9296875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-37"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.0390625,
+        0.9296875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-38"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-icon-b",
+      "bbox": [
+        0.6953125,
+        0.0859375,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-39"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-icon-b",
+      "bbox": [
+        0.6953125,
+        0.0859375,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-40"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-icon-b",
+      "bbox": [
+        0.6953125,
+        0.0859375,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-41"
+    }
+  ],
+  "result": "failed",
+  "manual_review": {
+    "required": false,
+    "approved": false
+  },
+  "manual_waivers": []
+}

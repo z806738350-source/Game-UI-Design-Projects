@@ -1,0 +1,90 @@
+{
+  "schema_version": "2.0",
+  "id": "project-font-manifest",
+  "version": 5,
+  "status": "approved",
+  "source": {
+    "last_import": "noto-sans-sc",
+    "last_confirmation": "noto-sans-sc:button-label"
+  },
+  "fonts": [
+    {
+      "id": "noto-sans-sc",
+      "family_name": "Noto Sans SC Thin",
+      "postscript_name": "NotoSansSC-Thin",
+      "source_type": "SIL OFL 1.1 (Noto Sans SC)",
+      "local_path": "style/fonts/noto-sans-sc.ttf",
+      "file_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "byte_length": 17772300,
+      "format": "ttf",
+      "license_status": "confirmed",
+      "coverage": {
+        "zh_cn": true,
+        "latin": true,
+        "digits": true,
+        "symbols": true
+      },
+      "imported_at": "2026-08-18T05:00:58.387Z",
+      "license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      }
+    }
+  ],
+  "roles": {
+    "display": {
+      "font_id": "noto-sans-sc",
+      "fidelity_mode": "exact",
+      "identity_critical": true,
+      "required_coverage": [
+        "zh_cn"
+      ],
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.390Z"
+      }
+    },
+    "body": {
+      "font_id": "noto-sans-sc",
+      "fidelity_mode": "exact",
+      "identity_critical": true,
+      "required_coverage": [
+        "zh_cn"
+      ],
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.393Z"
+      }
+    },
+    "numeric": {
+      "font_id": "noto-sans-sc",
+      "fidelity_mode": "exact",
+      "identity_critical": true,
+      "required_coverage": [
+        "zh_cn"
+      ],
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.397Z"
+      }
+    },
+    "button-label": {
+      "font_id": "noto-sans-sc",
+      "fidelity_mode": "exact",
+      "identity_critical": true,
+      "required_coverage": [
+        "zh_cn"
+      ],
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      }
+    }
+  },
+  "approved_at": "2026-08-18T05:00:58.404Z"
+}

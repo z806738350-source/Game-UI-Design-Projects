@@ -1,0 +1,153 @@
+{
+  "schema_version": "2.0",
+  "id": "functional-dense-screen-contract",
+  "version": 1,
+  "status": "approved",
+  "source": {
+    "wireframe": "release-evidence/golden-samples/functional-dense/inputs/wireframe.png"
+  },
+  "screen_id": "main",
+  "screen_name": "functional-dense",
+  "purpose": "Exercise the complete strict production path with real bitmap evidence.",
+  "primary_action": "Primary",
+  "secondary_actions": [
+    "Save"
+  ],
+  "required_information": [
+    "88880",
+    "Golden Sample",
+    "MAX",
+    "Row 01"
+  ],
+  "required_controls": [
+    {
+      "id": "primary-action",
+      "label": "Primary",
+      "role": "primary",
+      "required": true
+    },
+    {
+      "id": "navigation",
+      "label": "Navigation",
+      "role": "navigation",
+      "required": true
+    },
+    {
+      "id": "tab",
+      "label": "Items",
+      "role": "navigation",
+      "required": true
+    },
+    {
+      "id": "resources",
+      "label": "88880",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "content",
+      "label": "Golden Sample",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "icon-a",
+      "label": "Action A",
+      "role": "action",
+      "required": true
+    },
+    {
+      "id": "badge",
+      "label": "MAX",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "row",
+      "label": "Row 01",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "secondary-action",
+      "label": "Save",
+      "role": "secondary",
+      "required": true
+    },
+    {
+      "id": "icon-b",
+      "label": "Action B",
+      "role": "action",
+      "required": true
+    }
+  ],
+  "states": [
+    "default",
+    "pressed",
+    "disabled",
+    "selected"
+  ],
+  "edge_cases": [
+    "long labels",
+    "dense numeric content"
+  ],
+  "data_dependencies": [
+    "golden fixture"
+  ],
+  "design_constraints": {
+    "canvas": [
+      1024,
+      1024
+    ],
+    "minimum_controls": 10,
+    "exact_assets": true
+  },
+  "source_inventory": {
+    "requirement_functions": [
+      "Primary",
+      "Navigation",
+      "Items",
+      "88880",
+      "Golden Sample",
+      "Action A",
+      "MAX",
+      "Row 01",
+      "Save",
+      "Action B"
+    ],
+    "wireframe_controls": [
+      "Primary",
+      "Navigation",
+      "Items",
+      "88880",
+      "Golden Sample",
+      "Action A",
+      "MAX",
+      "Row 01",
+      "Save",
+      "Action B"
+    ],
+    "wireframe_information": [
+      "88880",
+      "Golden Sample",
+      "MAX",
+      "Row 01"
+    ]
+  },
+  "coverage": {
+    "covered_items": [
+      "Primary",
+      "Navigation",
+      "Items",
+      "88880",
+      "Golden Sample",
+      "Action A",
+      "MAX",
+      "Row 01",
+      "Save",
+      "Action B"
+    ],
+    "uncovered_items": []
+  },
+  "approved_at": "2026-08-18T04:37:17.181Z"
+}

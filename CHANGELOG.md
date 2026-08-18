@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — audit remediation PR-8B (golden fixture E2E, evidence governance, CI)
+
+- Replaced the synthetic known-issues gate tests with `goldenFixtures.test.cjs`, which replays the published real-provider evidence chain: index consistency, negative-control rejection, input/semantic-response/final-PNG hash recomputation, connected repair chain with provider task ids, zero-blocking final underlay re-review, and component/font coverage including `zh_cn`.
+- Recorded full Model Lineage in every execution log: model, critique prompt hash, input hashes, raw semantic responses, repair parent/child chain with provider task ids and output hashes, final underlay, final PNG hash, and frozen `threshold_version` (`underlay-metrics-v1`).
+- Added two reserved validation samples that never participated in threshold calibration: `jade-shop-zh` (Simplified Chinese copy, currency/percent/mixed CJK-Latin text, Noto Sans SC under SIL OFL 1.1) and `frontier-campaign`; `index.json` now derives `released/pending-signoff/failed/prepared` from execution logs and designer signoff.
+- Tiered the golden evidence: Git keeps reproducible inputs, JSON evidence, finals, manifests, fonts, and signoff records; source boards, repair attempt archives, and intermediate workspace PNGs stay local or ship as release assets (`.gitignore`).
+- Normalized absolute workspace paths out of exported snapshots and execution logs; transient network failures (socket error codes and provider 502/503/504) retry a sample once.
+- CI gained a fixture E2E job, a gitleaks secret scan, and a macOS validate job.
+
 ## Unreleased — audit remediation PR-5
 
 - Added an asynchronous pixel Fidelity inspector that decodes the persisted final PNG and verifies format, dimensions, alpha, visible pixels, file hash, canvas, and output version.

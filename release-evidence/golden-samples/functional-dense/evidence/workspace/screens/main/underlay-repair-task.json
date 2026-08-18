@@ -1,0 +1,34 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-critique-known-contaminated-repair-v1-repair-2",
+  "version": 1,
+  "status": "completed",
+  "source": {
+    "critique": "main-underlay-critique-known-contaminated-repair-v1",
+    "parent_underlay_id": "known-contaminated-repair-v1",
+    "underlay_contract": "main-underlay-contract"
+  },
+  "repair_mode": "regenerate",
+  "target_regions": [
+    "slot-navigation",
+    "slot-tab",
+    "slot-icon-a"
+  ],
+  "attempt": 2,
+  "max_automatic_attempts": 2,
+  "instructions": [
+    "remove text-like; Repeated rune-like marks and symbols around the floor circle resemble stylized characters despite being environmental ornament rather than formal text.",
+    "remove radial-navigation-like floor circle and glyphs; radial-navigation-like floor circle and glyphs",
+    "remove radial-interface-like linework and glyphs; radial-interface-like linework and glyphs",
+    "remove glowing-vial icon-like ambient prop; glowing-vial icon-like ambient prop"
+  ],
+  "preserve_regions": [],
+  "completed_at": "2026-08-18T04:46:14.808Z",
+  "output": {
+    "underlay_id": "known-contaminated-repair-v1-repair-v2",
+    "path": "screens/main/underlays/known-contaminated-repair-v1-repair-v2.png",
+    "hash": "sha256:79d00397961973f88acc5a3527d85c1f3499f21bb9ce87e95a6800c5d5d563ce",
+    "provider_task_id": "task_oswGrbJXDAGTRZvSvPNXzObrW8r2r9YI",
+    "parent_underlay_id": "known-contaminated-repair-v1"
+  }
+}

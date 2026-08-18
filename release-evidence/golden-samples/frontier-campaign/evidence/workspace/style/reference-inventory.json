@@ -1,0 +1,103 @@
+{
+  "schema_version": "2.0",
+  "id": "project-reference-inventory",
+  "version": 9,
+  "status": "approved",
+  "source": {
+    "managed_by": "reference-workbench"
+  },
+  "updated_at": "2026-08-18T05:10:48.592Z",
+  "assets": [
+    {
+      "id": "reference-mywpl22w-1",
+      "path": "style/references/mywpl22w.png",
+      "name": "reference-1.png",
+      "role": "primary",
+      "approved": true,
+      "screen_type": "frontier-campaign",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 1",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1987493,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 0
+    },
+    {
+      "id": "reference-mywpl22x-2",
+      "path": "style/references/mywpl22x.png",
+      "name": "reference-2.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "frontier-campaign",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 2",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1956326,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 1
+    },
+    {
+      "id": "reference-mywpl22y-3",
+      "path": "style/references/mywpl22y.png",
+      "name": "reference-3.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "frontier-campaign",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 3",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1926670,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 2
+    }
+  ],
+  "approved_at": "2026-08-18T05:10:48.598Z"
+}

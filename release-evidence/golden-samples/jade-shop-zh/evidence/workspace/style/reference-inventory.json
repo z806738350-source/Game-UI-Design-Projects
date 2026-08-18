@@ -1,0 +1,103 @@
+{
+  "schema_version": "2.0",
+  "id": "project-reference-inventory",
+  "version": 9,
+  "status": "approved",
+  "source": {
+    "managed_by": "reference-workbench"
+  },
+  "updated_at": "2026-08-18T05:00:58.365Z",
+  "assets": [
+    {
+      "id": "reference-mywpl22m-1",
+      "path": "style/references/mywpl22m.png",
+      "name": "reference-1.png",
+      "role": "primary",
+      "approved": true,
+      "screen_type": "jade-shop-zh",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 1",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 2334026,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 0
+    },
+    {
+      "id": "reference-mywpl22n-2",
+      "path": "style/references/mywpl22n.png",
+      "name": "reference-2.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "jade-shop-zh",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 2",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 2242842,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 1
+    },
+    {
+      "id": "reference-mywpl22o-3",
+      "path": "style/references/mywpl22o.png",
+      "name": "reference-3.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "jade-shop-zh",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 3",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 2210436,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 2
+    }
+  ],
+  "approved_at": "2026-08-18T05:00:58.371Z"
+}

@@ -1,0 +1,474 @@
+{
+  "schema_version": "2.0",
+  "id": "project-component-contract",
+  "version": 14,
+  "status": "approved",
+  "source": {
+    "last_import": "list-row:default"
+  },
+  "families": [
+    {
+      "id": "primary-button",
+      "name": "primary-button",
+      "category": "button",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "frontier-campaign/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/primary-button/default.png",
+          "asset_hash": "sha256:0963cee38a2bbc08ac80b58cc43099c5c45afa69af19d5ecf60c22511bd079ef",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "pressed": {
+          "state": "pressed",
+          "asset_path": "style/components/primary-button/pressed.png",
+          "asset_hash": "sha256:b444743a2dae637406093c8ee0e75998cc49a82eca2b55481287a10414e9fb9c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "disabled": {
+          "state": "disabled",
+          "asset_path": "style/components/primary-button/disabled.png",
+          "asset_hash": "sha256:966fe9487d0dac3c0eb1ecd915a20103c7f0ded27b8d84b70d332d674ed2088c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "bottom-navigation",
+      "name": "bottom-navigation",
+      "category": "navigation",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "frontier-campaign/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "none",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/bottom-navigation/default.png",
+          "asset_hash": "sha256:0963cee38a2bbc08ac80b58cc43099c5c45afa69af19d5ecf60c22511bd079ef",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "selected": {
+          "state": "selected",
+          "asset_path": "style/components/bottom-navigation/selected.png",
+          "asset_hash": "sha256:b444743a2dae637406093c8ee0e75998cc49a82eca2b55481287a10414e9fb9c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "disabled": {
+          "state": "disabled",
+          "asset_path": "style/components/bottom-navigation/disabled.png",
+          "asset_hash": "sha256:966fe9487d0dac3c0eb1ecd915a20103c7f0ded27b8d84b70d332d674ed2088c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "section-tab",
+      "name": "section-tab",
+      "category": "tab",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "frontier-campaign/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/section-tab/default.png",
+          "asset_hash": "sha256:0963cee38a2bbc08ac80b58cc43099c5c45afa69af19d5ecf60c22511bd079ef",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "selected": {
+          "state": "selected",
+          "asset_path": "style/components/section-tab/selected.png",
+          "asset_hash": "sha256:b444743a2dae637406093c8ee0e75998cc49a82eca2b55481287a10414e9fb9c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "disabled": {
+          "state": "disabled",
+          "asset_path": "style/components/section-tab/disabled.png",
+          "asset_hash": "sha256:966fe9487d0dac3c0eb1ecd915a20103c7f0ded27b8d84b70d332d674ed2088c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "resource-bar",
+      "name": "resource-bar",
+      "category": "resource-bar",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "frontier-campaign/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        220,
+        48
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/resource-bar/default.png",
+          "asset_hash": "sha256:a9ff400c030c7594c5e024c4bb09c5f26bf4004ddda40de03167df4878128e57",
+          "source_bbox": [
+            0,
+            0,
+            220,
+            48
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            220,
+            48
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "content-panel",
+      "name": "content-panel",
+      "category": "panel",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "frontier-campaign/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        256,
+        128
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/content-panel/default.png",
+          "asset_hash": "sha256:8cff5ca1ef01c771b168cfd309b87ac2dcfadfe26112399271fe07af755c63e9",
+          "source_bbox": [
+            0,
+            0,
+            256,
+            128
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            256,
+            128
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "action-icon",
+      "name": "action-icon",
+      "category": "icon",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "frontier-campaign/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "none",
+      "intrinsic_size": [
+        64,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/action-icon/default.png",
+          "asset_hash": "sha256:3a20648a3d7a5206564916297aaabdc4a4ba7d89de791bf431c691d6d57f6301",
+          "source_bbox": [
+            0,
+            0,
+            64,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            64,
+            64
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "status-badge",
+      "name": "status-badge",
+      "category": "badge",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "frontier-campaign/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        96,
+        40
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/status-badge/default.png",
+          "asset_hash": "sha256:6c40fedc85ea07e2448fa7cd749f4d44a6fc95969ec7fd3093367d14e904758d",
+          "source_bbox": [
+            0,
+            0,
+            96,
+            40
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            96,
+            40
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "list-row",
+      "name": "list-row",
+      "category": "list-row",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "frontier-campaign/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        280,
+        56
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/list-row/default.png",
+          "asset_hash": "sha256:24b4368edca71215cc409264df2723c716720ca272db4f0d8708bfa2c05aff6f",
+          "source_bbox": [
+            0,
+            0,
+            280,
+            56
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            280,
+            56
+          ],
+          "mime": "image/png"
+        }
+      }
+    }
+  ],
+  "approved_at": "2026-08-18T05:10:48.695Z"
+}

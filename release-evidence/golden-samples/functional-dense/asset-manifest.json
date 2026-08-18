@@ -1,0 +1,252 @@
+{
+  "schema_version": "1.0",
+  "id": "functional-dense",
+  "status": "prepared",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "provenance": {
+    "source_board": {
+      "path": "release-evidence/golden-samples/_sources/functional-dense-board.png",
+      "hash": "sha256:e001df5577a2db25cf157c4c98079289d26e294c47ac1d3e484f05b156bb2383"
+    },
+    "source_prompt": "Privacy-safe original game UI source board: two panels; a polished fantasy inventory/growth screen with at least ten controls, and a matching UI-free workshop environment. No brand, franchise, watermark, or real person.",
+    "generation_mode": "OpenAI built-in image generation",
+    "privacy": "original synthetic artwork; no personal data, real person, franchise, logo, or watermark requested",
+    "prepared_by": "scripts/prepare-real-golden-assets.cjs"
+  },
+  "inputs": {
+    "references": [
+      {
+        "path": "release-evidence/golden-samples/functional-dense/inputs/references/reference-1.png",
+        "hash": "sha256:ce40fee876c950b797e7ff18168101133bbed1e2a55a2ea36064b86f7358312c"
+      },
+      {
+        "path": "release-evidence/golden-samples/functional-dense/inputs/references/reference-2.png",
+        "hash": "sha256:a306b24ce492b20bb30194d366d7ae5468c11736f4e19ba69d77fd95c56f53f5"
+      },
+      {
+        "path": "release-evidence/golden-samples/functional-dense/inputs/references/reference-3.png",
+        "hash": "sha256:6516abdd07cd67316cb19b048e3e7efafebccce5c983166adad3a82a9e46d045"
+      }
+    ],
+    "clean_underlay": {
+      "path": "release-evidence/golden-samples/functional-dense/inputs/clean-underlay.png",
+      "hash": "sha256:8f1704e5174fecc61f7166292e140a453e75884af04353d8c9dd0cbc25278b95"
+    },
+    "wireframe": {
+      "path": "release-evidence/golden-samples/functional-dense/inputs/wireframe.png",
+      "hash": "sha256:32d22bceeb8f059cd1f8a7509aba229b0fcc805850062a9ff446b751f7686453"
+    },
+    "known_contaminated_underlay": {
+      "path": "release-evidence/golden-samples/functional-dense/inputs/known-contaminated-underlay.png",
+      "hash": "sha256:477f397bcf75384fc710aedbc43fc78d1cdfa00367df431c90fd9f76781c5543"
+    },
+    "components": [
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/primary-button/default.png",
+        "hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "pressed",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/primary-button/pressed.png",
+        "hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/primary-button/disabled.png",
+        "hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/bottom-navigation/default.png",
+        "hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/bottom-navigation/selected.png",
+        "hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/bottom-navigation/disabled.png",
+        "hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/section-tab/default.png",
+        "hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/section-tab/selected.png",
+        "hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/section-tab/disabled.png",
+        "hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695"
+      },
+      {
+        "family_id": "resource-bar",
+        "category": "resource-bar",
+        "state": "default",
+        "width": 220,
+        "height": 48,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/resource-bar/default.png",
+        "hash": "sha256:14e804a59ba0088e40c465c9ba3e845cd9d3bf59bb709f129154604d8e89e92c"
+      },
+      {
+        "family_id": "content-panel",
+        "category": "panel",
+        "state": "default",
+        "width": 256,
+        "height": 128,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/content-panel/default.png",
+        "hash": "sha256:34739e955595309e241e5950196462a6e6f041f885ea010af8d83534fc98d59c"
+      },
+      {
+        "family_id": "action-icon",
+        "category": "icon",
+        "state": "default",
+        "width": 64,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/action-icon/default.png",
+        "hash": "sha256:06455ebe7cf2f91531d3b600f4980e7c8e3b5a6de0242ac264d99906b06229b4"
+      },
+      {
+        "family_id": "status-badge",
+        "category": "badge",
+        "state": "default",
+        "width": 96,
+        "height": 40,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/status-badge/default.png",
+        "hash": "sha256:92128012af7061829bea9eaddf779ded4ef16797b2a726488c4cb9673857fb97"
+      },
+      {
+        "family_id": "list-row",
+        "category": "list-row",
+        "state": "default",
+        "width": 280,
+        "height": 56,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/functional-dense/inputs/components/list-row/default.png",
+        "hash": "sha256:8d7499b1ddbc3392f607b6cde2249b4b2c954921d3c1d8ba8a9036ffdf7dae79"
+      }
+    ]
+  },
+  "font": {
+    "id": "oxanium",
+    "path": "release-evidence/golden-samples/_shared/fonts/Oxanium-wght.ttf",
+    "license_path": "release-evidence/golden-samples/_shared/fonts/OFL.txt",
+    "license": "Google Fonts / SIL OFL 1.1",
+    "coverage": [
+      "latin"
+    ]
+  },
+  "required_font_roles": [
+    "display",
+    "body",
+    "numeric",
+    "button-label"
+  ],
+  "required_component_families": [
+    "primary-button",
+    "bottom-navigation",
+    "section-tab",
+    "resource-bar",
+    "content-panel",
+    "action-icon",
+    "status-badge",
+    "list-row"
+  ],
+  "acceptance": {
+    "provider_e2e": "passed",
+    "negative_control_critical_detected": true,
+    "negative_control_auto_pass": false,
+    "pipeline_gate": "passed",
+    "designer_signoff": "pending",
+    "formal_release": "blocked-until-signoff"
+  },
+  "outputs": {
+    "final_png": {
+      "path": "release-evidence/golden-samples/functional-dense/final.png",
+      "hash": "sha256:df66baab3fa3998701fe4f07424a360f0e46ab800d405b8f319d534de9fff64a"
+    },
+    "critique": {
+      "id": "main-underlay-critique-known-contaminated-repair-v1-repair-v2",
+      "result": "passed",
+      "raw_hash": "sha256:4f7cf9d2b6f07abc4204268804eca0c403c24b1d78cfbd88eddc8d8b68d58df9"
+    },
+    "fidelity": {
+      "id": "main-fidelity-report",
+      "status": "passed",
+      "evidence_digest": "sha256:db38b4e3cb3a3c827e3d212368ab77e6978d827db99ef747039fefb05f2cfc9a"
+    }
+  },
+  "last_run": {
+    "status": "pipeline-passed",
+    "started_at": "2026-08-18T04:37:17.044Z",
+    "completed_at": "2026-08-18T04:46:59.485Z",
+    "safe_provider": {
+      "configured": true,
+      "mode": "direct",
+      "envSource": ".env",
+      "modelSource": ".env",
+      "visionModel": "gpt-5.6-sol",
+      "critiqueModel": "gpt-5.6-sol",
+      "imageModel": "Image-GPT2"
+    }
+  }
+}

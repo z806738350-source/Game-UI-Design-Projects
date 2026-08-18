@@ -1,0 +1,90 @@
+{
+  "schema_version": "2.0",
+  "id": "project-font-manifest",
+  "version": 5,
+  "status": "approved",
+  "source": {
+    "last_import": "oxanium",
+    "last_confirmation": "oxanium:button-label"
+  },
+  "fonts": [
+    {
+      "id": "oxanium",
+      "family_name": "Oxanium ExtraLight",
+      "postscript_name": "Oxanium-ExtraLight",
+      "source_type": "Google Fonts / SIL OFL 1.1",
+      "local_path": "style/fonts/oxanium.ttf",
+      "file_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+      "byte_length": 43536,
+      "format": "ttf",
+      "license_status": "confirmed",
+      "coverage": {
+        "zh_cn": false,
+        "latin": true,
+        "digits": true,
+        "symbols": true
+      },
+      "imported_at": "2026-08-18T05:14:02.968Z",
+      "license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:14:02.981Z"
+      }
+    }
+  ],
+  "roles": {
+    "display": {
+      "font_id": "oxanium",
+      "fidelity_mode": "exact",
+      "identity_critical": true,
+      "required_coverage": [
+        "latin"
+      ],
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:14:02.971Z"
+      }
+    },
+    "body": {
+      "font_id": "oxanium",
+      "fidelity_mode": "exact",
+      "identity_critical": true,
+      "required_coverage": [
+        "latin"
+      ],
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:14:02.974Z"
+      }
+    },
+    "numeric": {
+      "font_id": "oxanium",
+      "fidelity_mode": "exact",
+      "identity_critical": true,
+      "required_coverage": [
+        "latin"
+      ],
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:14:02.978Z"
+      }
+    },
+    "button-label": {
+      "font_id": "oxanium",
+      "fidelity_mode": "exact",
+      "identity_critical": true,
+      "required_coverage": [
+        "latin"
+      ],
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:14:02.981Z"
+      }
+    }
+  },
+  "approved_at": "2026-08-18T05:14:02.984Z"
+}

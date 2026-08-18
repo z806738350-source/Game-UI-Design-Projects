@@ -1,0 +1,491 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-critique-known-contaminated-repair-v1",
+  "version": 1,
+  "status": "reviewed",
+  "source": {
+    "underlay": "known-contaminated-repair-v1",
+    "underlay_contract": "main-underlay-contract",
+    "prompt_hash": "sha256:095887b0676bd4dc6a0240ea5134b632fbc790c0f15212a5ecf518fa794f2dda",
+    "model": "gpt-5.6-sol"
+  },
+  "global_scan": {
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.034,
+          0.575,
+          0.943,
+          0.331
+        ],
+        "type": "radial-dial-like-environmental-ornament",
+        "confidence": 0.64,
+        "reason": "The large concentric, segmented paving design resembles a radial menu, gauge, or decorative HUD dial despite being part of the floor.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.398,
+          0.43,
+          0.075,
+          0.119
+        ],
+        "type": "icon-like-environmental-ornament",
+        "confidence": 0.34,
+        "reason": "The centered, symmetrical lantern silhouette has an icon-like presentation, but is clearly an in-world architectural prop.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": []
+  },
+  "slot_checks": [
+    {
+      "slot_id": "slot-primary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": {
+        "level": "moderate",
+        "confidence": 0.9,
+        "reason": "Cloud texture and a warm illumination gradient remain visible behind the slot."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.76,
+        "reason": "Bright cloud highlights and darker cloud patches create uneven local contrast."
+      },
+      "hard_edge_crossing": {
+        "detected": false,
+        "confidence": 0.91,
+        "reason": "Cloud boundaries are predominantly soft and do not form a strong crossing edge."
+      },
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-navigation",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.98,
+      "background_busyness": {
+        "level": "high",
+        "confidence": 0.96,
+        "reason": "Layered mountains, vegetation, rock texture, and mist occupy the navigation surface."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.94,
+        "reason": "Dark mountain forms alternate with pale mist across the slot."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.93,
+        "reason": "Mountain and vegetation contours cross the slot."
+      },
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.97
+      }
+    },
+    {
+      "slot_id": "slot-tab",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.98,
+      "background_busyness": {
+        "level": "high",
+        "confidence": 0.97,
+        "reason": "The slot contains a dark crag, trees, mist, and portions of architectural scenery."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.96,
+        "reason": "Strong dark-to-light transitions occur between the mountain, foliage, and fog."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.95,
+        "reason": "Jagged mountain and tree-line contours cross the tab footprint."
+      },
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.96
+      }
+    },
+    {
+      "slot_id": "slot-resources",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": {
+        "level": "high",
+        "confidence": 0.96,
+        "reason": "Numerous curved paving bands, engraved segments, and slab seams pass through the narrow slot."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.88,
+        "reason": "Alternating illuminated grooves and dark stone produce uneven contrast."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.98,
+        "reason": "Several strong curved and diagonal paving edges cross the slot."
+      },
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "segmented-ring-or-gauge-like-paving",
+        "confidence": 0.55
+      }
+    },
+    {
+      "slot_id": "slot-content",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.98,
+      "background_busyness": {
+        "level": "high",
+        "confidence": 0.95,
+        "reason": "Cloud layers and multiple detailed mountain silhouettes occupy much of the panel area."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.93,
+        "reason": "Dark mountain peaks sit against luminous clouds, creating substantial tonal variation."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.94,
+        "reason": "Several mountain ridges and peaks cross the intended panel surface."
+      },
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-icon-a",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": {
+        "level": "high",
+        "confidence": 0.95,
+        "reason": "A textured cliff, foliage, and mist fill the small icon footprint."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.91,
+        "reason": "Dark foliage and rock contrast sharply with the pale atmospheric background."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.95,
+        "reason": "The cliff silhouette and foliage contours cross the icon area."
+      },
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-badge",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": {
+        "level": "moderate",
+        "confidence": 0.91,
+        "reason": "Mist is interrupted by a rocky mountain contour and subtle vegetation detail."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.86,
+        "reason": "The dark ridge against pale fog creates a local contrast transition."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.9,
+        "reason": "A mountain edge crosses the compact badge footprint."
+      },
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-row",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": {
+        "level": "moderate",
+        "confidence": 0.94,
+        "reason": "Dark stone slabs contain multiple long seams and tonal variations."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.79,
+        "reason": "Stone seams and intermittent highlights create nonuniform contrast across the row."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.97,
+        "reason": "Several diagonal and near-horizontal slab boundaries cross the row."
+      },
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.94
+      }
+    },
+    {
+      "slot_id": "slot-secondary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": {
+        "level": "high",
+        "confidence": 0.97,
+        "reason": "Ornate concentric paving bands, engraved markings, and radial seams fill the button footprint."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.91,
+        "reason": "Bright engraved edges alternate with dark stone segments."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.98,
+        "reason": "Multiple curved ring edges and radial seams cross the slot."
+      },
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "radial-dial-like-floor-pattern",
+        "confidence": 0.66
+      }
+    },
+    {
+      "slot_id": "slot-icon-b",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": {
+        "level": "high",
+        "confidence": 0.94,
+        "reason": "A detailed mountain ridge, rock texture, and atmospheric layers occupy the icon area."
+      },
+      "contrast_conflict": {
+        "detected": true,
+        "confidence": 0.92,
+        "reason": "The dark ridge contrasts strongly against pale mist."
+      },
+      "hard_edge_crossing": {
+        "detected": true,
+        "confidence": 0.95,
+        "reason": "A prominent jagged mountain contour crosses the icon footprint."
+      },
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    }
+  ],
+  "deterministic_metrics": {
+    "threshold_version": "underlay-metrics-v1",
+    "thresholds": {
+      "version": "underlay-metrics-v1",
+      "edge_density": 0.22,
+      "local_contrast": 0.32,
+      "color_complexity": 0.42,
+      "highlight_density": 0.18,
+      "hard_edge_crossing": 0.2
+    },
+    "image_hash": "sha256:65a5b29bd0d18bb8e5e2fb3a065476b49e5549383609a53f3ea611d5aaacfcd4",
+    "width": 1024,
+    "height": 1024,
+    "slots": {
+      "slot-primary-action": {
+        "edge_density": 0,
+        "local_contrast": 0.08968418818550132,
+        "color_complexity": 0.08333333333333333,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-navigation": {
+        "edge_density": 0,
+        "local_contrast": 0.1106220544128982,
+        "color_complexity": 0.11458333333333333,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-tab": {
+        "edge_density": 0,
+        "local_contrast": 0.08958766349632574,
+        "color_complexity": 0.13541666666666666,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-resources": {
+        "edge_density": 0.0013907538845194705,
+        "local_contrast": 0.06825981653562309,
+        "color_complexity": 0.10416666666666667,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 10560
+      },
+      "slot-content": {
+        "edge_density": 0.00004604616895874263,
+        "local_contrast": 0.11916191220708676,
+        "color_complexity": 0.125,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.0013089005235602095,
+        "pixel_count": 32768
+      },
+      "slot-icon-a": {
+        "edge_density": 0,
+        "local_contrast": 0.10829663401151551,
+        "color_complexity": 0.052083333333333336,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 4096
+      },
+      "slot-badge": {
+        "edge_density": 0,
+        "local_contrast": 0.05600430729907869,
+        "color_complexity": 0.0625,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 3840
+      },
+      "slot-row": {
+        "edge_density": 0.00009669932955131511,
+        "local_contrast": 0.06878040437028991,
+        "color_complexity": 0.10416666666666667,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 15680
+      },
+      "slot-secondary-action": {
+        "edge_density": 0.00403579575364099,
+        "local_contrast": 0.07683542513117539,
+        "color_complexity": 0.13541666666666666,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.004132231404958678,
+        "pixel_count": 11520
+      },
+      "slot-icon-b": {
+        "edge_density": 0,
+        "local_contrast": 0.06041247042275113,
+        "color_complexity": 0.08333333333333333,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 4096
+      }
+    }
+  },
+  "evidence": {
+    "underlay": {
+      "path": "screens/main/underlays/known-contaminated-repair-v1.png",
+      "absolute_path": "screens/main/underlays/known-contaminated-repair-v1.png",
+      "hash": "sha256:65a5b29bd0d18bb8e5e2fb3a065476b49e5549383609a53f3ea611d5aaacfcd4",
+      "width": 1024,
+      "height": 1024
+    },
+    "overlay": {
+      "path": "screens/main/underlays/known-contaminated-repair-v1-review-input.png",
+      "hash": "sha256:ec9f03bf135d9f772de1fed7eed436492b9fdf18b41d075df01c6a676dd340dd",
+      "width": 1024,
+      "height": 1024
+    },
+    "annotated_overlay": {
+      "path": "screens/main/underlays/known-contaminated-repair-v1-review-overlay.png",
+      "hash": "sha256:8221f73288d9d612ebaa94e71459ce058604b48e911eb74172d16911a8991de1",
+      "width": 1024,
+      "height": 1024
+    },
+    "component_board": {
+      "path": "screens/main/underlays/component-review-board.png",
+      "hash": "sha256:fe2e443718e9ddaf1b8156132208cb3c62a4ba4456642aa52decd964c2f9ec02",
+      "count": 8,
+      "width": 800,
+      "height": 280
+    },
+    "semantic_raw": {
+      "path": "screens/main/reviews/known-contaminated-repair-v1-semantic-response.json",
+      "hash": "sha256:cd55e1fca95c8b6cdeba24dca5c179c64401a2641ed37e80e4b5fecf91790715",
+      "byte_length": 29082,
+      "media_type": "application/json"
+    },
+    "prompt_hash": "sha256:095887b0676bd4dc6a0240ea5134b632fbc790c0f15212a5ecf518fa794f2dda",
+    "model": "gpt-5.6-sol"
+  },
+  "issues": [
+    {
+      "severity": "minor",
+      "type": "radial-dial-like-environmental-ornament",
+      "bbox": [
+        0.034,
+        0.575,
+        0.943,
+        0.331
+      ],
+      "confidence": 0.64,
+      "reason": "The large concentric, segmented paving design resembles a radial menu, gauge, or decorative HUD dial despite being part of the floor.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-1"
+    },
+    {
+      "severity": "minor",
+      "type": "icon-like-environmental-ornament",
+      "bbox": [
+        0.398,
+        0.43,
+        0.075,
+        0.119
+      ],
+      "confidence": 0.34,
+      "reason": "The centered, symmetrical lantern silhouette has an icon-like presentation, but is clearly an in-world architectural prop.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-2"
+    },
+    {
+      "severity": "minor",
+      "type": "segmented-ring-or-gauge-like-paving",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.0078125,
+        0.8515625,
+        0.21484375,
+        0.046875
+      ],
+      "confidence": 0.55,
+      "reason": "segmented-ring-or-gauge-like-paving",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-3"
+    },
+    {
+      "severity": "minor",
+      "type": "radial-dial-like-floor-pattern",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.3203125,
+        0.8515625,
+        0.17578125,
+        0.0625
+      ],
+      "confidence": 0.66,
+      "reason": "radial-dial-like-floor-pattern",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-4"
+    }
+  ],
+  "result": "passed",
+  "manual_review": {
+    "required": false,
+    "approved": false
+  },
+  "manual_waivers": []
+}

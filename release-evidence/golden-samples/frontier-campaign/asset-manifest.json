@@ -1,0 +1,252 @@
+{
+  "schema_version": "1.0",
+  "id": "frontier-campaign",
+  "status": "prepared",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "provenance": {
+    "source_board": {
+      "path": "release-evidence/golden-samples/_sources/frontier-campaign-board.png",
+      "hash": "sha256:47cb4d7935d2d6bfc7ecaa7ecf1bed075d1248624d98fc35d87688b5e63dcd73"
+    },
+    "source_prompt": "Privacy-safe original game UI source board: two equal panels; left a strategy game campaign map screen with mission list, resources, and buttons, right the matching UI-free dusk frontier landscape. No brand, franchise, watermark, or real person.",
+    "generation_mode": "OpenAI built-in image generation",
+    "privacy": "original synthetic artwork; no personal data, real person, franchise, logo, or watermark requested",
+    "prepared_by": "scripts/prepare-real-golden-assets.cjs"
+  },
+  "inputs": {
+    "references": [
+      {
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/references/reference-1.png",
+        "hash": "sha256:119987721b08203c7e79b7b284ca5714e0625613025b5c6768cdffa522597d55"
+      },
+      {
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/references/reference-2.png",
+        "hash": "sha256:4b03bf1422529ebb032b966c1d24ff3fc3b224c1101581af3c585f43cc261e71"
+      },
+      {
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/references/reference-3.png",
+        "hash": "sha256:34fd87b8fe92e915dc91f12705945321720bb6bcd8ba2c26d60e0de85dac75cb"
+      }
+    ],
+    "clean_underlay": {
+      "path": "release-evidence/golden-samples/frontier-campaign/inputs/clean-underlay.png",
+      "hash": "sha256:76199a92e5460bbbd958bcb3810cf728d258437a8123cc48d995c7809cbdf3da"
+    },
+    "wireframe": {
+      "path": "release-evidence/golden-samples/frontier-campaign/inputs/wireframe.png",
+      "hash": "sha256:eb5cfdf5d36d49999a99cc683a81659610f4fa96311213847b745a3299c02e49"
+    },
+    "known_contaminated_underlay": {
+      "path": "release-evidence/golden-samples/frontier-campaign/inputs/known-contaminated-underlay.png",
+      "hash": "sha256:9b6a4bfb48763d7529d83492ba3aea91df945bb8c9c5eb3fe62a47574e2e7221"
+    },
+    "components": [
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/primary-button/default.png",
+        "hash": "sha256:0963cee38a2bbc08ac80b58cc43099c5c45afa69af19d5ecf60c22511bd079ef"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "pressed",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/primary-button/pressed.png",
+        "hash": "sha256:b444743a2dae637406093c8ee0e75998cc49a82eca2b55481287a10414e9fb9c"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/primary-button/disabled.png",
+        "hash": "sha256:966fe9487d0dac3c0eb1ecd915a20103c7f0ded27b8d84b70d332d674ed2088c"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/bottom-navigation/default.png",
+        "hash": "sha256:0963cee38a2bbc08ac80b58cc43099c5c45afa69af19d5ecf60c22511bd079ef"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/bottom-navigation/selected.png",
+        "hash": "sha256:b444743a2dae637406093c8ee0e75998cc49a82eca2b55481287a10414e9fb9c"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/bottom-navigation/disabled.png",
+        "hash": "sha256:966fe9487d0dac3c0eb1ecd915a20103c7f0ded27b8d84b70d332d674ed2088c"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/section-tab/default.png",
+        "hash": "sha256:0963cee38a2bbc08ac80b58cc43099c5c45afa69af19d5ecf60c22511bd079ef"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/section-tab/selected.png",
+        "hash": "sha256:b444743a2dae637406093c8ee0e75998cc49a82eca2b55481287a10414e9fb9c"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/section-tab/disabled.png",
+        "hash": "sha256:966fe9487d0dac3c0eb1ecd915a20103c7f0ded27b8d84b70d332d674ed2088c"
+      },
+      {
+        "family_id": "resource-bar",
+        "category": "resource-bar",
+        "state": "default",
+        "width": 220,
+        "height": 48,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/resource-bar/default.png",
+        "hash": "sha256:a9ff400c030c7594c5e024c4bb09c5f26bf4004ddda40de03167df4878128e57"
+      },
+      {
+        "family_id": "content-panel",
+        "category": "panel",
+        "state": "default",
+        "width": 256,
+        "height": 128,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/content-panel/default.png",
+        "hash": "sha256:8cff5ca1ef01c771b168cfd309b87ac2dcfadfe26112399271fe07af755c63e9"
+      },
+      {
+        "family_id": "action-icon",
+        "category": "icon",
+        "state": "default",
+        "width": 64,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/action-icon/default.png",
+        "hash": "sha256:3a20648a3d7a5206564916297aaabdc4a4ba7d89de791bf431c691d6d57f6301"
+      },
+      {
+        "family_id": "status-badge",
+        "category": "badge",
+        "state": "default",
+        "width": 96,
+        "height": 40,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/status-badge/default.png",
+        "hash": "sha256:6c40fedc85ea07e2448fa7cd749f4d44a6fc95969ec7fd3093367d14e904758d"
+      },
+      {
+        "family_id": "list-row",
+        "category": "list-row",
+        "state": "default",
+        "width": 280,
+        "height": 56,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/frontier-campaign/inputs/components/list-row/default.png",
+        "hash": "sha256:24b4368edca71215cc409264df2723c716720ca272db4f0d8708bfa2c05aff6f"
+      }
+    ]
+  },
+  "font": {
+    "id": "oxanium",
+    "path": "release-evidence/golden-samples/_shared/fonts/Oxanium-wght.ttf",
+    "license_path": "release-evidence/golden-samples/_shared/fonts/OFL.txt",
+    "license": "Google Fonts / SIL OFL 1.1",
+    "coverage": [
+      "latin"
+    ]
+  },
+  "required_font_roles": [
+    "display",
+    "body",
+    "numeric",
+    "button-label"
+  ],
+  "required_component_families": [
+    "primary-button",
+    "bottom-navigation",
+    "section-tab",
+    "resource-bar",
+    "content-panel",
+    "action-icon",
+    "status-badge",
+    "list-row"
+  ],
+  "acceptance": {
+    "provider_e2e": "passed",
+    "negative_control_critical_detected": true,
+    "negative_control_auto_pass": false,
+    "pipeline_gate": "passed",
+    "designer_signoff": "pending",
+    "formal_release": "blocked-until-signoff"
+  },
+  "outputs": {
+    "final_png": {
+      "path": "release-evidence/golden-samples/frontier-campaign/final.png",
+      "hash": "sha256:8951b64f29689da08ccf5cfbb8f92301c2ace3e37606479af370145b2b6cb2ad"
+    },
+    "critique": {
+      "id": "main-underlay-critique-known-contaminated-repair-v1",
+      "result": "passed",
+      "raw_hash": "sha256:d642911d5f7debdbd7d44f7bbc695fae798e08f144c655275908c6ae913507db"
+    },
+    "fidelity": {
+      "id": "main-fidelity-report",
+      "status": "passed",
+      "evidence_digest": "sha256:2ee5873a614a074d8755409357531401116c6da6be445c094b086e84efbe0572"
+    }
+  },
+  "last_run": {
+    "status": "pipeline-passed",
+    "started_at": "2026-08-18T05:10:48.558Z",
+    "completed_at": "2026-08-18T05:13:35.047Z",
+    "safe_provider": {
+      "configured": true,
+      "mode": "direct",
+      "envSource": ".env",
+      "modelSource": ".env",
+      "visionModel": "gpt-5.6-sol",
+      "critiqueModel": "gpt-5.6-sol",
+      "imageModel": "Image-GPT2"
+    }
+  }
+}

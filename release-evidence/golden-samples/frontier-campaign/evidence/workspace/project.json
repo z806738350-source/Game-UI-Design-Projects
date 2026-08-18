@@ -1,0 +1,138 @@
+{
+  "schema_version": "2.0",
+  "id": "golden-frontier-campaign-mywpiww4",
+  "name": "Golden frontier-campaign",
+  "screen_id": "main",
+  "project_type": "existing",
+  "continuation_mode": "existing-strict",
+  "art_direction": "Strictly continue the approved frontier-campaign reference language.",
+  "requirement": "Produce a final game UI composition from approved real references, exact components, exact typography, and a clean UI-free underlay.",
+  "requirement_source": "user",
+  "requirement_confirmed": true,
+  "input_revisions": {
+    "requirement": 0,
+    "wireframe": 1,
+    "art_direction": 0,
+    "references": 9
+  },
+  "reference_assets": [
+    {
+      "id": "reference-mywpl22w-1",
+      "path": "style/references/mywpl22w.png",
+      "name": "reference-1.png",
+      "role": "primary",
+      "approved": true,
+      "screen_type": "frontier-campaign",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 1",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1987493,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      }
+    },
+    {
+      "id": "reference-mywpl22x-2",
+      "path": "style/references/mywpl22x.png",
+      "name": "reference-2.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "frontier-campaign",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 2",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1956326,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      }
+    },
+    {
+      "id": "reference-mywpl22y-3",
+      "path": "style/references/mywpl22y.png",
+      "name": "reference-3.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "frontier-campaign",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 3",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1926670,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      }
+    }
+  ],
+  "status": "draft",
+  "created_at": "2026-08-18T05:10:48.560Z",
+  "updated_at": "2026-08-18T05:10:48.592Z",
+  "wireframe_path": "screens/main/inputs/wireframe.png",
+  "wireframe_name": "wireframe.png",
+  "wireframe_metadata": {
+    "format": "png",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 55467,
+    "canvas_spec": {
+      "width": 1024,
+      "height": 1024,
+      "orientation": "square",
+      "aspect_ratio": "1:1",
+      "generation_size": "1024x1024"
+    }
+  },
+  "canvas_spec": {
+    "width": 1024,
+    "height": 1024,
+    "orientation": "square",
+    "aspect_ratio": "1:1",
+    "generation_size": "1024x1024"
+  },
+  "reference_paths": [
+    "style/references/mywpl22w.png",
+    "style/references/mywpl22x.png",
+    "style/references/mywpl22y.png"
+  ]
+}

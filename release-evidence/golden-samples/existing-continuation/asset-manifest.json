@@ -1,0 +1,252 @@
+{
+  "schema_version": "1.0",
+  "id": "existing-continuation",
+  "status": "prepared",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "provenance": {
+    "source_board": {
+      "path": "release-evidence/golden-samples/_sources/existing-continuation-board.png",
+      "hash": "sha256:f69a21f823e5df6259019dddf21a54e411e4c6911446dd821c017a26b4b431b5"
+    },
+    "source_prompt": "Privacy-safe original strict-continuation source board: a 2x2 contact sheet containing party formation, inventory, and character growth screens that share one jade/bronze component system, plus a UI-free jade palace underlay. No brand, franchise, watermark, or real person.",
+    "generation_mode": "OpenAI built-in image generation",
+    "privacy": "original synthetic artwork; no personal data, real person, franchise, logo, or watermark requested",
+    "prepared_by": "scripts/prepare-real-golden-assets.cjs"
+  },
+  "inputs": {
+    "references": [
+      {
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/references/reference-1.png",
+        "hash": "sha256:9613fa707290fec3a6de06c1044452324af15f43b15562790191ee295e1d4eba"
+      },
+      {
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/references/reference-2.png",
+        "hash": "sha256:87de8a93c6c4c8e56268f00ac22f1754fe7c56a626b8e1248d8f11c8d34fc72b"
+      },
+      {
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/references/reference-3.png",
+        "hash": "sha256:09ceb3a0386c21853f4536b135a473bbfa172fdda971196264b55b2f0a1ee8c5"
+      }
+    ],
+    "clean_underlay": {
+      "path": "release-evidence/golden-samples/existing-continuation/inputs/clean-underlay.png",
+      "hash": "sha256:8eaa2af8157e7d41167d1bfe375f4472392e920567b2246d8cccf007cf31a9e3"
+    },
+    "wireframe": {
+      "path": "release-evidence/golden-samples/existing-continuation/inputs/wireframe.png",
+      "hash": "sha256:5e078aa6f29041ccec3ac05c61eaf3c6f525ed6ac86a459a4db5f534437ae900"
+    },
+    "known_contaminated_underlay": {
+      "path": "release-evidence/golden-samples/existing-continuation/inputs/known-contaminated-underlay.png",
+      "hash": "sha256:46ae89599e90ee6d94f030af364728ed3843a220561bdb106246a4ba116800ac"
+    },
+    "components": [
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/primary-button/default.png",
+        "hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "pressed",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/primary-button/pressed.png",
+        "hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/primary-button/disabled.png",
+        "hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/bottom-navigation/default.png",
+        "hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/bottom-navigation/selected.png",
+        "hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/bottom-navigation/disabled.png",
+        "hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/section-tab/default.png",
+        "hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/section-tab/selected.png",
+        "hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/section-tab/disabled.png",
+        "hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41"
+      },
+      {
+        "family_id": "resource-bar",
+        "category": "resource-bar",
+        "state": "default",
+        "width": 220,
+        "height": 48,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/resource-bar/default.png",
+        "hash": "sha256:30947f7ef23e5634795efd6989e0295df6e836a1e58200833e5557cb7b68c6e5"
+      },
+      {
+        "family_id": "content-panel",
+        "category": "panel",
+        "state": "default",
+        "width": 256,
+        "height": 128,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/content-panel/default.png",
+        "hash": "sha256:ad2cce47a492d58a7de688150296b6dfefbac3ea49f0baaad5e8c57b352610ac"
+      },
+      {
+        "family_id": "action-icon",
+        "category": "icon",
+        "state": "default",
+        "width": 64,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/action-icon/default.png",
+        "hash": "sha256:633c786d09b597629879b1f28f76f7b38b0e66e0f9ee924f028eae2707e47641"
+      },
+      {
+        "family_id": "status-badge",
+        "category": "badge",
+        "state": "default",
+        "width": 96,
+        "height": 40,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/status-badge/default.png",
+        "hash": "sha256:980422774c9188c08ad98b8837c26a9e1bd8f93c1f0eef0c2252dc3d9d602ef0"
+      },
+      {
+        "family_id": "list-row",
+        "category": "list-row",
+        "state": "default",
+        "width": 280,
+        "height": 56,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/existing-continuation/inputs/components/list-row/default.png",
+        "hash": "sha256:feaa11f0288f9a9a6299e27e8f02e8c39ef13c216eec551010568a57298e5b86"
+      }
+    ]
+  },
+  "font": {
+    "id": "oxanium",
+    "path": "release-evidence/golden-samples/_shared/fonts/Oxanium-wght.ttf",
+    "license_path": "release-evidence/golden-samples/_shared/fonts/OFL.txt",
+    "license": "Google Fonts / SIL OFL 1.1",
+    "coverage": [
+      "latin"
+    ]
+  },
+  "required_font_roles": [
+    "display",
+    "body",
+    "numeric",
+    "button-label"
+  ],
+  "required_component_families": [
+    "primary-button",
+    "bottom-navigation",
+    "section-tab",
+    "resource-bar",
+    "content-panel",
+    "action-icon",
+    "status-badge",
+    "list-row"
+  ],
+  "acceptance": {
+    "provider_e2e": "passed",
+    "negative_control_critical_detected": true,
+    "negative_control_auto_pass": false,
+    "pipeline_gate": "passed",
+    "designer_signoff": "pending",
+    "formal_release": "blocked-until-signoff"
+  },
+  "outputs": {
+    "final_png": {
+      "path": "release-evidence/golden-samples/existing-continuation/final.png",
+      "hash": "sha256:66c6f7ccdbc6dce0f0026f3bbc5176b6d9474d223cae4ccdec52100861a7fbc5"
+    },
+    "critique": {
+      "id": "main-underlay-critique-known-contaminated-repair-v1",
+      "result": "passed",
+      "raw_hash": "sha256:cd55e1fca95c8b6cdeba24dca5c179c64401a2641ed37e80e4b5fecf91790715"
+    },
+    "fidelity": {
+      "id": "main-fidelity-report",
+      "status": "passed",
+      "evidence_digest": "sha256:14ce3e6c8a8a15dd44124b30184029b75a7ae051de23dbc6d4cd231278021049"
+    }
+  },
+  "last_run": {
+    "status": "pipeline-passed",
+    "started_at": "2026-08-18T05:18:25.390Z",
+    "completed_at": "2026-08-18T05:21:46.543Z",
+    "safe_provider": {
+      "configured": true,
+      "mode": "direct",
+      "envSource": ".env",
+      "modelSource": ".env",
+      "visionModel": "gpt-5.6-sol",
+      "critiqueModel": "gpt-5.6-sol",
+      "imageModel": "Image-GPT2"
+    }
+  }
+}

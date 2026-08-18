@@ -1,0 +1,138 @@
+{
+  "schema_version": "2.0",
+  "id": "golden-jade-shop-zh-mywpiww3",
+  "name": "Golden jade-shop-zh",
+  "screen_id": "main",
+  "project_type": "existing",
+  "continuation_mode": "existing-strict",
+  "art_direction": "Strictly continue the approved jade-shop-zh reference language.",
+  "requirement": "Produce a final game UI composition from approved real references, exact components, exact typography, and a clean UI-free underlay.",
+  "requirement_source": "user",
+  "requirement_confirmed": true,
+  "input_revisions": {
+    "requirement": 0,
+    "wireframe": 1,
+    "art_direction": 0,
+    "references": 9
+  },
+  "reference_assets": [
+    {
+      "id": "reference-mywpl22m-1",
+      "path": "style/references/mywpl22m.png",
+      "name": "reference-1.png",
+      "role": "primary",
+      "approved": true,
+      "screen_type": "jade-shop-zh",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 1",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 2334026,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      }
+    },
+    {
+      "id": "reference-mywpl22n-2",
+      "path": "style/references/mywpl22n.png",
+      "name": "reference-2.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "jade-shop-zh",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 2",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 2242842,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      }
+    },
+    {
+      "id": "reference-mywpl22o-3",
+      "path": "style/references/mywpl22o.png",
+      "name": "reference-3.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "jade-shop-zh",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 3",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 2210436,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      }
+    }
+  ],
+  "status": "draft",
+  "created_at": "2026-08-18T05:00:58.334Z",
+  "updated_at": "2026-08-18T05:00:58.364Z",
+  "wireframe_path": "screens/main/inputs/wireframe.png",
+  "wireframe_name": "wireframe.png",
+  "wireframe_metadata": {
+    "format": "png",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 55579,
+    "canvas_spec": {
+      "width": 1024,
+      "height": 1024,
+      "orientation": "square",
+      "aspect_ratio": "1:1",
+      "generation_size": "1024x1024"
+    }
+  },
+  "canvas_spec": {
+    "width": 1024,
+    "height": 1024,
+    "orientation": "square",
+    "aspect_ratio": "1:1",
+    "generation_size": "1024x1024"
+  },
+  "reference_paths": [
+    "style/references/mywpl22m.png",
+    "style/references/mywpl22n.png",
+    "style/references/mywpl22o.png"
+  ]
+}

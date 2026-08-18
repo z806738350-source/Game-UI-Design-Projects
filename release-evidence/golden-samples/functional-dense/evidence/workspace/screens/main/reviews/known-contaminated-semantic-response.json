@@ -1,0 +1,622 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "underlay_id": "known-contaminated",
+    "prompt_hash": "sha256:cd653865da128f29860fb2f5f0b48ed8907358a4ecf754fe59e6ff79901aba0f",
+    "model": "gpt-5.6-sol",
+    "input_hashes": {
+      "underlay": "sha256:76d0551b85c693b4564da4335fb5fca6aad7eede863a43ed4ea2167ba1b3b55d",
+      "overlay": "sha256:599bdb22393b8e3d5a7188183ce723f563b5b90325a7e682bb76d2f1c0fa1b01",
+      "component_board": "sha256:946b6bae1f6a130955d1049d56b24c7949fea0f0f07154e8f404efce4ca16058"
+    }
+  },
+  "provider": {
+    "response_id": "chatcmpl-EE5rklZDXQ5DTZeCzIzzpKGiKwiOR",
+    "model": "gpt-5.6-sol-2026-07-09",
+    "created": 1787027848
+  },
+  "attempt": 1,
+  "raw_text": "{\n  \"confidence\": 0.99,\n  \"suspected_ui_regions\": [\n    {\n      \"bbox\": [0.030, 0.024, 0.279, 0.386],\n      \"type\": \"inventory-panel\",\n      \"confidence\": 0.999,\n      \"reason\": \"Large foreground panel with a bright cyan rounded frame, heading, and stacked button/list-row silhouettes.\"\n    },\n    {\n      \"bbox\": [0.055, 0.108, 0.227, 0.040],\n      \"type\": \"list-row\",\n      \"confidence\": 0.998,\n      \"reason\": \"Rounded rectangular UI row containing formal text.\"\n    },\n    {\n      \"bbox\": [0.055, 0.159, 0.227, 0.040],\n      \"type\": \"list-row\",\n      \"confidence\": 0.998,\n      \"reason\": \"Rounded rectangular UI row containing formal text.\"\n    },\n    {\n      \"bbox\": [0.055, 0.210, 0.227, 0.040],\n      \"type\": \"list-row\",\n      \"confidence\": 0.998,\n      \"reason\": \"Rounded rectangular UI row containing formal text.\"\n    },\n    {\n      \"bbox\": [0.055, 0.260, 0.227, 0.040],\n      \"type\": \"list-row\",\n      \"confidence\": 0.998,\n      \"reason\": \"Rounded rectangular UI row containing formal text.\"\n    },\n    {\n      \"bbox\": [0.055, 0.311, 0.227, 0.041],\n      \"type\": \"list-row\",\n      \"confidence\": 0.998,\n      \"reason\": \"Rounded rectangular UI row containing formal text.\"\n    },\n    {\n      \"bbox\": [0.740, 0.028, 0.224, 0.065],\n      \"type\": \"resource-bar\",\n      \"confidence\": 0.999,\n      \"reason\": \"Foreground rounded resource-bar silhouette with cyan frame and currency text.\"\n    }\n  ],\n  \"text_like_regions\": [\n    {\n      \"bbox\": [0.057, 0.057, 0.258, 0.029],\n      \"type\": \"formal-heading-and-number\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible text reading 'INVENTORY 9999'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.119, 0.105, 0.018],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible text reading 'ITEM 1 × 12'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.170, 0.105, 0.018],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible text reading 'ITEM 2 × 13'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.221, 0.105, 0.018],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible text reading 'ITEM 3 × 14'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.271, 0.105, 0.018],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible text reading 'ITEM 4 × 15'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.322, 0.105, 0.018],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible text reading 'ITEM 5 × 16'.\"\n    },\n    {\n      \"bbox\": [0.766, 0.050, 0.154, 0.025],\n      \"type\": \"formal-resource-label-and-number\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible text reading 'GOLD 88,880'.\"\n    }\n  ],\n  \"slot_checks\": [\n    {\n      \"slot_id\": \"slot-primary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.995,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": false,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-navigation\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.995,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-tab\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.995,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-resources\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"resource-bar-with-formal-text\",\n        \"confidence\": 0.999\n      }\n    },\n    {\n      \"slot_id\": \"slot-content\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.997,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"inventory-panel-frame-edge\",\n        \"confidence\": 0.97\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-a\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.995,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-badge\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.995,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-row\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.997,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-secondary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.996,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-b\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.996,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    }\n  ]\n}",
+  "parsed": {
+    "confidence": 0.99,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.03,
+          0.024,
+          0.279,
+          0.386
+        ],
+        "type": "inventory-panel",
+        "confidence": 0.999,
+        "reason": "Large foreground panel with a bright cyan rounded frame, heading, and stacked button/list-row silhouettes."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.108,
+          0.227,
+          0.04
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.159,
+          0.227,
+          0.04
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.21,
+          0.227,
+          0.04
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.26,
+          0.227,
+          0.04
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.311,
+          0.227,
+          0.041
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text."
+      },
+      {
+        "bbox": [
+          0.74,
+          0.028,
+          0.224,
+          0.065
+        ],
+        "type": "resource-bar",
+        "confidence": 0.999,
+        "reason": "Foreground rounded resource-bar silhouette with cyan frame and currency text."
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.057,
+          0.057,
+          0.258,
+          0.029
+        ],
+        "type": "formal-heading-and-number",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'INVENTORY 9999'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.119,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 1 × 12'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.17,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 2 × 13'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.221,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 3 × 14'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.271,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 4 × 15'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.322,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 5 × 16'."
+      },
+      {
+        "bbox": [
+          0.766,
+          0.05,
+          0.154,
+          0.025
+        ],
+        "type": "formal-resource-label-and-number",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'GOLD 88,880'."
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "medium",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource-bar-with-formal-text",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.997,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "inventory-panel-frame-edge",
+          "confidence": 0.97
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.997,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.996,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.996,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      }
+    ]
+  },
+  "normalized": {
+    "confidence": 0.99,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.03,
+          0.024,
+          0.279,
+          0.386
+        ],
+        "type": "inventory-panel",
+        "confidence": 0.999,
+        "reason": "Large foreground panel with a bright cyan rounded frame, heading, and stacked button/list-row silhouettes.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.108,
+          0.227,
+          0.04
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.159,
+          0.227,
+          0.04
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.21,
+          0.227,
+          0.04
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.26,
+          0.227,
+          0.04
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.311,
+          0.227,
+          0.041
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Rounded rectangular UI row containing formal text.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.74,
+          0.028,
+          0.224,
+          0.065
+        ],
+        "type": "resource-bar",
+        "confidence": 0.999,
+        "reason": "Foreground rounded resource-bar silhouette with cyan frame and currency text.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.057,
+          0.057,
+          0.258,
+          0.029
+        ],
+        "type": "formal-heading-and-number",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'INVENTORY 9999'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.119,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 1 × 12'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.17,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 2 × 13'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.221,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 3 × 14'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.271,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 4 × 15'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.322,
+          0.105,
+          0.018
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'ITEM 5 × 16'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.766,
+          0.05,
+          0.154,
+          0.025
+        ],
+        "type": "formal-resource-label-and-number",
+        "confidence": 0.999,
+        "reason": "Clearly legible text reading 'GOLD 88,880'.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "medium",
+        "contrast_conflict": false,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource-bar-with-formal-text",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.997,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "inventory-panel-frame-edge",
+          "confidence": 0.97
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "medium",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.995,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.997,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.996,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.996,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      }
+    ],
+    "coordinate_space": "normalized-0-1"
+  },
+  "captured_at": "2026-08-18T04:38:09.377Z"
+}

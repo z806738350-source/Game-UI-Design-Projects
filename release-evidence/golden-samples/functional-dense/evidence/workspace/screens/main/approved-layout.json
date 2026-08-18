@@ -1,0 +1,314 @@
+{
+  "schema_version": "2.0",
+  "id": "functional-dense-approved-layout",
+  "version": 1,
+  "status": "approved",
+  "source": {
+    "wireframe": "release-evidence/golden-samples/functional-dense/inputs/wireframe.png",
+    "bindings": "functional-dense-component-bindings"
+  },
+  "screen_id": "main",
+  "source_proposal": "golden-layout-a",
+  "approved_by": "golden-e2e-automation",
+  "approved_at": "2026-08-18T04:37:17.187Z",
+  "label": "Wireframe-locked golden layout",
+  "canvas_spec": {
+    "width": 1024,
+    "height": 1024,
+    "orientation": "square",
+    "aspect_ratio": "1:1",
+    "generation_size": "1024x1024"
+  },
+  "required_controls": [
+    {
+      "id": "primary-action",
+      "label": "Primary",
+      "role": "primary",
+      "required": true
+    },
+    {
+      "id": "navigation",
+      "label": "Navigation",
+      "role": "navigation",
+      "required": true
+    },
+    {
+      "id": "tab",
+      "label": "Items",
+      "role": "navigation",
+      "required": true
+    },
+    {
+      "id": "resources",
+      "label": "88880",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "content",
+      "label": "Golden Sample",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "icon-a",
+      "label": "Action A",
+      "role": "action",
+      "required": true
+    },
+    {
+      "id": "badge",
+      "label": "MAX",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "row",
+      "label": "Row 01",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "secondary-action",
+      "label": "Save",
+      "role": "secondary",
+      "required": true
+    },
+    {
+      "id": "icon-b",
+      "label": "Action B",
+      "role": "action",
+      "required": true
+    }
+  ],
+  "slots": [
+    {
+      "id": "slot-primary-action",
+      "control_id": "primary-action",
+      "component_id": "primary-button",
+      "rect": {
+        "x": 0.78515625,
+        "y": 0.8828125,
+        "width": 0.17578125,
+        "height": 0.0625
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 20,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-navigation",
+      "control_id": "navigation",
+      "component_id": "bottom-navigation",
+      "rect": {
+        "x": 0.0390625,
+        "y": 0.8828125,
+        "width": 0.17578125,
+        "height": 0.0625
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 21,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-tab",
+      "control_id": "tab",
+      "component_id": "section-tab",
+      "rect": {
+        "x": 0.23828125,
+        "y": 0.8828125,
+        "width": 0.17578125,
+        "height": 0.0625
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 22,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-resources",
+      "control_id": "resources",
+      "component_id": "resource-bar",
+      "rect": {
+        "x": 0.74609375,
+        "y": 0.0390625,
+        "width": 0.21484375,
+        "height": 0.046875
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 23,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-content",
+      "control_id": "content",
+      "component_id": "content-panel",
+      "rect": {
+        "x": 0.2998046875,
+        "y": 0.0390625,
+        "width": 0.25,
+        "height": 0.125
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 24,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-icon-a",
+      "control_id": "icon-a",
+      "component_id": "action-icon",
+      "rect": {
+        "x": 0.439453125,
+        "y": 0.1953125,
+        "width": 0.0625,
+        "height": 0.0625
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 25,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-badge",
+      "control_id": "badge",
+      "component_id": "status-badge",
+      "rect": {
+        "x": 0.517578125,
+        "y": 0.20703125,
+        "width": 0.09375,
+        "height": 0.0390625
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 26,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-row",
+      "control_id": "row",
+      "component_id": "list-row",
+      "rect": {
+        "x": 0.2998046875,
+        "y": 0.46875,
+        "width": 0.2734375,
+        "height": 0.0546875
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 27,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-secondary-action",
+      "control_id": "secondary-action",
+      "component_id": "primary-button",
+      "rect": {
+        "x": 0.3359375,
+        "y": 0.30859375,
+        "width": 0.17578125,
+        "height": 0.0625
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 28,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    },
+    {
+      "id": "slot-icon-b",
+      "control_id": "icon-b",
+      "component_id": "action-icon",
+      "rect": {
+        "x": 0.53515625,
+        "y": 0.30859375,
+        "width": 0.0625,
+        "height": 0.0625
+      },
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "z_index": 29,
+      "underlay_policy": {
+        "keep_clear": true,
+        "preferred_treatment": "low-detail",
+        "detail_level": "low",
+        "contrast_role": "surface-behind-ui",
+        "visual_noise_budget": 0.18
+      }
+    }
+  ],
+  "focal_regions": [
+    {
+      "id": "focal-centre",
+      "bbox": [
+        0.32,
+        0.2,
+        0.4,
+        0.52
+      ]
+    }
+  ],
+  "manual_adjustments": [],
+  "input_revisions": {
+    "requirement": 0,
+    "wireframe": 1,
+    "art_direction": 0,
+    "references": 0
+  }
+}

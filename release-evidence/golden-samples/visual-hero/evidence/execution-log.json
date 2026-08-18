@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "visual-hero",
+  "status": "pipeline-passed",
+  "started_at": "2026-08-18T05:14:02.924Z",
+  "safe_provider": {
+    "configured": true,
+    "mode": "direct",
+    "envSource": ".env",
+    "modelSource": ".env",
+    "visionModel": "gpt-5.6-sol",
+    "critiqueModel": "gpt-5.6-sol",
+    "imageModel": "Image-GPT2"
+  },
+  "threshold_version": "underlay-metrics-v1",
+  "lineage": {
+    "repair_chain": [
+      {
+        "attempt": 1,
+        "mode": "regenerate",
+        "parent_underlay_id": "known-contaminated",
+        "output_underlay_id": "known-contaminated-repair-v1",
+        "provider_task_id": "task_MWVgVoQ43UIiCGqJjKb9gy8YT5BciD6z",
+        "output_hash": "sha256:74700589124913e4be4064fb875b22f1e681e090da141f822760ded58b00d57d"
+      }
+    ],
+    "model": "gpt-5.6-sol",
+    "critique_prompt_hash": "sha256:b382bfe0384c7f00fedbea5dc764ab6f8e8d305dfabae79b61ce08b6b157707b",
+    "input_hashes": {
+      "known_contaminated_underlay": "sha256:411c2d92a7e3b26d9625c9dbfb2e169375a1cece26c15ee1e99c0e1c6f67ecd6",
+      "wireframe": "sha256:d8024353649b333956137a438be619732f9bd151335a10fa354b8436543b58a5"
+    },
+    "semantic_responses": [
+      {
+        "stage": "critique-negative-control",
+        "path": "screens/main/reviews/known-contaminated-semantic-response.json",
+        "hash": "sha256:e0bd4e6546f694983d6046096ff83e18578145e9c0cf109f2f69575f003c6b7c",
+        "byte_length": 17428,
+        "media_type": "application/json"
+      },
+      {
+        "stage": "repair-and-recritique-1",
+        "path": "screens/main/reviews/known-contaminated-repair-v1-semantic-response.json",
+        "hash": "sha256:32f294322b1fe4515c11ca568bb5929e82cc75b564e4066ab7163b37ec144d0b",
+        "byte_length": 15011,
+        "media_type": "application/json"
+      }
+    ],
+    "final_underlay": {
+      "id": "known-contaminated-repair-v1",
+      "hash": "sha256:74700589124913e4be4064fb875b22f1e681e090da141f822760ded58b00d57d"
+    },
+    "final_png": "sha256:b614ea5d13b2f21fac1a8c497879fb22da9591d14f6cd313ff764481c70f383a"
+  },
+  "stages": [
+    {
+      "id": "create-project",
+      "started_at": "2026-08-18T05:14:02.924Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:14:02.929Z"
+    },
+    {
+      "id": "import-wireframe",
+      "started_at": "2026-08-18T05:14:02.929Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:14:02.931Z"
+    },
+    {
+      "id": "approve-references",
+      "started_at": "2026-08-18T05:14:02.931Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:14:02.966Z"
+    },
+    {
+      "id": "approve-font-roles",
+      "started_at": "2026-08-18T05:14:02.966Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:14:02.986Z"
+    },
+    {
+      "id": "approve-component-kit",
+      "started_at": "2026-08-18T05:14:02.986Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:14:03.058Z"
+    },
+    {
+      "id": "seed-reviewed-contracts",
+      "started_at": "2026-08-18T05:14:03.058Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:14:03.069Z"
+    },
+    {
+      "id": "approve-underlay-contract",
+      "started_at": "2026-08-18T05:14:03.069Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:14:03.083Z"
+    },
+    {
+      "id": "seed-negative-control",
+      "started_at": "2026-08-18T05:14:03.083Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:14:03.085Z"
+    },
+    {
+      "id": "critique-negative-control",
+      "started_at": "2026-08-18T05:14:03.085Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:15:49.978Z"
+    },
+    {
+      "id": "repair-and-recritique-1",
+      "started_at": "2026-08-18T05:15:49.978Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:18:24.634Z",
+      "critique": {
+        "id": "main-underlay-critique-known-contaminated-repair-v1",
+        "result": "passed",
+        "blocking": 0,
+        "raw_evidence": {
+          "path": "screens/main/reviews/known-contaminated-repair-v1-semantic-response.json",
+          "hash": "sha256:32f294322b1fe4515c11ca568bb5929e82cc75b564e4066ab7163b37ec144d0b",
+          "byte_length": 15011,
+          "media_type": "application/json"
+        }
+      }
+    },
+    {
+      "id": "final-composition",
+      "started_at": "2026-08-18T05:18:24.634Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:18:24.981Z"
+    },
+    {
+      "id": "pixel-fidelity",
+      "started_at": "2026-08-18T05:18:24.981Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:18:25.126Z"
+    },
+    {
+      "id": "approve-pipeline-output",
+      "started_at": "2026-08-18T05:18:25.126Z",
+      "status": "passed",
+      "completed_at": "2026-08-18T05:18:25.274Z"
+    }
+  ],
+  "negative_control": {
+    "critique_id": "main-underlay-critique-known-contaminated",
+    "result": "failed",
+    "gate_passed": false,
+    "critical_count": 12,
+    "issue_count": 41,
+    "raw_evidence": {
+      "path": "screens/main/reviews/known-contaminated-semantic-response.json",
+      "hash": "sha256:e0bd4e6546f694983d6046096ff83e18578145e9c0cf109f2f69575f003c6b7c",
+      "byte_length": 17428,
+      "media_type": "application/json"
+    }
+  },
+  "completed_at": "2026-08-18T05:18:25.274Z"
+}

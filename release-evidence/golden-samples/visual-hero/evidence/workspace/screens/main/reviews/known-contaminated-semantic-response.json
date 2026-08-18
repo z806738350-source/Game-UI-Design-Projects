@@ -1,0 +1,415 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "underlay_id": "known-contaminated",
+    "prompt_hash": "sha256:b382bfe0384c7f00fedbea5dc764ab6f8e8d305dfabae79b61ce08b6b157707b",
+    "model": "gpt-5.6-sol",
+    "input_hashes": {
+      "underlay": "sha256:411c2d92a7e3b26d9625c9dbfb2e169375a1cece26c15ee1e99c0e1c6f67ecd6",
+      "overlay": "sha256:424a08bee875e9e3c9f4bde110ee14dbea737ceea1e563422c272e70869bf3b8",
+      "component_board": "sha256:1f0c6793978dcf1c4f7206cccb1f1783f083759d969680d0d0b4fbfd0302f05d"
+    }
+  },
+  "provider": {
+    "response_id": "chatcmpl-EE6SFYwAHEItPiUmIZxvb0GhZMPBw",
+    "model": "gpt-5.6-sol-2026-07-09",
+    "created": 1787030111
+  },
+  "attempt": 2,
+  "raw_text": "{\n  \"confidence\": 0.99,\n  \"suspected_ui_regions\": [\n    {\n      \"bbox\": [0.323, 0.108, 0.354, 0.66],\n      \"type\": \"large_framed_card_panel\",\n      \"confidence\": 0.99,\n      \"reason\": \"Dominant dark rectangular card with rounded corners, a gold outline, an inset focal graphic, and a caption; this is composed UI rather than underlay scenery.\"\n    },\n    {\n      \"bbox\": [0.382, 0.193, 0.236, 0.495],\n      \"type\": \"hero_placeholder_icon\",\n      \"confidence\": 0.99,\n      \"reason\": \"Large outlined circle-and-triangle symbol forms a deliberate foreground icon or placeholder silhouette inside the card.\"\n    },\n    {\n      \"bbox\": [0.783, 0.877, 0.181, 0.07],\n      \"type\": \"button\",\n      \"confidence\": 0.99,\n      \"reason\": \"Rounded dark rectangle with a gold border and centered action label closely matches a shared button silhouette.\"\n    }\n  ],\n  \"text_like_regions\": [\n    {\n      \"bbox\": [0.386, 0.713, 0.235, 0.031],\n      \"type\": \"formal_text\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible uppercase caption reading LIMITED HERO inside the central card.\"\n    },\n    {\n      \"bbox\": [0.815, 0.899, 0.135, 0.03],\n      \"type\": \"formal_text_and_number\",\n      \"confidence\": 0.99,\n      \"reason\": \"Clearly legible action text reading DRAW ×10 inside the bottom-right button.\"\n    }\n  ],\n  \"slot_checks\": [\n    {\n      \"slot_id\": \"slot-primary-action\",\n      \"subject_overlap\": true,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"framed_card_and_large_circular_focal_icon\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-navigation\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.97,\n      \"background_busyness\": \"moderate\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"rounded_card_border\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-tab\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-resources\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.98,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"large_card_edge\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-content\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.94,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"large_framed_card\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-a\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"moderate\",\n      \"contrast_conflict\": false,\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-badge\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"moderate\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.98\n      }\n    },\n    {\n      \"slot_id\": \"slot-row\",\n      \"subject_overlap\": true,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"framed_card_and_large_triangular_focal_icon\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-secondary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-b\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": true,\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.99\n      }\n    }\n  ]\n}",
+  "parsed": {
+    "confidence": 0.99,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.323,
+          0.108,
+          0.354,
+          0.66
+        ],
+        "type": "large_framed_card_panel",
+        "confidence": 0.99,
+        "reason": "Dominant dark rectangular card with rounded corners, a gold outline, an inset focal graphic, and a caption; this is composed UI rather than underlay scenery."
+      },
+      {
+        "bbox": [
+          0.382,
+          0.193,
+          0.236,
+          0.495
+        ],
+        "type": "hero_placeholder_icon",
+        "confidence": 0.99,
+        "reason": "Large outlined circle-and-triangle symbol forms a deliberate foreground icon or placeholder silhouette inside the card."
+      },
+      {
+        "bbox": [
+          0.783,
+          0.877,
+          0.181,
+          0.07
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Rounded dark rectangle with a gold border and centered action label closely matches a shared button silhouette."
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.386,
+          0.713,
+          0.235,
+          0.031
+        ],
+        "type": "formal_text",
+        "confidence": 0.99,
+        "reason": "Clearly legible uppercase caption reading LIMITED HERO inside the central card."
+      },
+      {
+        "bbox": [
+          0.815,
+          0.899,
+          0.135,
+          0.03
+        ],
+        "type": "formal_text_and_number",
+        "confidence": 0.99,
+        "reason": "Clearly legible action text reading DRAW ×10 inside the bottom-right button."
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": true,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "framed_card_and_large_circular_focal_icon",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.97,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "rounded_card_border",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "large_card_edge",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.94,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "large_framed_card",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": false,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": true,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "framed_card_and_large_triangular_focal_icon",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      }
+    ]
+  },
+  "normalized": {
+    "confidence": 0.99,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.323,
+          0.108,
+          0.354,
+          0.66
+        ],
+        "type": "large_framed_card_panel",
+        "confidence": 0.99,
+        "reason": "Dominant dark rectangular card with rounded corners, a gold outline, an inset focal graphic, and a caption; this is composed UI rather than underlay scenery.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.382,
+          0.193,
+          0.236,
+          0.495
+        ],
+        "type": "hero_placeholder_icon",
+        "confidence": 0.99,
+        "reason": "Large outlined circle-and-triangle symbol forms a deliberate foreground icon or placeholder silhouette inside the card.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.783,
+          0.877,
+          0.181,
+          0.07
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Rounded dark rectangle with a gold border and centered action label closely matches a shared button silhouette.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.386,
+          0.713,
+          0.235,
+          0.031
+        ],
+        "type": "formal_text",
+        "confidence": 0.99,
+        "reason": "Clearly legible uppercase caption reading LIMITED HERO inside the central card.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.815,
+          0.899,
+          0.135,
+          0.03
+        ],
+        "type": "formal_text_and_number",
+        "confidence": 0.99,
+        "reason": "Clearly legible action text reading DRAW ×10 inside the bottom-right button.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": true,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "framed_card_and_large_circular_focal_icon",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.97,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "rounded_card_border",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.98,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "large_card_edge",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.94,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "large_framed_card",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": false,
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "moderate",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.98
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": true,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "framed_card_and_large_triangular_focal_icon",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": true,
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.99
+        }
+      }
+    ],
+    "coordinate_space": "normalized-0-1"
+  },
+  "captured_at": "2026-08-18T05:15:49.892Z"
+}

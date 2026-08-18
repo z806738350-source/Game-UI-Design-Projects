@@ -1,0 +1,461 @@
+{
+  "schema_version": "2.0",
+  "id": "main-fidelity-report",
+  "version": 1,
+  "status": "passed",
+  "source": {
+    "composition_manifest": "main-composition-final",
+    "composition_manifest_version": 1,
+    "composition_output": "main-composition-final-output",
+    "composition_output_version": 1,
+    "composition_output_hash": "sha256:d56324947d7d0e051299c4ba82cbeb3c6d867eff5d7af6c0e4eb7616e0084312",
+    "underlay_critique": "main-underlay-critique-known-contaminated-repair-v1-repair-v2"
+  },
+  "output": {
+    "path": "screens/main/compositions/final-v1.png",
+    "hash": "sha256:d56324947d7d0e051299c4ba82cbeb3c6d867eff5d7af6c0e4eb7616e0084312",
+    "width": 1024,
+    "height": 1024,
+    "renderer_version": "composition-v1/sharp-0.35.3/libvips-8.18.3",
+    "verified": true
+  },
+  "coverage": {
+    "required_controls": 10,
+    "rendered_controls": 10
+  },
+  "underlay": {
+    "critique_id": "main-underlay-critique-known-contaminated-repair-v1-repair-v2",
+    "result": "passed",
+    "manual_waivers": []
+  },
+  "typography": {
+    "identity_critical_roles": 4,
+    "exact_roles": 4,
+    "actual_verified_layers": 7
+  },
+  "manifest_consistency": {
+    "passed": true,
+    "checks": []
+  },
+  "visual_fidelity": {
+    "passed": true,
+    "checks": []
+  },
+  "evidence": {
+    "check_version": "pixel-fidelity-v1",
+    "thresholds": {
+      "visible_alpha_minimum": 1,
+      "safe_area_ratio": 0.05,
+      "allowed_component_overlap_pixels": 0,
+      "text_may_touch_boundary": false,
+      "nine_slice_fixed_hash_must_match": true
+    },
+    "output": {
+      "path": "screens/main/compositions/final-v1.png",
+      "expected_hash": "sha256:d56324947d7d0e051299c4ba82cbeb3c6d867eff5d7af6c0e4eb7616e0084312",
+      "actual_hash": "sha256:d56324947d7d0e051299c4ba82cbeb3c6d867eff5d7af6c0e4eb7616e0084312",
+      "format": "png",
+      "width": 1024,
+      "height": 1024,
+      "has_alpha": true,
+      "alpha_min": 255,
+      "alpha_max": 255,
+      "byte_length": 2591457,
+      "version": 1
+    },
+    "assets": [
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/default.png",
+        "expected_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+        "actual_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/default.png",
+        "expected_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+        "actual_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c"
+      },
+      {
+        "kind": "font",
+        "id": "noto-sans-sc",
+        "path": "style/fonts/noto-sans-sc.ttf",
+        "expected_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "actual_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "family": "Noto Sans SC Thin",
+        "postscript_name": "NotoSansSC-Thin"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/default.png",
+        "expected_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+        "actual_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c"
+      },
+      {
+        "kind": "component",
+        "id": "resource-bar",
+        "path": "style/components/resource-bar/default.png",
+        "expected_hash": "sha256:5f460ada6c255d2a1b784ef58fd766900efb4055d817bc0315a1dd62adbe1bf2",
+        "actual_hash": "sha256:5f460ada6c255d2a1b784ef58fd766900efb4055d817bc0315a1dd62adbe1bf2"
+      },
+      {
+        "kind": "font",
+        "id": "noto-sans-sc",
+        "path": "style/fonts/noto-sans-sc.ttf",
+        "expected_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "actual_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "family": "Noto Sans SC Thin",
+        "postscript_name": "NotoSansSC-Thin"
+      },
+      {
+        "kind": "component",
+        "id": "content-panel",
+        "path": "style/components/content-panel/default.png",
+        "expected_hash": "sha256:7cad31af87f2842b08832d30e4870d40a01d09559916f4bc62aefcc9c037a8f8",
+        "actual_hash": "sha256:7cad31af87f2842b08832d30e4870d40a01d09559916f4bc62aefcc9c037a8f8"
+      },
+      {
+        "kind": "font",
+        "id": "noto-sans-sc",
+        "path": "style/fonts/noto-sans-sc.ttf",
+        "expected_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "actual_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "family": "Noto Sans SC Thin",
+        "postscript_name": "NotoSansSC-Thin"
+      },
+      {
+        "kind": "component",
+        "id": "action-icon",
+        "path": "style/components/action-icon/default.png",
+        "expected_hash": "sha256:70f8960a4a9f7063b98ac08c9f6bea77f442f96194fad7f9d6d6dbef960f8749",
+        "actual_hash": "sha256:70f8960a4a9f7063b98ac08c9f6bea77f442f96194fad7f9d6d6dbef960f8749"
+      },
+      {
+        "kind": "font",
+        "id": "noto-sans-sc",
+        "path": "style/fonts/noto-sans-sc.ttf",
+        "expected_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "actual_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "family": "Noto Sans SC Thin",
+        "postscript_name": "NotoSansSC-Thin"
+      },
+      {
+        "kind": "component",
+        "id": "status-badge",
+        "path": "style/components/status-badge/default.png",
+        "expected_hash": "sha256:2df013997e56471e7e3977171e851991770a96df248a98f32539197eadf2008d",
+        "actual_hash": "sha256:2df013997e56471e7e3977171e851991770a96df248a98f32539197eadf2008d"
+      },
+      {
+        "kind": "component",
+        "id": "list-row",
+        "path": "style/components/list-row/default.png",
+        "expected_hash": "sha256:d6f126f77a0f1cc8b42a60e3fed30808e5bc222ae3b5a9776341adf9543f1bc9",
+        "actual_hash": "sha256:d6f126f77a0f1cc8b42a60e3fed30808e5bc222ae3b5a9776341adf9543f1bc9"
+      },
+      {
+        "kind": "font",
+        "id": "noto-sans-sc",
+        "path": "style/fonts/noto-sans-sc.ttf",
+        "expected_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "actual_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "family": "Noto Sans SC Thin",
+        "postscript_name": "NotoSansSC-Thin"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/default.png",
+        "expected_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+        "actual_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c"
+      },
+      {
+        "kind": "font",
+        "id": "noto-sans-sc",
+        "path": "style/fonts/noto-sans-sc.ttf",
+        "expected_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "actual_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "family": "Noto Sans SC Thin",
+        "postscript_name": "NotoSansSC-Thin"
+      },
+      {
+        "kind": "component",
+        "id": "action-icon",
+        "path": "style/components/action-icon/default.png",
+        "expected_hash": "sha256:70f8960a4a9f7063b98ac08c9f6bea77f442f96194fad7f9d6d6dbef960f8749",
+        "actual_hash": "sha256:70f8960a4a9f7063b98ac08c9f6bea77f442f96194fad7f9d6d6dbef960f8749"
+      },
+      {
+        "kind": "font",
+        "id": "noto-sans-sc",
+        "path": "style/fonts/noto-sans-sc.ttf",
+        "expected_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "actual_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+        "family": "Noto Sans SC Thin",
+        "postscript_name": "NotoSansSC-Thin"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/pressed.png",
+        "expected_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59",
+        "actual_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/disabled.png",
+        "expected_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d",
+        "actual_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/selected.png",
+        "expected_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59",
+        "actual_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/disabled.png",
+        "expected_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d",
+        "actual_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/selected.png",
+        "expected_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59",
+        "actual_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/disabled.png",
+        "expected_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d",
+        "actual_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d"
+      }
+    ],
+    "layout": [
+      {
+        "control_id": "primary-action",
+        "type": "component",
+        "rect": {
+          "left": 120,
+          "top": 920,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:1348546e18a5e42ae56b72c69c4a847200c000533177087d726cc17197dc4879"
+      },
+      {
+        "control_id": "navigation",
+        "type": "component",
+        "rect": {
+          "left": 88,
+          "top": 424,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:16f355c6470ad1ee894968fa7589f4dbf046d50e2782ab1adc7f31dc800cda86"
+      },
+      {
+        "control_id": "primary-action",
+        "type": "text",
+        "rect": {
+          "left": 120,
+          "top": 920,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:1348546e18a5e42ae56b72c69c4a847200c000533177087d726cc17197dc4879"
+      },
+      {
+        "control_id": "tab",
+        "type": "component",
+        "rect": {
+          "left": 728,
+          "top": 8,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:f1a7c65a1efa1990b16016668d26c563ccf8a72cbbc1ab43aeedfb673c590d95"
+      },
+      {
+        "control_id": "resources",
+        "type": "component",
+        "rect": {
+          "left": 344,
+          "top": 24,
+          "width": 220,
+          "height": 48
+        },
+        "crop_hash": "sha256:c2d997d4349d8008223bbd394cccb54cd9b18f43b90b864fca146e7ca05e56b9"
+      },
+      {
+        "control_id": "tab",
+        "type": "text",
+        "rect": {
+          "left": 728,
+          "top": 8,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:f1a7c65a1efa1990b16016668d26c563ccf8a72cbbc1ab43aeedfb673c590d95"
+      },
+      {
+        "control_id": "content",
+        "type": "component",
+        "rect": {
+          "left": 728,
+          "top": 808,
+          "width": 256,
+          "height": 128
+        },
+        "crop_hash": "sha256:8653a1f668e34b78dd72d36321dbe08a5d36bcb85e365b66c4629da42e62f0d9"
+      },
+      {
+        "control_id": "resources",
+        "type": "text",
+        "rect": {
+          "left": 344,
+          "top": 24,
+          "width": 220,
+          "height": 48
+        },
+        "crop_hash": "sha256:c2d997d4349d8008223bbd394cccb54cd9b18f43b90b864fca146e7ca05e56b9"
+      },
+      {
+        "control_id": "icon-a",
+        "type": "component",
+        "rect": {
+          "left": 488,
+          "top": 152,
+          "width": 64,
+          "height": 64
+        },
+        "crop_hash": "sha256:0e0c9cc47e939578f2b5bde6f759e587928e6a8a6da66d9bb745d89ea0c73df7"
+      },
+      {
+        "control_id": "content",
+        "type": "text",
+        "rect": {
+          "left": 728,
+          "top": 808,
+          "width": 256,
+          "height": 128
+        },
+        "crop_hash": "sha256:8653a1f668e34b78dd72d36321dbe08a5d36bcb85e365b66c4629da42e62f0d9"
+      },
+      {
+        "control_id": "badge",
+        "type": "component",
+        "rect": {
+          "left": 632,
+          "top": 968,
+          "width": 96,
+          "height": 40
+        },
+        "crop_hash": "sha256:da359368d5b2c6b78aedd4e3036dd5476a92682ca52520d967ee1ef1fccac528"
+      },
+      {
+        "control_id": "row",
+        "type": "component",
+        "rect": {
+          "left": 328,
+          "top": 888,
+          "width": 280,
+          "height": 56
+        },
+        "crop_hash": "sha256:2f820706cd9614cef379b1917bdeb24e7af75a770cc3e3d5935021fc68938e09"
+      },
+      {
+        "control_id": "badge",
+        "type": "text",
+        "rect": {
+          "left": 632,
+          "top": 968,
+          "width": 96,
+          "height": 40
+        },
+        "crop_hash": "sha256:da359368d5b2c6b78aedd4e3036dd5476a92682ca52520d967ee1ef1fccac528"
+      },
+      {
+        "control_id": "secondary-action",
+        "type": "component",
+        "rect": {
+          "left": 504,
+          "top": 792,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:75c94c087712152a115b7f1fa42f1f61daf90ab383cf54682e1e1f8853e49ce2"
+      },
+      {
+        "control_id": "row",
+        "type": "text",
+        "rect": {
+          "left": 328,
+          "top": 888,
+          "width": 280,
+          "height": 56
+        },
+        "crop_hash": "sha256:2f820706cd9614cef379b1917bdeb24e7af75a770cc3e3d5935021fc68938e09"
+      },
+      {
+        "control_id": "icon-b",
+        "type": "component",
+        "rect": {
+          "left": 216,
+          "top": 840,
+          "width": 64,
+          "height": 64
+        },
+        "crop_hash": "sha256:aa8cf4ed9283b9ab2bf37461ae26bc20ba6b836e5d78ec384f6d1f73e6ea3bc4"
+      },
+      {
+        "control_id": "secondary-action",
+        "type": "text",
+        "rect": {
+          "left": 504,
+          "top": 792,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:75c94c087712152a115b7f1fa42f1f61daf90ab383cf54682e1e1f8853e49ce2"
+      }
+    ],
+    "renderer_version": "composition-v1/sharp-0.35.3/libvips-8.18.3",
+    "manifest": {
+      "id": "main-composition-final",
+      "version": 1,
+      "hash": "sha256:40ea5353c479593a956e9c6aa00586873312b85a89ab84ebbd2c902282de72d5"
+    }
+  },
+  "evidence_digest": "sha256:d6097e3a26ab5fdfc7642fa981de0490127e94dc555c9106214c988757df86b3",
+  "checks": [
+    "composition-output",
+    "decoded-pixels",
+    "alpha",
+    "asset-rehash",
+    "rendered-bbox",
+    "overlap",
+    "safe-area",
+    "text-overflow",
+    "nine-slice-fixed-regions",
+    "control-coverage",
+    "underlay-gate",
+    "font-render-evidence",
+    "dependency-freshness"
+  ],
+  "issues": [],
+  "manual_review": {
+    "required": false,
+    "approved": false
+  },
+  "checked_at": "2026-08-18T05:10:48.196Z"
+}

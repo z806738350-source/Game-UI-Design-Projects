@@ -1,0 +1,103 @@
+{
+  "schema_version": "2.0",
+  "id": "project-reference-inventory",
+  "version": 9,
+  "status": "approved",
+  "source": {
+    "managed_by": "reference-workbench"
+  },
+  "updated_at": "2026-08-18T05:18:25.424Z",
+  "assets": [
+    {
+      "id": "reference-mywpl22c-1",
+      "path": "style/references/mywpl22c.png",
+      "name": "reference-1.png",
+      "role": "primary",
+      "approved": true,
+      "screen_type": "existing-continuation",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 1",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 2460396,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 0
+    },
+    {
+      "id": "reference-mywpl22d-2",
+      "path": "style/references/mywpl22d.png",
+      "name": "reference-2.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "existing-continuation",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 2",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 1805140,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 1
+    },
+    {
+      "id": "reference-mywpl22e-3",
+      "path": "style/references/mywpl22e.png",
+      "name": "reference-3.png",
+      "role": "supporting",
+      "approved": true,
+      "screen_type": "existing-continuation",
+      "contains": [
+        "layout",
+        "components",
+        "typography"
+      ],
+      "baseline": "approved visual reference page",
+      "notes": "Golden reference 3",
+      "metadata": {
+        "format": "png",
+        "mime": "image/png",
+        "width": 1024,
+        "height": 1024,
+        "bytes": 2256289,
+        "canvas_spec": {
+          "width": 1024,
+          "height": 1024,
+          "orientation": "square",
+          "aspect_ratio": "1:1",
+          "generation_size": "1024x1024"
+        }
+      },
+      "order": 2
+    }
+  ],
+  "approved_at": "2026-08-18T05:18:25.430Z"
+}

@@ -12,8 +12,11 @@ These review units follow the dependency order required by `Game-UI-Design-Copil
 | PR-4 | Merged | GitHub PR #5; CI passed; `main` merge `5ad6d32`; `docs/baseline/pr4-critique-repair.md`. |
 | PR-5 | Merged | GitHub PR #6; CI passed; `main` merge `711e70d`; `docs/baseline/pr5-pixel-fidelity.md`. |
 | PR-6 | Merged | GitHub PR #7; CI passed; `main` merge `bde8732`; `docs/baseline/pr6-product-workbenches.md`. |
-| PR-7 | Implemented on current review branch | `docs/baseline/pr7-stale-transactional-migration.md` |
-| PR-8 | Pending | Must follow dependency order below. |
+| PR-7 | Merged | GitHub PR #8; CI passed; `main` merge `6e83b7e`; `docs/baseline/pr7-stale-transactional-migration.md`. |
+| PR-8A | Merged | Runtime fixes from real E2E findings: GitHub PR #9 (`36b79d5`, `cd9a021`) and PR #10 (`bca8b0f`). |
+| Style Contract 2.0 (P0) | Merged | GitHub PR #11; executable style schema with numeric bounds, required semantic colors, vague-word blacklist, and failing tests; `main` merge `e0b233e`. |
+| PR-8B | In review branch | `codex/audit-pr8b-fixture-e2e-ci`: fixture E2E, lineage, evidence tiering, CI additions, reserved + Chinese font samples; runbook `docs/baseline/pr8-golden-release.md`. |
+| PR-8C | Pending | Designer signoff, execution docs, README/CHANGELOG/version, final release evidence. |
 
 1. **Release correction, CI, and baseline** — mark the current build as an architecture alpha, preserve the independent audit, add PR/main CI, and freeze reproducible facts without claiming formal acceptance.
 2. **Composition output and renderers** — persist real preview/final PNG output; implement exact, nine-slice, and vector-token renderer dispatch; export the verified final artifact.
