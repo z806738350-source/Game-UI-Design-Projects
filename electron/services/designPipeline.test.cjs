@@ -306,3 +306,111 @@ test('screen-scoped pipeline operations reject missing or inactive screen contex
     await fs.rm(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+function bindingGateFixture() {
+  const screenContract = {
+    schema_version: '2.0', id: 'main-screen-contract', version: 1, status: 'approved', source: {},
+    screen_id: 'main', screen_name: 'Lineup', purpose: 'Save lineup', primary_action: 'save',
+    required_controls: [{ id: 'save', label: '保存', role: 'primary-action', required: true }]
+  };
+  const componentContract = {
+    schema_version: '2.0', id: 'components', version: 1, status: 'approved', source: {},
+    families: [
+      {
+        id: 'button.primary', category: 'button', status: 'approved', reuse_mode: 'nine-slice',
+        states: { default: { asset_path: 'style/components/button.png' }, pressed: { asset_path: 'style/components/button_pressed.png' }, disabled: { asset_path: 'style/components/button_disabled.png' } }
+      },
+      {
+        id: 'nav.item', category: 'navigation', status: 'approved', reuse_mode: 'nine-slice',
+        states: { default: { asset_path: 'style/components/nav.png' }, selected: { asset_path: 'style/components/nav_selected.png' }, disabled: { asset_path: 'style/components/nav_disabled.png' } }
+      }
+    ]
+  };
+  const fontManifest = {
+    schema_version: '2.0', id: 'fonts', version: 1, status: 'approved', source: {}, fonts: [],
+    roles: { 'button-label': { font_id: 'ui', fidelity_mode: 'exact' } }
+  };
+  const compatibleBinding = { control_id: 'save', component_id: 'button.primary', state: 'default', slot_id: 'bottom', text: '保存', font_role: 'button-label' };
+  return { screenContract, componentContract, fontManifest, compatibleBinding };
+}
+
+test('binding approval is a backend fact and semantic mismatch blocks approval', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-binding-gate-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const fixture = bindingGateFixture();
+    const projectStore = createProjectStore();
+    const project = await projectStore.create({ name: 'Binding Gate', projectType: 'existing', requirement: 'Lineup.' });
+    assert.equal(project.continuation_mode, 'existing-strict');
+    await projectStore.saveArtifact(project.id, 'screen-contract', fixture.screenContract, { screenId: 'main' });
+    await projectStore.saveArtifact(project.id, 'component-contract', fixture.componentContract);
+    await projectStore.saveArtifact(project.id, 'font-manifest', fixture.fontManifest);
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    // Client-supplied approved flags and artifact-level approval must be ignored.
+    let updated = await pipeline.updateArtifact(project.id, 'component-bindings', {
+      screenId: 'main',
+      bindings: [{ ...fixture.compatibleBinding, approved: true }],
+      approval: { approved_by: 'attacker', validation_version: 'forged' }
+    });
+    assert.equal(updated.artifacts.bindings.bindings[0].approved, false);
+    assert.equal(updated.artifacts.bindings.approval, undefined);
+    assert.notEqual(updated.artifacts.bindings.status, 'approved');
+    // Approval is stamped by the pipeline after full semantic validation.
+    updated = await pipeline.approveArtifact(project.id, 'component-bindings', { screenId: 'main' });
+    assert.equal(updated.artifacts.bindings.status, 'approved');
+    assert.equal(updated.artifacts.bindings.bindings[0].approved, true);
+    assert.equal(updated.artifacts.bindings.approval.approved_by, 'ui-designer');
+    assert.equal(updated.artifacts.bindings.approval.validation_version, 'binding-policy-v1');
+    // Semantic mismatch (primary-action control bound to a navigation family) blocks approval.
+    updated = await pipeline.updateArtifact(project.id, 'component-bindings', {
+      screenId: 'main',
+      bindings: [{ ...fixture.compatibleBinding, component_id: 'nav.item', state: 'default' }]
+    });
+    assert.notEqual(updated.artifacts.bindings.status, 'approved');
+    await assert.rejects(
+      pipeline.approveArtifact(project.id, 'component-bindings', { screenId: 'main' }),
+      (error) => error.code === 'BINDING_COVERAGE_INCOMPLETE' && /BINDING_COMPONENT_CATEGORY_MISMATCH/.test(error.message)
+    );
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('label-only screen contract edits keep bindings fresh while role edits stale them', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-binding-stale-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const fixture = bindingGateFixture();
+    const projectStore = createProjectStore();
+    const project = await projectStore.create({ name: 'Binding Stale', projectType: 'existing', requirement: 'Lineup.' });
+    await projectStore.saveArtifact(project.id, 'screen-contract', fixture.screenContract, { screenId: 'main' });
+    await projectStore.saveArtifact(project.id, 'component-contract', fixture.componentContract);
+    await projectStore.saveArtifact(project.id, 'font-manifest', fixture.fontManifest);
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    await pipeline.updateArtifact(project.id, 'component-bindings', { screenId: 'main', bindings: [fixture.compatibleBinding] });
+    let updated = await pipeline.approveArtifact(project.id, 'component-bindings', { screenId: 'main' });
+    assert.equal(updated.artifacts.bindings.status, 'approved');
+    // Label-only edits are cosmetic: bindings stay approved.
+    updated = await pipeline.updateArtifact(project.id, 'screen-contract', {
+      screenId: 'main',
+      required_controls: [{ id: 'save', label: '保存阵容', role: 'primary-action', required: true }]
+    });
+    assert.equal(updated.artifacts.screenContract.version, 2);
+    assert.equal(updated.artifacts.bindings.status, 'approved');
+    // Role changes are semantic: bindings must be revalidated.
+    updated = await pipeline.updateArtifact(project.id, 'screen-contract', {
+      screenId: 'main',
+      required_controls: [{ id: 'save', label: '保存阵容', role: 'navigation', required: true }]
+    });
+    assert.equal(updated.artifacts.screenContract.version, 3);
+    assert.equal(updated.artifacts.bindings.status, 'stale');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
