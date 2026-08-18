@@ -416,7 +416,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     } else if (kind === 'style-contract') {
       const current = project.artifacts.styleContract;
       if (!current) throw new Error('Style Contract does not exist.');
-      await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', locked_at: new Date().toISOString() });
+      const approved = { ...current, status: 'approved', locked_at: new Date().toISOString() };
+      const errors = validateArtifact(kind, approved);
+      if (errors.length) throw Object.assign(new Error(`Style Contract 尚不可执行，不能锁定：${errors.join('; ')}`), { code: 'STYLE_CONTRACT_INVALID' });
+      await projectStore.saveArtifact(projectId, kind, approved);
       await projectStore.updateWorkflow(projectId, 'style_resolution', 'approved', 'style/style-contract.json');
     } else if (kind === 'font-manifest' || kind === 'component-contract') {
       const key = kind === 'font-manifest' ? 'fontManifest' : 'componentContract';

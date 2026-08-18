@@ -78,12 +78,16 @@ function stylePrompt(project, approvedLayout, referencePack) {
     `${canvasInstruction(project)}\n` +
     `${attachmentInstructions(referencePack)}\n` +
     `Approved layout:\n${JSON.stringify(approvedLayout)}\n\n` +
-    `Return: "style_id", "visual_identity":{"theme","mood" string[],"keywords" string[]}, ` +
-    `"colors" object with semantic color roles, "typography" object, "materials" string[], "lighting" object, ` +
-    `"geometry" object, "components" object covering button/icon/card/panel/modal/navigation and selected/disabled/reward/warning states, ` +
+    `Return: "style_id", "visual_identity":{"theme" string,"mood" string[],"keywords" string[]}, ` +
+    `"colors" object mapping the required semantic roles primary, surface, text (plus optional roles) to concrete hex colors like #d6b05f, ` +
+    `"typography" object containing at least the roles display and body, where every role defines size integer 6..256 px, weight integer 100..900, letter_spacing number -8..64 px, line_height number 0.7..3 ratio, fill hex color, and optional stroke {width 0..32 px, color hex} and shadow {blur 0..64 px, offset_x/offset_y -64..64 px, color hex}, ` +
+    `"materials" string[] of concrete material descriptions, ` +
+    `"lighting" object with concrete treatment string, light_direction one of top|top-left|top-right|left|right|bottom|bottom-left|bottom-right|ambient, and optional intensity 0..1, ` +
+    `"geometry" object with corner_language one of sharp|beveled|beveled-soft|rounded|notched|mixed, corner_radius number 0..128 px, and density one of functional|balanced|sparse|hero, ` +
+    `"components" object covering button/icon/card/panel/modal/navigation and selected/disabled/reward/warning states, ` +
     `"composition" object with information_density/main_visual_priority/decoration_density/spacing, ` +
     `"reference_ids" string[], "negative_style_constraints" string[], "designer_summary" string. ` +
-    `Descriptions must be concrete enough to reproduce across multiple screens.`;
+    `All numeric values must be JSON numbers (never strings like "14px"). Never use vague terms such as 高级/适当/有质感/大气/premium/somewhat/subtle/elegant — every value must be concrete enough for a renderer to execute and for another screen to reproduce exactly.`;
 }
 
 function visualTask(project, approvedLayout, styleContract, variation, feedback = '', context = {}) {
