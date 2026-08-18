@@ -1,0 +1,13 @@
+# Review-domain mapping (G-01 / REM-05).
+# The repository currently has a single maintainer; this file documents the
+# intended review domains and becomes authoritative once collaborators join.
+
+/electron/services/        @z806738350-source
+/src/                      @z806738350-source
+/server/                   @z806738350-source
+/scripts/                  @z806738350-source
+/.github/workflows/        @z806738350-source
+/docs/                     @z806738350-source
+/release-evidence/         @z806738350-source
+/package.json              @z806738350-source
+/pnpm-lock.yaml            @z806738350-source
