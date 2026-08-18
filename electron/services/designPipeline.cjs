@@ -366,10 +366,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       // Approval is a backend fact: stamp each binding and record the policy
       // version; client-supplied approved flags are never trusted.
       covered.bindings = (covered.bindings || []).map((binding) => ({ ...binding, approved: true }));
+      const approvedAt = new Date().toISOString();
       await invalidateArtifacts(projectId, 'component-bindings');
       await projectStore.saveArtifact(projectId, kind, {
-        ...covered, status: 'approved', approved_at: new Date().toISOString(),
-        approval: { approved_at: new Date().toISOString(), approved_by: 'ui-designer', validation_version: BINDING_POLICY_VERSION }
+        ...covered, status: 'approved', approved_at: approvedAt,
+        approval: { approved_at: approvedAt, approved_by: 'ui-designer', validation_version: BINDING_POLICY_VERSION }
       });
       await projectStore.updateWorkflow(projectId, 'component_binding', 'approved', `screens/${project.screen_id}/component-bindings.json`);
     } else if (kind === 'underlay-contract') {
@@ -524,7 +525,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       source: { ...(definition.artifact.source || {}), edited_by: 'ui-designer' },
       edited_at: new Date().toISOString()
     };
-    if (kind === 'component-bindings') next = withCoverage(next, project.artifacts.screenContract, project.artifacts.componentContract, project.artifacts.fontManifest, { strict: project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation' });
+    if (kind === 'component-bindings') {
+      // Editing demotes the artifact to reviewed; drop any stale approval
+      // stamp from the previous version so approval remains a current fact.
+      delete next.approval;
+      delete next.approved_at;
+      next = withCoverage(next, project.artifacts.screenContract, project.artifacts.componentContract, project.artifacts.fontManifest, { strict: project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation' });
+    }
     await projectStore.saveArtifact(projectId, kind, next);
     await projectStore.updateWorkflow(projectId, definition.stage, next.status, undefined, {
       progress: undefined

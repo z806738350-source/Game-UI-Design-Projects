@@ -77,7 +77,9 @@ component selection fails validation with `BINDING_COMPONENT_NOT_SELECTED`.
 ## 6. 批准与信任模型
 
 - `updateArtifact('component-bindings')`：剥离客户端 `approval` 字段，把每条
-  binding 的 `approved` 强制为 `false`。客户端永远无法把绑定写为已批准。
+  binding 的 `approved` 强制为 `false`，并清除上一版本残留的
+  `approval`/`approved_at` stamp（编辑即降级为 `reviewed`，批准仅对应当前
+  版本）。客户端永远无法把绑定写为已批准。
 - `approveArtifact('component-bindings')`：以
   `{ strict }`（strict = `existing-strict` / `locked-continuation`）执行
   `withCoverage` + `validateBindings` 全量校验；任何 error 抛出

@@ -362,6 +362,17 @@ test('binding approval is a backend fact and semantic mismatch blocks approval',
     assert.equal(updated.artifacts.bindings.bindings[0].approved, true);
     assert.equal(updated.artifacts.bindings.approval.approved_by, 'ui-designer');
     assert.equal(updated.artifacts.bindings.approval.validation_version, 'binding-policy-v1');
+    assert.equal(updated.artifacts.bindings.approval.approved_at, updated.artifacts.bindings.approved_at);
+    // Editing an approved binding demotes it and clears the stale approval stamp.
+    updated = await pipeline.updateArtifact(project.id, 'component-bindings', {
+      screenId: 'main',
+      bindings: [{ ...fixture.compatibleBinding, text: '保存阵容' }]
+    });
+    assert.equal(updated.artifacts.bindings.status, 'reviewed');
+    assert.equal(updated.artifacts.bindings.approval, undefined);
+    assert.equal(updated.artifacts.bindings.approved_at, undefined);
+    updated = await pipeline.approveArtifact(project.id, 'component-bindings', { screenId: 'main' });
+    assert.equal(updated.artifacts.bindings.status, 'approved');
     // Semantic mismatch (primary-action control bound to a navigation family) blocks approval.
     updated = await pipeline.updateArtifact(project.id, 'component-bindings', {
       screenId: 'main',
