@@ -49,7 +49,7 @@ export function BindingWorkbench({ project, busy, run }: { project: DesignProjec
   const allSelected = controls.length > 0 && controls.every((control) => choiceOf(control).component_id);
   const bindingsPayload = () => controls.map((control) => {
     const choice = choiceOf(control);
-    return { control_id: control.id, component_id: choice.component_id, state: choice.state, font_role: choice.font_role || undefined, slot_id: `${control.id}-slot`, reuse_policy: 'contract', label: control.label, text: control.label };
+    return { control_id: control.id, component_id: choice.component_id, state: choice.state, font_role: choice.font_role || undefined, slot_id: `slot-${control.id}`, reuse_policy: 'contract', label: control.label, text: control.label };
   });
   const execute = async (label: string, stage: 'style_resolution', task: () => Promise<DesignProject>) => {
     if (run) { await run(task, { label, stage }); return; }

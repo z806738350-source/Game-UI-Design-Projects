@@ -25,3 +25,6 @@ release-evidence/golden-samples/*/attempts/
 release-evidence/golden-samples/*/evidence/workspace/**/*.png
 release-evidence/golden-samples/*/evidence/workspace/style/fonts/
 release-evidence/golden-samples/*/evidence/workspace/workflow/history/
+
+# Playwright UI E2E runtime output
+test-results/

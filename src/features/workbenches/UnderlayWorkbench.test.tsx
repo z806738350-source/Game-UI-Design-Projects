@@ -14,8 +14,8 @@ describe('UnderlayWorkbench（Repair 状态）', () => {
       }
     });
     render(<UnderlayWorkbench project={project} />);
-    expect(screen.getByTestId('underlay-critique').textContent).toContain('passed · 0 项问题');
-    expect(screen.getByTestId('underlay-repair').textContent).toContain('尚未生成');
+    expect(screen.getByTestId('underlay-evidence-critique').textContent).toContain('passed · 0 项问题');
+    expect(screen.getByTestId('underlay-evidence-repair').textContent).toContain('尚未生成');
   });
 
   it('失败路径：Repair 尝试链显示当前轮次与失败状态', () => {
@@ -26,8 +26,8 @@ describe('UnderlayWorkbench（Repair 状态）', () => {
       }
     });
     render(<UnderlayWorkbench project={project} />);
-    expect(screen.getByTestId('underlay-critique').textContent).toContain('failed · 2 项问题');
-    const repair = screen.getByTestId('underlay-repair');
+    expect(screen.getByTestId('underlay-evidence-critique').textContent).toContain('failed · 2 项问题');
+    const repair = screen.getByTestId('underlay-evidence-repair');
     expect(repair.textContent).toContain('第 2 次 · failed');
     expect(repair.querySelector('small')!.className).toContain('is-failed');
   });

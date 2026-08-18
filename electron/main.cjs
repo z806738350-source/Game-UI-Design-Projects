@@ -7,7 +7,9 @@ const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
 const { exportCompositionOutput, hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('./services/compositionRenderer.cjs');
 
-const isDev = process.env.VITE_DEV_SERVER_URL || !app.isPackaged;
+// UI E2E runs the packaged renderer (dist/) from an unpackaged checkout via
+// DESIGN_COPILOT_FORCE_DIST; a dev server URL always wins for local dev.
+const isDev = process.env.VITE_DEV_SERVER_URL ? true : process.env.DESIGN_COPILOT_FORCE_DIST === 'true' ? false : !app.isPackaged;
 
 function createWindow() {
   const window = new BrowserWindow({
