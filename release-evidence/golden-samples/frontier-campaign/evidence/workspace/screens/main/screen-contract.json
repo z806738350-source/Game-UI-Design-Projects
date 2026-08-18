@@ -1,0 +1,153 @@
+{
+  "schema_version": "2.0",
+  "id": "frontier-campaign-screen-contract",
+  "version": 1,
+  "status": "approved",
+  "source": {
+    "wireframe": "release-evidence/golden-samples/frontier-campaign/inputs/wireframe.png"
+  },
+  "screen_id": "main",
+  "screen_name": "frontier-campaign",
+  "purpose": "Exercise the complete strict production path with real bitmap evidence.",
+  "primary_action": "Deploy",
+  "secondary_actions": [
+    "Recall"
+  ],
+  "required_information": [
+    "12,480",
+    "Frontier Report",
+    "78%",
+    "Outpost 04 ready"
+  ],
+  "required_controls": [
+    {
+      "id": "primary-action",
+      "label": "Deploy",
+      "role": "primary",
+      "required": true
+    },
+    {
+      "id": "navigation",
+      "label": "Campaign",
+      "role": "navigation",
+      "required": true
+    },
+    {
+      "id": "tab",
+      "label": "Missions",
+      "role": "navigation",
+      "required": true
+    },
+    {
+      "id": "resources",
+      "label": "12,480",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "content",
+      "label": "Frontier Report",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "icon-a",
+      "label": "Scout",
+      "role": "action",
+      "required": true
+    },
+    {
+      "id": "badge",
+      "label": "78%",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "row",
+      "label": "Outpost 04 ready",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "secondary-action",
+      "label": "Recall",
+      "role": "secondary",
+      "required": true
+    },
+    {
+      "id": "icon-b",
+      "label": "Signal",
+      "role": "action",
+      "required": true
+    }
+  ],
+  "states": [
+    "default",
+    "pressed",
+    "disabled",
+    "selected"
+  ],
+  "edge_cases": [
+    "long labels",
+    "dense numeric content"
+  ],
+  "data_dependencies": [
+    "golden fixture"
+  ],
+  "design_constraints": {
+    "canvas": [
+      1024,
+      1024
+    ],
+    "minimum_controls": 10,
+    "exact_assets": true
+  },
+  "source_inventory": {
+    "requirement_functions": [
+      "Deploy",
+      "Campaign",
+      "Missions",
+      "12,480",
+      "Frontier Report",
+      "Scout",
+      "78%",
+      "Outpost 04 ready",
+      "Recall",
+      "Signal"
+    ],
+    "wireframe_controls": [
+      "Deploy",
+      "Campaign",
+      "Missions",
+      "12,480",
+      "Frontier Report",
+      "Scout",
+      "78%",
+      "Outpost 04 ready",
+      "Recall",
+      "Signal"
+    ],
+    "wireframe_information": [
+      "12,480",
+      "Frontier Report",
+      "78%",
+      "Outpost 04 ready"
+    ]
+  },
+  "coverage": {
+    "covered_items": [
+      "Deploy",
+      "Campaign",
+      "Missions",
+      "12,480",
+      "Frontier Report",
+      "Scout",
+      "78%",
+      "Outpost 04 ready",
+      "Recall",
+      "Signal"
+    ],
+    "uncovered_items": []
+  },
+  "approved_at": "2026-08-18T05:10:48.704Z"
+}

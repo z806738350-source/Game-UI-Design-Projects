@@ -1,0 +1,698 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-critique-known-contaminated-repair-v1",
+  "version": 1,
+  "status": "reviewed",
+  "source": {
+    "underlay": "known-contaminated-repair-v1",
+    "underlay_contract": "main-underlay-contract",
+    "prompt_hash": "sha256:b382bfe0384c7f00fedbea5dc764ab6f8e8d305dfabae79b61ce08b6b157707b",
+    "model": "gpt-5.6-sol"
+  },
+  "global_scan": {
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.105,
+          0.704,
+          0.79,
+          0.178
+        ],
+        "type": "radial-dial-like architectural ornament",
+        "confidence": 0.4,
+        "reason": "The concentric circular floor inlay and gold radial markers weakly resemble a large radial UI dial, although they are clearly integrated into the environment.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0,
+          0.883,
+          1,
+          0.11699999999999999
+        ],
+        "type": "stacked-bar-like architectural bands",
+        "confidence": 0.28,
+        "reason": "Repeated dark platform and stair bands create long bar-like silhouettes near the bottom edge, but perspective and material continuity identify them as architecture rather than composed UI.",
+        "source_bbox": [
+          0,
+          0.883,
+          1,
+          0.117
+        ],
+        "bbox_normalization": "pixel-to-normalized-or-clamped"
+      }
+    ],
+    "text_like_regions": []
+  },
+  "slot_checks": [
+    {
+      "slot_id": "slot-primary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.98,
+      "background_busyness": "medium",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.96
+      }
+    },
+    {
+      "slot_id": "slot-navigation",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "medium",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.95
+      }
+    },
+    {
+      "slot_id": "slot-tab",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "concentric radial floor-ring segment",
+        "confidence": 0.43
+      }
+    },
+    {
+      "slot_id": "slot-resources",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.98,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.96
+      }
+    },
+    {
+      "slot_id": "slot-content",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.97,
+      "background_busyness": "medium",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.96
+      }
+    },
+    {
+      "slot_id": "slot-icon-a",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "low",
+      "contrast_conflict": false,
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-badge",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "medium",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.97
+      }
+    },
+    {
+      "slot_id": "slot-row",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.98,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.96
+      }
+    },
+    {
+      "slot_id": "slot-secondary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.84
+      }
+    },
+    {
+      "slot_id": "slot-icon-b",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "low",
+      "contrast_conflict": false,
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.99
+      }
+    }
+  ],
+  "deterministic_metrics": {
+    "threshold_version": "underlay-metrics-v1",
+    "thresholds": {
+      "version": "underlay-metrics-v1",
+      "edge_density": 0.22,
+      "local_contrast": 0.32,
+      "color_complexity": 0.42,
+      "highlight_density": 0.18,
+      "hard_edge_crossing": 0.2
+    },
+    "image_hash": "sha256:74700589124913e4be4064fb875b22f1e681e090da141f822760ded58b00d57d",
+    "width": 1024,
+    "height": 1024,
+    "slots": {
+      "slot-primary-action": {
+        "edge_density": 0.0028075100894893843,
+        "local_contrast": 0.04755891245574893,
+        "color_complexity": 0.16666666666666666,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.002066115702479339,
+        "pixel_count": 11520
+      },
+      "slot-navigation": {
+        "edge_density": 0.011624846464291981,
+        "local_contrast": 0.06996599868349217,
+        "color_complexity": 0.23958333333333334,
+        "highlight_density": 0.00008680555555555556,
+        "hard_edge_crossing": 0.022727272727272728,
+        "pixel_count": 11520
+      },
+      "slot-tab": {
+        "edge_density": 0.00728197929461309,
+        "local_contrast": 0.1283027428468267,
+        "color_complexity": 0.14583333333333334,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.004132231404958678,
+        "pixel_count": 11520
+      },
+      "slot-resources": {
+        "edge_density": 0.0019662382505275275,
+        "local_contrast": 0.07856783190252944,
+        "color_complexity": 0.08333333333333333,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.0018796992481203006,
+        "pixel_count": 10560
+      },
+      "slot-content": {
+        "edge_density": 0.0013046414538310412,
+        "local_contrast": 0.10805342218974598,
+        "color_complexity": 0.17708333333333334,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.003926701570680628,
+        "pixel_count": 32768
+      },
+      "slot-icon-a": {
+        "edge_density": 0.0003720238095238095,
+        "local_contrast": 0.027427322749842897,
+        "color_complexity": 0.07291666666666667,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 4096
+      },
+      "slot-badge": {
+        "edge_density": 0.0023860021208907743,
+        "local_contrast": 0.02772613074934934,
+        "color_complexity": 0.08333333333333333,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.007462686567164179,
+        "pixel_count": 3840
+      },
+      "slot-row": {
+        "edge_density": 0.00731691593604951,
+        "local_contrast": 0.13337356682083662,
+        "color_complexity": 0.2708333333333333,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.005988023952095809,
+        "pixel_count": 15680
+      },
+      "slot-secondary-action": {
+        "edge_density": 0.0006141428320758028,
+        "local_contrast": 0.08577110199544359,
+        "color_complexity": 0.13541666666666666,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.002066115702479339,
+        "pixel_count": 11520
+      },
+      "slot-icon-b": {
+        "edge_density": 0,
+        "local_contrast": 0.03805228044510578,
+        "color_complexity": 0.03125,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 4096
+      }
+    }
+  },
+  "evidence": {
+    "underlay": {
+      "path": "screens/main/underlays/known-contaminated-repair-v1.png",
+      "absolute_path": "screens/main/underlays/known-contaminated-repair-v1.png",
+      "hash": "sha256:74700589124913e4be4064fb875b22f1e681e090da141f822760ded58b00d57d",
+      "width": 1024,
+      "height": 1024
+    },
+    "overlay": {
+      "path": "screens/main/underlays/known-contaminated-repair-v1-review-input.png",
+      "hash": "sha256:2d01bc54bf29905f63516b65a06ba714132af99d13b334176fd08566cb0de9a8",
+      "width": 1024,
+      "height": 1024
+    },
+    "annotated_overlay": {
+      "path": "screens/main/underlays/known-contaminated-repair-v1-review-overlay.png",
+      "hash": "sha256:9f1bc51d78a11104add8434b9ea9eef82a137942a330c12e40fe3b03a03c4684",
+      "width": 1024,
+      "height": 1024
+    },
+    "component_board": {
+      "path": "screens/main/underlays/component-review-board.png",
+      "hash": "sha256:1f0c6793978dcf1c4f7206cccb1f1783f083759d969680d0d0b4fbfd0302f05d",
+      "count": 8,
+      "width": 800,
+      "height": 280
+    },
+    "semantic_raw": {
+      "path": "screens/main/reviews/known-contaminated-repair-v1-semantic-response.json",
+      "hash": "sha256:32f294322b1fe4515c11ca568bb5929e82cc75b564e4066ab7163b37ec144d0b",
+      "byte_length": 15011,
+      "media_type": "application/json"
+    },
+    "prompt_hash": "sha256:b382bfe0384c7f00fedbea5dc764ab6f8e8d305dfabae79b61ce08b6b157707b",
+    "model": "gpt-5.6-sol"
+  },
+  "issues": [
+    {
+      "severity": "minor",
+      "type": "radial-dial-like architectural ornament",
+      "bbox": [
+        0.105,
+        0.704,
+        0.79,
+        0.178
+      ],
+      "confidence": 0.4,
+      "reason": "The concentric circular floor inlay and gold radial markers weakly resemble a large radial UI dial, although they are clearly integrated into the environment.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-1"
+    },
+    {
+      "severity": "minor",
+      "type": "stacked-bar-like architectural bands",
+      "bbox": [
+        0,
+        0.883,
+        1,
+        0.11699999999999999
+      ],
+      "confidence": 0.28,
+      "reason": "Repeated dark platform and stair bands create long bar-like silhouettes near the bottom edge, but perspective and material continuity identify them as architecture rather than composed UI.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-2"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.3515625,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-3"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.3515625,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-4"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.3515625,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-5"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.1796875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-6"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.1796875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-7"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.1796875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-8"
+    },
+    {
+      "severity": "minor",
+      "type": "concentric radial floor-ring segment",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.6953125,
+        0.7890625,
+        0.17578125,
+        0.0625
+      ],
+      "confidence": 0.43,
+      "reason": "concentric radial floor-ring segment",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-9"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.6953125,
+        0.7890625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-10"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.6953125,
+        0.7890625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-11"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.6953125,
+        0.7890625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-12"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.6328125,
+        0.4609375,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-13"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.6328125,
+        0.4609375,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-14"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.6328125,
+        0.4609375,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-15"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.6171875,
+        0.3203125,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-16"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.6171875,
+        0.3203125,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-17"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.6171875,
+        0.3203125,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-18"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.7890625,
+        0.0546875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-19"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.7890625,
+        0.0546875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-20"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.7890625,
+        0.0546875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-21"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-22"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-23"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.3203125,
+        0.4453125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-24"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.0390625,
+        0.9296875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-25"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.0390625,
+        0.9296875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-26"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.0390625,
+        0.9296875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-repair-v1-issue-27"
+    }
+  ],
+  "result": "passed",
+  "manual_review": {
+    "required": false,
+    "approved": false
+  },
+  "manual_waivers": []
+}

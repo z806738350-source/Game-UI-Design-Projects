@@ -1,0 +1,305 @@
+[
+  {
+    "kind": "composition-manifest",
+    "id": "main-composition-final",
+    "version": 1,
+    "status": "generated",
+    "saved_at": "2026-08-18T05:13:35.045Z",
+    "snapshot": "workflow/history/composition-manifest-2026-08-18T05-13-35-044Z.json"
+  },
+  {
+    "kind": "underlay-critique",
+    "id": "main-underlay-critique-known-contaminated",
+    "version": 1,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:13:34.546Z",
+    "snapshot": "workflow/history/underlay-critique-2026-08-18T05-13-34-546Z.json"
+  },
+  {
+    "kind": "underlay-repair-task",
+    "id": "main-underlay-critique-known-contaminated-repair-1",
+    "version": 1,
+    "status": "in_progress",
+    "saved_at": "2026-08-18T05:12:58.356Z",
+    "snapshot": "workflow/history/underlay-repair-task-2026-08-18T05-12-58-355Z.json"
+  },
+  {
+    "kind": "visual-results",
+    "id": "frontier-campaign-visual-results",
+    "version": 1,
+    "status": "generated",
+    "saved_at": "2026-08-18T05:12:58.354Z",
+    "snapshot": "workflow/history/visual-results-2026-08-18T05-12-58-354Z.json"
+  },
+  {
+    "kind": "visual-results",
+    "version": 1,
+    "status": "stale",
+    "saved_at": "2026-08-18T05:10:48.728Z",
+    "snapshot": "workflow/history/visual-results-2026-08-18T05-10-48-728Z.json"
+  },
+  {
+    "kind": "underlay-contract",
+    "id": "main-underlay-contract",
+    "version": 1,
+    "status": "approved",
+    "saved_at": "2026-08-18T05:10:48.726Z",
+    "snapshot": "workflow/history/underlay-contract-2026-08-18T05-10-48-726Z.json"
+  },
+  {
+    "kind": "underlay-contract",
+    "id": "main-underlay-contract",
+    "version": 1,
+    "status": "generated",
+    "saved_at": "2026-08-18T05:10:48.721Z",
+    "snapshot": "workflow/history/underlay-contract-2026-08-18T05-10-48-721Z.json"
+  },
+  {
+    "kind": "component-bindings",
+    "id": "frontier-campaign-component-bindings",
+    "version": 1,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.709Z",
+    "snapshot": "workflow/history/component-bindings-2026-08-18T05-10-48-709Z.json"
+  },
+  {
+    "kind": "screen-contract",
+    "id": "frontier-campaign-screen-contract",
+    "version": 1,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.704Z",
+    "snapshot": "workflow/history/screen-contract-2026-08-18T05-10-48-704Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 14,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.700Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-700Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 14,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.694Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-693Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 13,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.690Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-689Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 12,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.685Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-685Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 11,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.680Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-680Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 10,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.675Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-675Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 9,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.670Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-670Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 8,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.665Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-665Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 7,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.660Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-660Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 6,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.656Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-655Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 5,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.651Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-651Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 4,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.646Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-646Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 3,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.642Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-641Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 2,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.637Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-637Z.json"
+  },
+  {
+    "kind": "component-contract",
+    "id": "project-component-contract",
+    "version": 1,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.633Z",
+    "snapshot": "workflow/history/component-contract-2026-08-18T05-10-48-633Z.json"
+  },
+  {
+    "kind": "font-manifest",
+    "id": "project-font-manifest",
+    "version": 5,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.622Z",
+    "snapshot": "workflow/history/font-manifest-2026-08-18T05-10-48-622Z.json"
+  },
+  {
+    "kind": "font-manifest",
+    "id": "project-font-manifest",
+    "version": 4,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.619Z",
+    "snapshot": "workflow/history/font-manifest-2026-08-18T05-10-48-619Z.json"
+  },
+  {
+    "kind": "font-manifest",
+    "id": "project-font-manifest",
+    "version": 3,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.615Z",
+    "snapshot": "workflow/history/font-manifest-2026-08-18T05-10-48-615Z.json"
+  },
+  {
+    "kind": "font-manifest",
+    "id": "project-font-manifest",
+    "version": 2,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.611Z",
+    "snapshot": "workflow/history/font-manifest-2026-08-18T05-10-48-611Z.json"
+  },
+  {
+    "kind": "font-manifest",
+    "id": "project-font-manifest",
+    "version": 1,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.607Z",
+    "snapshot": "workflow/history/font-manifest-2026-08-18T05-10-48-607Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 9,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.599Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-598Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 8,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.593Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-593Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 7,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.589Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-589Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 6,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.586Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-586Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 5,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.582Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-581Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 4,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.579Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-578Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 3,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.576Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-576Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 2,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.572Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-572Z.json"
+  },
+  {
+    "kind": "reference-inventory",
+    "id": "project-reference-inventory",
+    "version": 1,
+    "status": "reviewed",
+    "saved_at": "2026-08-18T05:10:48.570Z",
+    "snapshot": "workflow/history/reference-inventory-2026-08-18T05-10-48-569Z.json"
+  }
+]

@@ -1,0 +1,461 @@
+{
+  "schema_version": "2.0",
+  "id": "main-fidelity-report",
+  "version": 1,
+  "status": "passed",
+  "source": {
+    "composition_manifest": "main-composition-final",
+    "composition_manifest_version": 1,
+    "composition_output": "main-composition-final-output",
+    "composition_output_version": 1,
+    "composition_output_hash": "sha256:66c6f7ccdbc6dce0f0026f3bbc5176b6d9474d223cae4ccdec52100861a7fbc5",
+    "underlay_critique": "main-underlay-critique-known-contaminated-repair-v1"
+  },
+  "output": {
+    "path": "screens/main/compositions/final-v1.png",
+    "hash": "sha256:66c6f7ccdbc6dce0f0026f3bbc5176b6d9474d223cae4ccdec52100861a7fbc5",
+    "width": 1024,
+    "height": 1024,
+    "renderer_version": "composition-v1/sharp-0.35.3/libvips-8.18.3",
+    "verified": true
+  },
+  "coverage": {
+    "required_controls": 10,
+    "rendered_controls": 10
+  },
+  "underlay": {
+    "critique_id": "main-underlay-critique-known-contaminated-repair-v1",
+    "result": "passed",
+    "manual_waivers": []
+  },
+  "typography": {
+    "identity_critical_roles": 4,
+    "exact_roles": 4,
+    "actual_verified_layers": 7
+  },
+  "manifest_consistency": {
+    "passed": true,
+    "checks": []
+  },
+  "visual_fidelity": {
+    "passed": true,
+    "checks": []
+  },
+  "evidence": {
+    "check_version": "pixel-fidelity-v1",
+    "thresholds": {
+      "visible_alpha_minimum": 1,
+      "safe_area_ratio": 0.05,
+      "allowed_component_overlap_pixels": 0,
+      "text_may_touch_boundary": false,
+      "nine_slice_fixed_hash_must_match": true
+    },
+    "output": {
+      "path": "screens/main/compositions/final-v1.png",
+      "expected_hash": "sha256:66c6f7ccdbc6dce0f0026f3bbc5176b6d9474d223cae4ccdec52100861a7fbc5",
+      "actual_hash": "sha256:66c6f7ccdbc6dce0f0026f3bbc5176b6d9474d223cae4ccdec52100861a7fbc5",
+      "format": "png",
+      "width": 1024,
+      "height": 1024,
+      "has_alpha": true,
+      "alpha_min": 255,
+      "alpha_max": 255,
+      "byte_length": 2322465,
+      "version": 1
+    },
+    "assets": [
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/default.png",
+        "expected_hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e",
+        "actual_hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/default.png",
+        "expected_hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e",
+        "actual_hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/default.png",
+        "expected_hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e",
+        "actual_hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e"
+      },
+      {
+        "kind": "component",
+        "id": "resource-bar",
+        "path": "style/components/resource-bar/default.png",
+        "expected_hash": "sha256:30947f7ef23e5634795efd6989e0295df6e836a1e58200833e5557cb7b68c6e5",
+        "actual_hash": "sha256:30947f7ef23e5634795efd6989e0295df6e836a1e58200833e5557cb7b68c6e5"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "content-panel",
+        "path": "style/components/content-panel/default.png",
+        "expected_hash": "sha256:ad2cce47a492d58a7de688150296b6dfefbac3ea49f0baaad5e8c57b352610ac",
+        "actual_hash": "sha256:ad2cce47a492d58a7de688150296b6dfefbac3ea49f0baaad5e8c57b352610ac"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "action-icon",
+        "path": "style/components/action-icon/default.png",
+        "expected_hash": "sha256:633c786d09b597629879b1f28f76f7b38b0e66e0f9ee924f028eae2707e47641",
+        "actual_hash": "sha256:633c786d09b597629879b1f28f76f7b38b0e66e0f9ee924f028eae2707e47641"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "status-badge",
+        "path": "style/components/status-badge/default.png",
+        "expected_hash": "sha256:980422774c9188c08ad98b8837c26a9e1bd8f93c1f0eef0c2252dc3d9d602ef0",
+        "actual_hash": "sha256:980422774c9188c08ad98b8837c26a9e1bd8f93c1f0eef0c2252dc3d9d602ef0"
+      },
+      {
+        "kind": "component",
+        "id": "list-row",
+        "path": "style/components/list-row/default.png",
+        "expected_hash": "sha256:feaa11f0288f9a9a6299e27e8f02e8c39ef13c216eec551010568a57298e5b86",
+        "actual_hash": "sha256:feaa11f0288f9a9a6299e27e8f02e8c39ef13c216eec551010568a57298e5b86"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/default.png",
+        "expected_hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e",
+        "actual_hash": "sha256:f1d10a56b5abec0e4821141a2c9010840bf234f3d0e13cc72da24947d0eeb78e"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "action-icon",
+        "path": "style/components/action-icon/default.png",
+        "expected_hash": "sha256:633c786d09b597629879b1f28f76f7b38b0e66e0f9ee924f028eae2707e47641",
+        "actual_hash": "sha256:633c786d09b597629879b1f28f76f7b38b0e66e0f9ee924f028eae2707e47641"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/pressed.png",
+        "expected_hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399",
+        "actual_hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/disabled.png",
+        "expected_hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41",
+        "actual_hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/selected.png",
+        "expected_hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399",
+        "actual_hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/disabled.png",
+        "expected_hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41",
+        "actual_hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/selected.png",
+        "expected_hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399",
+        "actual_hash": "sha256:ec7ddbe2587522bb512c473c404e8ff832e483771accd2fe77e666d509fef399"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/disabled.png",
+        "expected_hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41",
+        "actual_hash": "sha256:93317d322d530cec64d4a79fea3394ba2480c2af270e292bb4e9e64d90f5dd41"
+      }
+    ],
+    "layout": [
+      {
+        "control_id": "primary-action",
+        "type": "component",
+        "rect": {
+          "left": 824,
+          "top": 56,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:c3ef7d5505528ba814a5a6811e66cd5fd157d17a1cae2633c4f9a4c15decd006"
+      },
+      {
+        "control_id": "navigation",
+        "type": "component",
+        "rect": {
+          "left": 552,
+          "top": 312,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:3b79fb703cecb71f0fbb159eb7eb734ede5aebce9bd1b58e28ed12c036f06832"
+      },
+      {
+        "control_id": "primary-action",
+        "type": "text",
+        "rect": {
+          "left": 824,
+          "top": 56,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:c3ef7d5505528ba814a5a6811e66cd5fd157d17a1cae2633c4f9a4c15decd006"
+      },
+      {
+        "control_id": "tab",
+        "type": "component",
+        "rect": {
+          "left": 280,
+          "top": 328,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:9d16f7175e6b1925a182b008bdc30daf6254ba49743f4caa83eea2d5c0710771"
+      },
+      {
+        "control_id": "resources",
+        "type": "component",
+        "rect": {
+          "left": 8,
+          "top": 872,
+          "width": 220,
+          "height": 48
+        },
+        "crop_hash": "sha256:c48eb3df831d45e4bc7918313e24443bdc047234c2a86e83f91dca280624efee"
+      },
+      {
+        "control_id": "tab",
+        "type": "text",
+        "rect": {
+          "left": 280,
+          "top": 328,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:9d16f7175e6b1925a182b008bdc30daf6254ba49743f4caa83eea2d5c0710771"
+      },
+      {
+        "control_id": "content",
+        "type": "component",
+        "rect": {
+          "left": 232,
+          "top": 40,
+          "width": 256,
+          "height": 128
+        },
+        "crop_hash": "sha256:0bb8af57425e99fc7520398f68f1ea8a1e3a26262779c0d381f1e624078a2131"
+      },
+      {
+        "control_id": "resources",
+        "type": "text",
+        "rect": {
+          "left": 8,
+          "top": 872,
+          "width": 220,
+          "height": 48
+        },
+        "crop_hash": "sha256:c48eb3df831d45e4bc7918313e24443bdc047234c2a86e83f91dca280624efee"
+      },
+      {
+        "control_id": "icon-a",
+        "type": "component",
+        "rect": {
+          "left": 152,
+          "top": 72,
+          "width": 64,
+          "height": 64
+        },
+        "crop_hash": "sha256:1cfd06b2367e8763514504987e83d39abe60d9a4f2ed0d790c4695e350f108b7"
+      },
+      {
+        "control_id": "content",
+        "type": "text",
+        "rect": {
+          "left": 232,
+          "top": 40,
+          "width": 256,
+          "height": 128
+        },
+        "crop_hash": "sha256:0bb8af57425e99fc7520398f68f1ea8a1e3a26262779c0d381f1e624078a2131"
+      },
+      {
+        "control_id": "badge",
+        "type": "component",
+        "rect": {
+          "left": 520,
+          "top": 248,
+          "width": 96,
+          "height": 40
+        },
+        "crop_hash": "sha256:57e62474b995cc51c4b454b41f088943a614608b56a4357495501dd9ba18c490"
+      },
+      {
+        "control_id": "row",
+        "type": "component",
+        "rect": {
+          "left": 152,
+          "top": 952,
+          "width": 280,
+          "height": 56
+        },
+        "crop_hash": "sha256:d9bb7ee9a8b54c28320c11370d2b5bc0f7c44236587be57285e9f7c69c984feb"
+      },
+      {
+        "control_id": "badge",
+        "type": "text",
+        "rect": {
+          "left": 520,
+          "top": 248,
+          "width": 96,
+          "height": 40
+        },
+        "crop_hash": "sha256:57e62474b995cc51c4b454b41f088943a614608b56a4357495501dd9ba18c490"
+      },
+      {
+        "control_id": "secondary-action",
+        "type": "component",
+        "rect": {
+          "left": 328,
+          "top": 872,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:f63faf498f9cb3a1e10bbbf3252a12768d439a7bd73798b025468a67c7f5155c"
+      },
+      {
+        "control_id": "row",
+        "type": "text",
+        "rect": {
+          "left": 152,
+          "top": 952,
+          "width": 280,
+          "height": 56
+        },
+        "crop_hash": "sha256:d9bb7ee9a8b54c28320c11370d2b5bc0f7c44236587be57285e9f7c69c984feb"
+      },
+      {
+        "control_id": "icon-b",
+        "type": "component",
+        "rect": {
+          "left": 216,
+          "top": 216,
+          "width": 64,
+          "height": 64
+        },
+        "crop_hash": "sha256:58560f43e16f5aed6a0c8b5cc32503dfb937bc73cb67d4c3c29a1a3c8089cbc9"
+      },
+      {
+        "control_id": "secondary-action",
+        "type": "text",
+        "rect": {
+          "left": 328,
+          "top": 872,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:f63faf498f9cb3a1e10bbbf3252a12768d439a7bd73798b025468a67c7f5155c"
+      }
+    ],
+    "renderer_version": "composition-v1/sharp-0.35.3/libvips-8.18.3",
+    "manifest": {
+      "id": "main-composition-final",
+      "version": 1,
+      "hash": "sha256:dcfd1ab3ddff6c4fd53c98c5e7c00ffcd7fa8a4ec51d454678a096ff8b738ea1"
+    }
+  },
+  "evidence_digest": "sha256:14ce3e6c8a8a15dd44124b30184029b75a7ae051de23dbc6d4cd231278021049",
+  "checks": [
+    "composition-output",
+    "decoded-pixels",
+    "alpha",
+    "asset-rehash",
+    "rendered-bbox",
+    "overlap",
+    "safe-area",
+    "text-overflow",
+    "nine-slice-fixed-regions",
+    "control-coverage",
+    "underlay-gate",
+    "font-render-evidence",
+    "dependency-freshness"
+  ],
+  "issues": [],
+  "manual_review": {
+    "required": false,
+    "approved": false
+  },
+  "checked_at": "2026-08-18T05:21:46.405Z"
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": "2.0",
+  "id": "frontier-campaign-style-contract",
+  "version": 1,
+  "status": "approved",
+  "source": {
+    "reference_inventory": "frontier-campaign-references",
+    "generated_for": "real-golden-e2e"
+  },
+  "style_id": "frontier-campaign-locked-style",
+  "visual_identity": {
+    "theme": "frontier-campaign",
+    "fidelity": "strict-continuation",
+    "source": "approved-reference-pages"
+  },
+  "colors": {
+    "primary": "#d6b05f",
+    "surface": "#173b46",
+    "text": "#fff7d6"
+  },
+  "typography": {
+    "display": {
+      "size": 24,
+      "weight": 650,
+      "letter_spacing": 0.4,
+      "line_height": 1.1,
+      "fill": "#fff4c4"
+    },
+    "body": {
+      "size": 15,
+      "weight": 500,
+      "letter_spacing": 0.1,
+      "line_height": 1.15,
+      "fill": "#ffffff"
+    },
+    "numeric": {
+      "size": 14,
+      "weight": 700,
+      "letter_spacing": 0.2,
+      "line_height": 1.1,
+      "numeric_style": "tabular",
+      "fill": "#fff5bd"
+    },
+    "button-label": {
+      "size": 15,
+      "weight": 700,
+      "letter_spacing": 0.3,
+      "line_height": 1.1,
+      "fill": "#ffffff"
+    }
+  },
+  "geometry": {
+    "corner_language": "beveled-soft",
+    "corner_radius": 10,
+    "density": "functional"
+  },
+  "lighting": {
+    "treatment": "restrained edge glow",
+    "light_direction": "top-left",
+    "intensity": 0.35
+  },
+  "components": {
+    "reuse": "exact approved assets",
+    "families": 8
+  },
+  "composition": {
+    "hierarchy": "wireframe-locked",
+    "underlay": "UI-free reserved regions"
+  },
+  "materials": [
+    "dark lacquer",
+    "brushed metal",
+    "soft emissive glass"
+  ],
+  "reference_ids": [
+    "reference-mywpl22w-1",
+    "reference-mywpl22x-2",
+    "reference-mywpl22y-3"
+  ],
+  "negative_style_constraints": [
+    "no provider-rendered shared UI",
+    "no formal text in underlay",
+    "no slot-crossing subject"
+  ]
+}

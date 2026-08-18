@@ -1,0 +1,45 @@
+{
+  "schema_version": "2.0",
+  "id": "visual-hero-visual-results",
+  "version": 2,
+  "status": "generated",
+  "source": {
+    "known_contamination": "sha256:411c2d92a7e3b26d9625c9dbfb2e169375a1cece26c15ee1e99c0e1c6f67ecd6"
+  },
+  "variations": [
+    {
+      "id": "known-contaminated",
+      "strategy": "negative-control",
+      "image_path": "screens/main/underlays/known-contaminated-input.png",
+      "status": "generated",
+      "created_at": "2026-08-18T05:14:03.083Z",
+      "canvas_spec": {
+        "width": 1024,
+        "height": 1024,
+        "orientation": "square",
+        "aspect_ratio": "1:1",
+        "generation_size": "1024x1024"
+      }
+    },
+    {
+      "id": "known-contaminated-repair-v1",
+      "strategy": "underlay-repair",
+      "image_url": "https://kunpoapiimg.ziy.cc/images/output/gpt-image-2/20260818/1787030236026_bf00b4.png",
+      "image_path": "screens/main/underlays/known-contaminated-repair-v1.png",
+      "provider_task_id": "task_MWVgVoQ43UIiCGqJjKb9gy8YT5BciD6z",
+      "parent_underlay_id": "known-contaminated",
+      "repair_task_id": "main-underlay-critique-known-contaminated-repair-1",
+      "repair_mode": "regenerate",
+      "storage_mode": "provider_cdn",
+      "status": "generated",
+      "created_at": "2026-08-18T05:17:27.902Z",
+      "canvas_spec": {
+        "width": 1024,
+        "height": 1024,
+        "orientation": "square",
+        "aspect_ratio": "1:1",
+        "generation_size": "1024x1024"
+      }
+    }
+  ]
+}

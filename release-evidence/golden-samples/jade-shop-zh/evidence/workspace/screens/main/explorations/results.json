@@ -1,0 +1,65 @@
+{
+  "schema_version": "2.0",
+  "id": "jade-shop-zh-visual-results",
+  "version": 3,
+  "status": "generated",
+  "source": {
+    "known_contamination": "sha256:48306f828b8866a5d6e1baba5de2320ef7a24567d9950cb9036ade8b250706dd"
+  },
+  "variations": [
+    {
+      "id": "known-contaminated",
+      "strategy": "negative-control",
+      "image_path": "screens/main/underlays/known-contaminated-input.png",
+      "status": "generated",
+      "created_at": "2026-08-18T05:00:58.502Z",
+      "canvas_spec": {
+        "width": 1024,
+        "height": 1024,
+        "orientation": "square",
+        "aspect_ratio": "1:1",
+        "generation_size": "1024x1024"
+      }
+    },
+    {
+      "id": "known-contaminated-repair-v1",
+      "strategy": "underlay-repair",
+      "image_url": "https://kunpoapiimg.ziy.cc/images/output/gpt-image-2/20260818/1787029381128_dd2e5f.png",
+      "image_path": "screens/main/underlays/known-contaminated-repair-v1.png",
+      "provider_task_id": "task_qxQ1mqN8JxnlTS93m7cacqy7WidNRK6k",
+      "parent_underlay_id": "known-contaminated",
+      "repair_task_id": "main-underlay-critique-known-contaminated-repair-1",
+      "repair_mode": "regenerate",
+      "storage_mode": "provider_cdn",
+      "status": "generated",
+      "created_at": "2026-08-18T05:03:21.761Z",
+      "canvas_spec": {
+        "width": 1024,
+        "height": 1024,
+        "orientation": "square",
+        "aspect_ratio": "1:1",
+        "generation_size": "1024x1024"
+      }
+    },
+    {
+      "id": "known-contaminated-repair-v1-repair-v2",
+      "strategy": "underlay-repair",
+      "image_url": "https://kunpoapiimg.ziy.cc/images/output/gpt-image-2/20260818/1787029785874_e7deba.png",
+      "image_path": "screens/main/underlays/known-contaminated-repair-v1-repair-v2.png",
+      "provider_task_id": "task_NpSxcklf7ieEF8j7l2CURbBtxzRqtGqc",
+      "parent_underlay_id": "known-contaminated-repair-v1",
+      "repair_task_id": "main-underlay-critique-known-contaminated-repair-v1-repair-2",
+      "repair_mode": "regenerate",
+      "storage_mode": "provider_cdn",
+      "status": "generated",
+      "created_at": "2026-08-18T05:09:57.843Z",
+      "canvas_spec": {
+        "width": 1024,
+        "height": 1024,
+        "orientation": "square",
+        "aspect_ratio": "1:1",
+        "generation_size": "1024x1024"
+      }
+    }
+  ]
+}

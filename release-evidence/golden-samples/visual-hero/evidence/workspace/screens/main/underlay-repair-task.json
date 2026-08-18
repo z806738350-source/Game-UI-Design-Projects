@@ -1,0 +1,47 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-critique-known-contaminated-repair-1",
+  "version": 1,
+  "status": "completed",
+  "source": {
+    "critique": "main-underlay-critique-known-contaminated",
+    "parent_underlay_id": "known-contaminated",
+    "underlay_contract": "main-underlay-contract"
+  },
+  "repair_mode": "regenerate",
+  "target_regions": [
+    "slot-primary-action",
+    "slot-navigation",
+    "slot-resources",
+    "slot-content",
+    "slot-row"
+  ],
+  "attempt": 1,
+  "max_automatic_attempts": 2,
+  "instructions": [
+    "remove large_framed_card_panel; Dominant dark rectangular card with rounded corners, a gold outline, an inset focal graphic, and a caption; this is composed UI rather than underlay scenery.",
+    "remove hero_placeholder_icon; Large outlined circle-and-triangle symbol forms a deliberate foreground icon or placeholder silhouette inside the card.",
+    "remove button; Rounded dark rectangle with a gold border and centered action label closely matches a shared button silhouette.",
+    "remove text-like; Clearly legible uppercase caption reading LIMITED HERO inside the central card.",
+    "remove text-like; Clearly legible action text reading DRAW ×10 inside the bottom-right button.",
+    "remove subject-overlap; subject-overlap",
+    "remove framed_card_and_large_circular_focal_icon; framed_card_and_large_circular_focal_icon",
+    "remove rounded_card_border; rounded_card_border",
+    "remove large_card_edge; large_card_edge",
+    "remove large_framed_card; large_framed_card",
+    "remove subject-overlap; subject-overlap",
+    "remove framed_card_and_large_triangular_focal_icon; framed_card_and_large_triangular_focal_icon",
+    "remove background-busyness; Semantic busyness is corroborated by pixel metrics.",
+    "remove contrast-conflict; Semantic contrast conflict is corroborated by pixel metrics.",
+    "remove background-busyness; edge=0.024303764827230533, contrast=0.44105586178095274, color=0.3229166666666667"
+  ],
+  "preserve_regions": [],
+  "completed_at": "2026-08-18T05:17:27.908Z",
+  "output": {
+    "underlay_id": "known-contaminated-repair-v1",
+    "path": "screens/main/underlays/known-contaminated-repair-v1.png",
+    "hash": "sha256:74700589124913e4be4064fb875b22f1e681e090da141f822760ded58b00d57d",
+    "provider_task_id": "task_MWVgVoQ43UIiCGqJjKb9gy8YT5BciD6z",
+    "parent_underlay_id": "known-contaminated"
+  }
+}

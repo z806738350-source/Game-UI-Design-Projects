@@ -1,0 +1,597 @@
+{
+  "schema_version": "2.0",
+  "id": "main-composition-final",
+  "version": 1,
+  "status": "approved",
+  "source": {
+    "screen_contract": "jade-shop-zh-screen-contract",
+    "approved_layout": "jade-shop-zh-approved-layout",
+    "component_bindings": "jade-shop-zh-component-bindings",
+    "component_contract": "project-component-contract",
+    "font_manifest": "project-font-manifest",
+    "style_contract": "jade-shop-zh-style-contract",
+    "underlay_critique": "main-underlay-critique-known-contaminated-repair-v1-repair-v2"
+  },
+  "mode": "final",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "underlay": {
+    "source": "provider-result",
+    "variation_id": "known-contaminated-repair-v1-repair-v2",
+    "path": "screens/main/underlays/known-contaminated-repair-v1-repair-v2.png",
+    "provider_task_id": "task_NpSxcklf7ieEF8j7l2CURbBtxzRqtGqc",
+    "critique_id": "main-underlay-critique-known-contaminated-repair-v1-repair-v2"
+  },
+  "layers": [
+    {
+      "type": "component",
+      "control_id": "primary-action",
+      "component_id": "primary-button",
+      "state": "default",
+      "asset_path": "style/components/primary-button/default.png",
+      "asset_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.1171875,
+        0.8984375,
+        0.17578125,
+        0.0625
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 20
+    },
+    {
+      "type": "component",
+      "control_id": "navigation",
+      "component_id": "bottom-navigation",
+      "state": "default",
+      "asset_path": "style/components/bottom-navigation/default.png",
+      "asset_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.0859375,
+        0.4140625,
+        0.17578125,
+        0.0625
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 21
+    },
+    {
+      "type": "text",
+      "control_id": "primary-action",
+      "content": "立即购买",
+      "font_role": "button-label",
+      "font_id": "noto-sans-sc",
+      "font_path": "style/fonts/noto-sans-sc.ttf",
+      "font_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "font_family": "Noto Sans SC Thin",
+      "postscript_name": "NotoSansSC-Thin",
+      "font_format": "ttf",
+      "font_license_status": "confirmed",
+      "font_license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "fidelity_mode": "exact",
+      "typography": {
+        "size": 15,
+        "weight": 700,
+        "letter_spacing": 0.3,
+        "line_height": 1.1,
+        "fill": "#ffffff"
+      },
+      "rect": [
+        0.1171875,
+        0.8984375,
+        0.17578125,
+        0.0625
+      ],
+      "z_index": 21,
+      "composition_mode": "final"
+    },
+    {
+      "type": "component",
+      "control_id": "tab",
+      "component_id": "section-tab",
+      "state": "default",
+      "asset_path": "style/components/section-tab/default.png",
+      "asset_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.7109375,
+        0.0078125,
+        0.17578125,
+        0.0625
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 22
+    },
+    {
+      "type": "component",
+      "control_id": "resources",
+      "component_id": "resource-bar",
+      "state": "default",
+      "asset_path": "style/components/resource-bar/default.png",
+      "asset_hash": "sha256:5f460ada6c255d2a1b784ef58fd766900efb4055d817bc0315a1dd62adbe1bf2",
+      "intrinsic_size": [
+        220,
+        48
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.3359375,
+        0.0234375,
+        0.21484375,
+        0.046875
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 23
+    },
+    {
+      "type": "text",
+      "control_id": "tab",
+      "content": "礼包",
+      "font_role": "button-label",
+      "font_id": "noto-sans-sc",
+      "font_path": "style/fonts/noto-sans-sc.ttf",
+      "font_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "font_family": "Noto Sans SC Thin",
+      "postscript_name": "NotoSansSC-Thin",
+      "font_format": "ttf",
+      "font_license_status": "confirmed",
+      "font_license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "fidelity_mode": "exact",
+      "typography": {
+        "size": 15,
+        "weight": 700,
+        "letter_spacing": 0.3,
+        "line_height": 1.1,
+        "fill": "#ffffff"
+      },
+      "rect": [
+        0.7109375,
+        0.0078125,
+        0.17578125,
+        0.0625
+      ],
+      "z_index": 23,
+      "composition_mode": "final"
+    },
+    {
+      "type": "component",
+      "control_id": "content",
+      "component_id": "content-panel",
+      "state": "default",
+      "asset_path": "style/components/content-panel/default.png",
+      "asset_hash": "sha256:7cad31af87f2842b08832d30e4870d40a01d09559916f4bc62aefcc9c037a8f8",
+      "intrinsic_size": [
+        256,
+        128
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.7109375,
+        0.7890625,
+        0.25,
+        0.125
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 24
+    },
+    {
+      "type": "text",
+      "control_id": "resources",
+      "content": "¥68",
+      "font_role": "numeric",
+      "font_id": "noto-sans-sc",
+      "font_path": "style/fonts/noto-sans-sc.ttf",
+      "font_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "font_family": "Noto Sans SC Thin",
+      "postscript_name": "NotoSansSC-Thin",
+      "font_format": "ttf",
+      "font_license_status": "confirmed",
+      "font_license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.397Z"
+      },
+      "fidelity_mode": "exact",
+      "typography": {
+        "size": 14,
+        "weight": 700,
+        "letter_spacing": 0.2,
+        "line_height": 1.1,
+        "numeric_style": "tabular",
+        "fill": "#fff5bd"
+      },
+      "rect": [
+        0.3359375,
+        0.0234375,
+        0.21484375,
+        0.046875
+      ],
+      "z_index": 24,
+      "composition_mode": "final"
+    },
+    {
+      "type": "component",
+      "control_id": "icon-a",
+      "component_id": "action-icon",
+      "state": "default",
+      "asset_path": "style/components/action-icon/default.png",
+      "asset_hash": "sha256:70f8960a4a9f7063b98ac08c9f6bea77f442f96194fad7f9d6d6dbef960f8749",
+      "intrinsic_size": [
+        64,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.4765625,
+        0.1484375,
+        0.0625,
+        0.0625
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 25
+    },
+    {
+      "type": "text",
+      "control_id": "content",
+      "content": "今日特惠 VIP 专享",
+      "font_role": "display",
+      "font_id": "noto-sans-sc",
+      "font_path": "style/fonts/noto-sans-sc.ttf",
+      "font_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "font_family": "Noto Sans SC Thin",
+      "postscript_name": "NotoSansSC-Thin",
+      "font_format": "ttf",
+      "font_license_status": "confirmed",
+      "font_license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.390Z"
+      },
+      "fidelity_mode": "exact",
+      "typography": {
+        "size": 24,
+        "weight": 650,
+        "letter_spacing": 0.4,
+        "line_height": 1.1,
+        "fill": "#fff4c4"
+      },
+      "rect": [
+        0.7109375,
+        0.7890625,
+        0.25,
+        0.125
+      ],
+      "z_index": 25,
+      "composition_mode": "final"
+    },
+    {
+      "type": "component",
+      "control_id": "badge",
+      "component_id": "status-badge",
+      "state": "default",
+      "asset_path": "style/components/status-badge/default.png",
+      "asset_hash": "sha256:2df013997e56471e7e3977171e851991770a96df248a98f32539197eadf2008d",
+      "intrinsic_size": [
+        96,
+        40
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.6171875,
+        0.9453125,
+        0.09375,
+        0.0390625
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 26
+    },
+    {
+      "type": "component",
+      "control_id": "row",
+      "component_id": "list-row",
+      "state": "default",
+      "asset_path": "style/components/list-row/default.png",
+      "asset_hash": "sha256:d6f126f77a0f1cc8b42a60e3fed30808e5bc222ae3b5a9776341adf9543f1bc9",
+      "intrinsic_size": [
+        280,
+        56
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.3203125,
+        0.8671875,
+        0.2734375,
+        0.0546875
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 27
+    },
+    {
+      "type": "text",
+      "control_id": "badge",
+      "content": "-25%",
+      "font_role": "numeric",
+      "font_id": "noto-sans-sc",
+      "font_path": "style/fonts/noto-sans-sc.ttf",
+      "font_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "font_family": "Noto Sans SC Thin",
+      "postscript_name": "NotoSansSC-Thin",
+      "font_format": "ttf",
+      "font_license_status": "confirmed",
+      "font_license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.397Z"
+      },
+      "fidelity_mode": "exact",
+      "typography": {
+        "size": 14,
+        "weight": 700,
+        "letter_spacing": 0.2,
+        "line_height": 1.1,
+        "numeric_style": "tabular",
+        "fill": "#fff5bd"
+      },
+      "rect": [
+        0.6171875,
+        0.9453125,
+        0.09375,
+        0.0390625
+      ],
+      "z_index": 27,
+      "composition_mode": "final"
+    },
+    {
+      "type": "component",
+      "control_id": "secondary-action",
+      "component_id": "primary-button",
+      "state": "default",
+      "asset_path": "style/components/primary-button/default.png",
+      "asset_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.4921875,
+        0.7734375,
+        0.17578125,
+        0.0625
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 28
+    },
+    {
+      "type": "text",
+      "control_id": "row",
+      "content": "限时礼包 仅剩2天",
+      "font_role": "body",
+      "font_id": "noto-sans-sc",
+      "font_path": "style/fonts/noto-sans-sc.ttf",
+      "font_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "font_family": "Noto Sans SC Thin",
+      "postscript_name": "NotoSansSC-Thin",
+      "font_format": "ttf",
+      "font_license_status": "confirmed",
+      "font_license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.393Z"
+      },
+      "fidelity_mode": "exact",
+      "typography": {
+        "size": 15,
+        "weight": 500,
+        "letter_spacing": 0.1,
+        "line_height": 1.15,
+        "fill": "#ffffff"
+      },
+      "rect": [
+        0.3203125,
+        0.8671875,
+        0.2734375,
+        0.0546875
+      ],
+      "z_index": 28,
+      "composition_mode": "final"
+    },
+    {
+      "type": "component",
+      "control_id": "icon-b",
+      "component_id": "action-icon",
+      "state": "default",
+      "asset_path": "style/components/action-icon/default.png",
+      "asset_hash": "sha256:70f8960a4a9f7063b98ac08c9f6bea77f442f96194fad7f9d6d6dbef960f8749",
+      "intrinsic_size": [
+        64,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "rect": [
+        0.2109375,
+        0.8203125,
+        0.0625,
+        0.0625
+      ],
+      "anchor": "top-left",
+      "resize_mode": "exact",
+      "renderer": "exact",
+      "z_index": 29
+    },
+    {
+      "type": "text",
+      "control_id": "secondary-action",
+      "content": "加入购物车",
+      "font_role": "button-label",
+      "font_id": "noto-sans-sc",
+      "font_path": "style/fonts/noto-sans-sc.ttf",
+      "font_hash": "sha256:a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+      "font_family": "Noto Sans SC Thin",
+      "postscript_name": "NotoSansSC-Thin",
+      "font_format": "ttf",
+      "font_license_status": "confirmed",
+      "font_license_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "exact_confirmation": {
+        "confirmed": true,
+        "confirmed_by": "golden-e2e-license-verifier",
+        "confirmed_at": "2026-08-18T05:00:58.401Z"
+      },
+      "fidelity_mode": "exact",
+      "typography": {
+        "size": 15,
+        "weight": 700,
+        "letter_spacing": 0.3,
+        "line_height": 1.1,
+        "fill": "#ffffff"
+      },
+      "rect": [
+        0.4921875,
+        0.7734375,
+        0.17578125,
+        0.0625
+      ],
+      "z_index": 29,
+      "composition_mode": "final"
+    }
+  ],
+  "coverage": {
+    "required_controls": 10,
+    "bound_required_controls": 10,
+    "unbound_required_controls": []
+  },
+  "renderer": {
+    "engine": "sharp-libvips",
+    "deterministic_order": true,
+    "registry": [
+      "exact",
+      "nine-slice",
+      "vector-token"
+    ],
+    "version": "composition-v1/sharp-0.35.3/libvips-8.18.3"
+  },
+  "output": {
+    "artifact_id": "main-composition-final-output",
+    "path": "screens/main/compositions/final-v1.png",
+    "hash": "sha256:d56324947d7d0e051299c4ba82cbeb3c6d867eff5d7af6c0e4eb7616e0084312",
+    "width": 1024,
+    "height": 1024
+  },
+  "approved_at": "2026-08-18T05:10:48.431Z"
+}

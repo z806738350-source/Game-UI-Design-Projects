@@ -1,0 +1,38 @@
+{
+  "schema_version": "2.0",
+  "screen_id": "main",
+  "input_mode": "own",
+  "requirement": "Produce a final game UI composition from approved real references, exact components, exact typography, and a clean UI-free underlay.",
+  "requirement_source": "user",
+  "requirement_confirmed": true,
+  "input_revisions": {
+    "requirement": 0,
+    "wireframe": 1,
+    "art_direction": 0,
+    "references": 0
+  },
+  "wireframe_path": "screens/main/inputs/wireframe.png",
+  "wireframe_name": "wireframe.png",
+  "wireframe_metadata": {
+    "format": "png",
+    "mime": "image/png",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 58365,
+    "canvas_spec": {
+      "width": 1024,
+      "height": 1024,
+      "orientation": "square",
+      "aspect_ratio": "1:1",
+      "generation_size": "1024x1024"
+    }
+  },
+  "canvas_spec": {
+    "width": 1024,
+    "height": 1024,
+    "orientation": "square",
+    "aspect_ratio": "1:1",
+    "generation_size": "1024x1024"
+  },
+  "updated_at": "2026-08-18T05:18:25.395Z"
+}

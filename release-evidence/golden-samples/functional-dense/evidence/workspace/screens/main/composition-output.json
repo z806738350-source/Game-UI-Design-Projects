@@ -1,0 +1,489 @@
+{
+  "schema_version": "1.0",
+  "id": "main-composition-final-output",
+  "version": 1,
+  "status": "generated",
+  "source": {
+    "composition_manifest": "main-composition-final",
+    "composition_manifest_version": 1
+  },
+  "mode": "final",
+  "path": "screens/main/compositions/final-v1.png",
+  "hash": "sha256:df66baab3fa3998701fe4f07424a360f0e46ab800d405b8f319d534de9fff64a",
+  "width": 1024,
+  "height": 1024,
+  "byte_length": 1816896,
+  "rendered_at": "2026-08-18T04:46:59.254Z",
+  "renderer_version": "composition-v1/sharp-0.35.3/libvips-8.18.3",
+  "underlay_hash": "sha256:79d00397961973f88acc5a3527d85c1f3499f21bb9ce87e95a6800c5d5d563ce",
+  "render_log": {
+    "deterministic_order": true,
+    "layers": [
+      {
+        "renderer": "underlay",
+        "source_hash": "sha256:79d00397961973f88acc5a3527d85c1f3499f21bb9ce87e95a6800c5d5d563ce",
+        "target_rect": {
+          "left": 0,
+          "top": 0,
+          "width": 1024,
+          "height": 1024
+        }
+      },
+      {
+        "control_id": "primary-action",
+        "component_id": "primary-button",
+        "renderer": "exact",
+        "source_size": [
+          180,
+          64
+        ],
+        "target_rect": {
+          "left": 804,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "control_id": "navigation",
+        "component_id": "bottom-navigation",
+        "renderer": "exact",
+        "source_size": [
+          180,
+          64
+        ],
+        "target_rect": {
+          "left": 40,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "control_id": "primary-action",
+        "font_role": "button-label",
+        "renderer": "sharp-pango-fontfile",
+        "target_rect": {
+          "left": 804,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "requested_font": "Oxanium ExtraLight",
+        "actual_font_verified": true,
+        "actual_loaded_family": "Oxanium ExtraLight",
+        "actual_postscript_name": "Oxanium-ExtraLight",
+        "font_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "effects": {
+          "size": 15,
+          "weight": 700,
+          "letter_spacing": 0.2998046875,
+          "line_height": 1.1,
+          "stroke_width": 0,
+          "gradient": false,
+          "shadow": false,
+          "baseline_offset": 0,
+          "numeric_style": "proportional"
+        },
+        "ink_bounds": {
+          "left": 62,
+          "top": 25,
+          "width": 57,
+          "height": 15,
+          "touches_boundary": false
+        },
+        "text_overflow": false
+      },
+      {
+        "control_id": "tab",
+        "component_id": "section-tab",
+        "renderer": "exact",
+        "source_size": [
+          180,
+          64
+        ],
+        "target_rect": {
+          "left": 244,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "control_id": "resources",
+        "component_id": "resource-bar",
+        "renderer": "exact",
+        "source_size": [
+          220,
+          48
+        ],
+        "target_rect": {
+          "left": 764,
+          "top": 40,
+          "width": 220,
+          "height": 48
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:14e804a59ba0088e40c465c9ba3e845cd9d3bf59bb709f129154604d8e89e92c"
+      },
+      {
+        "control_id": "tab",
+        "font_role": "button-label",
+        "renderer": "sharp-pango-fontfile",
+        "target_rect": {
+          "left": 244,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "requested_font": "Oxanium ExtraLight",
+        "actual_font_verified": true,
+        "actual_loaded_family": "Oxanium ExtraLight",
+        "actual_postscript_name": "Oxanium-ExtraLight",
+        "font_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "effects": {
+          "size": 15,
+          "weight": 700,
+          "letter_spacing": 0.2998046875,
+          "line_height": 1.1,
+          "stroke_width": 0,
+          "gradient": false,
+          "shadow": false,
+          "baseline_offset": 0,
+          "numeric_style": "proportional"
+        },
+        "ink_bounds": {
+          "left": 71,
+          "top": 26,
+          "width": 38,
+          "height": 12,
+          "touches_boundary": false
+        },
+        "text_overflow": false
+      },
+      {
+        "control_id": "content",
+        "component_id": "content-panel",
+        "renderer": "exact",
+        "source_size": [
+          256,
+          128
+        ],
+        "target_rect": {
+          "left": 307,
+          "top": 40,
+          "width": 256,
+          "height": 128
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:34739e955595309e241e5950196462a6e6f041f885ea010af8d83534fc98d59c"
+      },
+      {
+        "control_id": "resources",
+        "font_role": "numeric",
+        "renderer": "sharp-pango-fontfile",
+        "target_rect": {
+          "left": 764,
+          "top": 40,
+          "width": 220,
+          "height": 48
+        },
+        "requested_font": "Oxanium ExtraLight",
+        "actual_font_verified": true,
+        "actual_loaded_family": "Oxanium ExtraLight",
+        "actual_postscript_name": "Oxanium-ExtraLight",
+        "font_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "effects": {
+          "size": 14,
+          "weight": 700,
+          "letter_spacing": 0.2001953125,
+          "line_height": 1.1,
+          "stroke_width": 0,
+          "gradient": false,
+          "shadow": false,
+          "baseline_offset": 0,
+          "numeric_style": "tabular"
+        },
+        "ink_bounds": {
+          "left": 90,
+          "top": 19,
+          "width": 41,
+          "height": 11,
+          "touches_boundary": false
+        },
+        "text_overflow": false
+      },
+      {
+        "control_id": "icon-a",
+        "component_id": "action-icon",
+        "renderer": "exact",
+        "source_size": [
+          64,
+          64
+        ],
+        "target_rect": {
+          "left": 450,
+          "top": 200,
+          "width": 64,
+          "height": 64
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:06455ebe7cf2f91531d3b600f4980e7c8e3b5a6de0242ac264d99906b06229b4"
+      },
+      {
+        "control_id": "content",
+        "font_role": "display",
+        "renderer": "sharp-pango-fontfile",
+        "target_rect": {
+          "left": 307,
+          "top": 40,
+          "width": 256,
+          "height": 128
+        },
+        "requested_font": "Oxanium ExtraLight",
+        "actual_font_verified": true,
+        "actual_loaded_family": "Oxanium ExtraLight",
+        "actual_postscript_name": "Oxanium-ExtraLight",
+        "font_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "effects": {
+          "size": 24,
+          "weight": 650,
+          "letter_spacing": 0.400390625,
+          "line_height": 1.1,
+          "stroke_width": 0,
+          "gradient": false,
+          "shadow": false,
+          "baseline_offset": 0,
+          "numeric_style": "proportional"
+        },
+        "ink_bounds": {
+          "left": 38,
+          "top": 52,
+          "width": 180,
+          "height": 24,
+          "touches_boundary": false
+        },
+        "text_overflow": false
+      },
+      {
+        "control_id": "badge",
+        "component_id": "status-badge",
+        "renderer": "exact",
+        "source_size": [
+          96,
+          40
+        ],
+        "target_rect": {
+          "left": 530,
+          "top": 212,
+          "width": 96,
+          "height": 40
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:92128012af7061829bea9eaddf779ded4ef16797b2a726488c4cb9673857fb97"
+      },
+      {
+        "control_id": "row",
+        "component_id": "list-row",
+        "renderer": "exact",
+        "source_size": [
+          280,
+          56
+        ],
+        "target_rect": {
+          "left": 307,
+          "top": 480,
+          "width": 280,
+          "height": 56
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:8d7499b1ddbc3392f607b6cde2249b4b2c954921d3c1d8ba8a9036ffdf7dae79"
+      },
+      {
+        "control_id": "badge",
+        "font_role": "numeric",
+        "renderer": "sharp-pango-fontfile",
+        "target_rect": {
+          "left": 530,
+          "top": 212,
+          "width": 96,
+          "height": 40
+        },
+        "requested_font": "Oxanium ExtraLight",
+        "actual_font_verified": true,
+        "actual_loaded_family": "Oxanium ExtraLight",
+        "actual_postscript_name": "Oxanium-ExtraLight",
+        "font_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "effects": {
+          "size": 14,
+          "weight": 700,
+          "letter_spacing": 0.2001953125,
+          "line_height": 1.1,
+          "stroke_width": 0,
+          "gradient": false,
+          "shadow": false,
+          "baseline_offset": 0,
+          "numeric_style": "tabular"
+        },
+        "ink_bounds": {
+          "left": 33,
+          "top": 15,
+          "width": 31,
+          "height": 11,
+          "touches_boundary": false
+        },
+        "text_overflow": false
+      },
+      {
+        "control_id": "secondary-action",
+        "component_id": "primary-button",
+        "renderer": "exact",
+        "source_size": [
+          180,
+          64
+        ],
+        "target_rect": {
+          "left": 344,
+          "top": 316,
+          "width": 180,
+          "height": 64
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "control_id": "row",
+        "font_role": "body",
+        "renderer": "sharp-pango-fontfile",
+        "target_rect": {
+          "left": 307,
+          "top": 480,
+          "width": 280,
+          "height": 56
+        },
+        "requested_font": "Oxanium ExtraLight",
+        "actual_font_verified": true,
+        "actual_loaded_family": "Oxanium ExtraLight",
+        "actual_postscript_name": "Oxanium-ExtraLight",
+        "font_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "effects": {
+          "size": 15,
+          "weight": 500,
+          "letter_spacing": 0.099609375,
+          "line_height": 1.15,
+          "stroke_width": 0,
+          "gradient": false,
+          "shadow": false,
+          "baseline_offset": 0,
+          "numeric_style": "proportional"
+        },
+        "ink_bounds": {
+          "left": 117,
+          "top": 22,
+          "width": 47,
+          "height": 12,
+          "touches_boundary": false
+        },
+        "text_overflow": false
+      },
+      {
+        "control_id": "icon-b",
+        "component_id": "action-icon",
+        "renderer": "exact",
+        "source_size": [
+          64,
+          64
+        ],
+        "target_rect": {
+          "left": 548,
+          "top": 316,
+          "width": 64,
+          "height": 64
+        },
+        "transform": {
+          "scale_x": 1,
+          "scale_y": 1,
+          "uniform": true
+        },
+        "asset_hash": "sha256:06455ebe7cf2f91531d3b600f4980e7c8e3b5a6de0242ac264d99906b06229b4"
+      },
+      {
+        "control_id": "secondary-action",
+        "font_role": "button-label",
+        "renderer": "sharp-pango-fontfile",
+        "target_rect": {
+          "left": 344,
+          "top": 316,
+          "width": 180,
+          "height": 64
+        },
+        "requested_font": "Oxanium ExtraLight",
+        "actual_font_verified": true,
+        "actual_loaded_family": "Oxanium ExtraLight",
+        "actual_postscript_name": "Oxanium-ExtraLight",
+        "font_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "effects": {
+          "size": 15,
+          "weight": 700,
+          "letter_spacing": 0.2998046875,
+          "line_height": 1.1,
+          "stroke_width": 0,
+          "gradient": false,
+          "shadow": false,
+          "baseline_offset": 0,
+          "numeric_style": "proportional"
+        },
+        "ink_bounds": {
+          "left": 73,
+          "top": 26,
+          "width": 34,
+          "height": 13,
+          "touches_boundary": false
+        },
+        "text_overflow": false
+      }
+    ]
+  }
+}

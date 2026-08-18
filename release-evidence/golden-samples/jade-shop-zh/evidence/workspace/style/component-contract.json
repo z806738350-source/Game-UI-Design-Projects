@@ -1,0 +1,474 @@
+{
+  "schema_version": "2.0",
+  "id": "project-component-contract",
+  "version": 14,
+  "status": "approved",
+  "source": {
+    "last_import": "list-row:default"
+  },
+  "families": [
+    {
+      "id": "primary-button",
+      "name": "primary-button",
+      "category": "button",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "jade-shop-zh/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/primary-button/default.png",
+          "asset_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "pressed": {
+          "state": "pressed",
+          "asset_path": "style/components/primary-button/pressed.png",
+          "asset_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "disabled": {
+          "state": "disabled",
+          "asset_path": "style/components/primary-button/disabled.png",
+          "asset_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "bottom-navigation",
+      "name": "bottom-navigation",
+      "category": "navigation",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "jade-shop-zh/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "none",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/bottom-navigation/default.png",
+          "asset_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "selected": {
+          "state": "selected",
+          "asset_path": "style/components/bottom-navigation/selected.png",
+          "asset_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "disabled": {
+          "state": "disabled",
+          "asset_path": "style/components/bottom-navigation/disabled.png",
+          "asset_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "section-tab",
+      "name": "section-tab",
+      "category": "tab",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "jade-shop-zh/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        180,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/section-tab/default.png",
+          "asset_hash": "sha256:9c608c042cb75b4643136734f7d74c2aaebd679cf09ffc9057a43348dea9a67c",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "selected": {
+          "state": "selected",
+          "asset_path": "style/components/section-tab/selected.png",
+          "asset_hash": "sha256:0c29ed30f11940a112ce56fae6c31a77b31be93d858b83d6748a3f598e07ef59",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        },
+        "disabled": {
+          "state": "disabled",
+          "asset_path": "style/components/section-tab/disabled.png",
+          "asset_hash": "sha256:c40745555f89eec6213d0d25042d793af19f76c6a8f7f4b5f74c6e120a0bc43d",
+          "source_bbox": [
+            0,
+            0,
+            180,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            180,
+            64
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "resource-bar",
+      "name": "resource-bar",
+      "category": "resource-bar",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "jade-shop-zh/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        220,
+        48
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/resource-bar/default.png",
+          "asset_hash": "sha256:5f460ada6c255d2a1b784ef58fd766900efb4055d817bc0315a1dd62adbe1bf2",
+          "source_bbox": [
+            0,
+            0,
+            220,
+            48
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            220,
+            48
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "content-panel",
+      "name": "content-panel",
+      "category": "panel",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "jade-shop-zh/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        256,
+        128
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/content-panel/default.png",
+          "asset_hash": "sha256:7cad31af87f2842b08832d30e4870d40a01d09559916f4bc62aefcc9c037a8f8",
+          "source_bbox": [
+            0,
+            0,
+            256,
+            128
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            256,
+            128
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "action-icon",
+      "name": "action-icon",
+      "category": "icon",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "jade-shop-zh/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "none",
+      "intrinsic_size": [
+        64,
+        64
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/action-icon/default.png",
+          "asset_hash": "sha256:70f8960a4a9f7063b98ac08c9f6bea77f442f96194fad7f9d6d6dbef960f8749",
+          "source_bbox": [
+            0,
+            0,
+            64,
+            64
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            64,
+            64
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "status-badge",
+      "name": "status-badge",
+      "category": "badge",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "jade-shop-zh/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        96,
+        40
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/status-badge/default.png",
+          "asset_hash": "sha256:2df013997e56471e7e3977171e851991770a96df248a98f32539197eadf2008d",
+          "source_bbox": [
+            0,
+            0,
+            96,
+            40
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            96,
+            40
+          ],
+          "mime": "image/png"
+        }
+      }
+    },
+    {
+      "id": "list-row",
+      "name": "list-row",
+      "category": "list-row",
+      "status": "approved",
+      "source": {
+        "type": "privacy-safe-real-golden-asset",
+        "asset_manifest": "jade-shop-zh/asset-manifest.json"
+      },
+      "reuse_mode": "exact",
+      "text_policy": "text-slot",
+      "intrinsic_size": [
+        280,
+        56
+      ],
+      "scale_policy": {
+        "uniform_only": true,
+        "min_scale": 1,
+        "max_scale": 1
+      },
+      "locked_properties": [
+        "asset_hash",
+        "intrinsic_size",
+        "state"
+      ],
+      "states": {
+        "default": {
+          "state": "default",
+          "asset_path": "style/components/list-row/default.png",
+          "asset_hash": "sha256:d6f126f77a0f1cc8b42a60e3fed30808e5bc222ae3b5a9776341adf9543f1bc9",
+          "source_bbox": [
+            0,
+            0,
+            280,
+            56
+          ],
+          "alpha_channel": true,
+          "intrinsic_size": [
+            280,
+            56
+          ],
+          "mime": "image/png"
+        }
+      }
+    }
+  ],
+  "approved_at": "2026-08-18T05:00:58.470Z"
+}

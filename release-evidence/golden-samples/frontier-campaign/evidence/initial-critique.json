@@ -1,0 +1,1061 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-critique-known-contaminated",
+  "version": 1,
+  "status": "reviewed",
+  "source": {
+    "underlay": "known-contaminated",
+    "underlay_contract": "main-underlay-contract",
+    "prompt_hash": "sha256:f1737ab3d4f97fde515402711fc4e957e01d29051abcfdc0c81c5e8bef372ae1",
+    "model": "gpt-5.6-sol"
+  },
+  "global_scan": {
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.031,
+          0.025,
+          0.297,
+          0.374
+        ],
+        "type": "content-panel",
+        "confidence": 0.998,
+        "reason": "Large dark rounded rectangular panel with a gold outline, heading, and repeated list controls; clearly pre-rendered shared UI.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.109,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.162,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.215,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.269,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.321,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.717,
+          0.028,
+          0.251,
+          0.064
+        ],
+        "type": "resource-bar",
+        "confidence": 0.999,
+        "reason": "Top-right rounded, outlined resource display containing a label and numeric value.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.681,
+          0.856,
+          0.279,
+          0.078
+        ],
+        "type": "primary-button",
+        "confidence": 0.999,
+        "reason": "Large bottom-right rounded action-button silhouette with centered formal text.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.057,
+          0.061,
+          0.214,
+          0.028
+        ],
+        "type": "formal-heading",
+        "confidence": 0.999,
+        "reason": "Clearly legible mission heading and progress count: 'MISSIONS 12/20'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.122,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 01 · 40%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.175,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 02 · 52%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.228,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 03 · 64%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.282,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 04 · 76%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.334,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 05 · 88%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.74,
+          0.049,
+          0.187,
+          0.027
+        ],
+        "type": "resource-label-and-number",
+        "confidence": 0.999,
+        "reason": "Clearly legible resource text: 'SUPPLY 12,480'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.751,
+          0.88,
+          0.125,
+          0.028
+        ],
+        "type": "action-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible action text: 'DEPLOY'.",
+        "bbox_normalization": "already-normalized"
+      }
+    ]
+  },
+  "slot_checks": [
+    {
+      "slot_id": "slot-primary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": "high",
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "content-panel-and-list-rows",
+        "confidence": 0.999
+      }
+    },
+    {
+      "slot_id": "slot-navigation",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.998,
+      "background_busyness": "low",
+      "contrast_conflict": "low",
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.995
+      }
+    },
+    {
+      "slot_id": "slot-tab",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.998,
+      "background_busyness": "low",
+      "contrast_conflict": "medium",
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "resource-bar-bottom-edge",
+        "confidence": 0.97
+      }
+    },
+    {
+      "slot_id": "slot-resources",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.998,
+      "background_busyness": "low",
+      "contrast_conflict": "low",
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.996
+      }
+    },
+    {
+      "slot_id": "slot-content",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.999,
+      "background_busyness": "high",
+      "contrast_conflict": "high",
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "content-panel-heading-and-list-row",
+        "confidence": 1
+      }
+    },
+    {
+      "slot_id": "slot-icon-a",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.999,
+      "background_busyness": "high",
+      "contrast_conflict": "high",
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "content-panel-list-row-and-percentage-text",
+        "confidence": 0.999
+      }
+    },
+    {
+      "slot_id": "slot-badge",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.999,
+      "background_busyness": "low",
+      "contrast_conflict": "low",
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.997
+      }
+    },
+    {
+      "slot_id": "slot-row",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.999,
+      "background_busyness": "high",
+      "contrast_conflict": "high",
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "resource-bar-with-formal-text-and-number",
+        "confidence": 1
+      }
+    },
+    {
+      "slot_id": "slot-secondary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.997,
+      "background_busyness": "medium",
+      "contrast_conflict": "medium",
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.995
+      }
+    },
+    {
+      "slot_id": "slot-icon-b",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.998,
+      "background_busyness": "low",
+      "contrast_conflict": "low",
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.996
+      }
+    }
+  ],
+  "deterministic_metrics": {
+    "threshold_version": "underlay-metrics-v1",
+    "thresholds": {
+      "version": "underlay-metrics-v1",
+      "edge_density": 0.22,
+      "local_contrast": 0.32,
+      "color_complexity": 0.42,
+      "highlight_density": 0.18,
+      "hard_edge_crossing": 0.2
+    },
+    "image_hash": "sha256:9b6a4bfb48763d7529d83492ba3aea91df945bb8c9c5eb3fe62a47574e2e7221",
+    "width": 1024,
+    "height": 1024,
+    "slots": {
+      "slot-primary-action": {
+        "edge_density": 0.10067555711528338,
+        "local_contrast": 0.4642803171763151,
+        "color_complexity": 0.23958333333333334,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.03305785123966942,
+        "pixel_count": 11520
+      },
+      "slot-navigation": {
+        "edge_density": 0,
+        "local_contrast": 0.0196838426469411,
+        "color_complexity": 0.03125,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-tab": {
+        "edge_density": 0.01482716266011581,
+        "local_contrast": 0.16721184695608096,
+        "color_complexity": 0.10416666666666667,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.010330578512396695,
+        "pixel_count": 11520
+      },
+      "slot-resources": {
+        "edge_density": 0,
+        "local_contrast": 0.01425699180227078,
+        "color_complexity": 0.03125,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 10560
+      },
+      "slot-content": {
+        "edge_density": 0.08831655206286837,
+        "local_contrast": 0.4783502896168741,
+        "color_complexity": 0.23958333333333334,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.007853403141361256,
+        "pixel_count": 32768
+      },
+      "slot-icon-a": {
+        "edge_density": 0.13405257936507936,
+        "local_contrast": 0.4765125847059595,
+        "color_complexity": 0.17708333333333334,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.18253968253968253,
+        "pixel_count": 4096
+      },
+      "slot-badge": {
+        "edge_density": 0,
+        "local_contrast": 0.015370209663393971,
+        "color_complexity": 0.020833333333333332,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 3840
+      },
+      "slot-row": {
+        "edge_density": 0.049606756059824654,
+        "local_contrast": 0.3427999730022365,
+        "color_complexity": 0.1875,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0.0748502994011976,
+        "pixel_count": 15680
+      },
+      "slot-secondary-action": {
+        "edge_density": 0,
+        "local_contrast": 0.02468624069548689,
+        "color_complexity": 0.020833333333333332,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-icon-b": {
+        "edge_density": 0,
+        "local_contrast": 0.012424019775624448,
+        "color_complexity": 0.020833333333333332,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 4096
+      }
+    }
+  },
+  "evidence": {
+    "underlay": {
+      "path": "screens/main/underlays/known-contaminated.png",
+      "absolute_path": "/var/folders/qc/58d4jj9x3mzgmr6j4kzphy9r0000gn/T/game-ui-golden-frontier-campaign-1vxO59/golden-frontier-campaign-mywpiww4/screens/main/underlays/known-contaminated.png",
+      "hash": "sha256:9b6a4bfb48763d7529d83492ba3aea91df945bb8c9c5eb3fe62a47574e2e7221",
+      "width": 1024,
+      "height": 1024
+    },
+    "overlay": {
+      "path": "screens/main/underlays/known-contaminated-review-input.png",
+      "hash": "sha256:4f90b5f78a4fc07c62185d12a6177a806b751ef4fe1b1225b0218dddebec2132",
+      "width": 1024,
+      "height": 1024
+    },
+    "annotated_overlay": {
+      "path": "screens/main/underlays/known-contaminated-review-overlay.png",
+      "hash": "sha256:53d57ba4465df75b577a8c9f11dae739b57d0b97950866a03679d47105604170",
+      "width": 1024,
+      "height": 1024
+    },
+    "component_board": {
+      "path": "screens/main/underlays/component-review-board.png",
+      "hash": "sha256:a0241d49e1067a15a541b6c4d25ad9bed89e4d707af02b29a4b76be1822717fe",
+      "count": 8,
+      "width": 800,
+      "height": 280
+    },
+    "semantic_raw": {
+      "path": "screens/main/reviews/known-contaminated-semantic-response.json",
+      "hash": "sha256:df118a5e45d4ba7bf37622f38c17661d7e068c4ea53811d655df3f48b88741ac",
+      "byte_length": 25550,
+      "media_type": "application/json"
+    },
+    "prompt_hash": "sha256:f1737ab3d4f97fde515402711fc4e957e01d29051abcfdc0c81c5e8bef372ae1",
+    "model": "gpt-5.6-sol"
+  },
+  "issues": [
+    {
+      "severity": "critical",
+      "type": "content-panel",
+      "bbox": [
+        0.031,
+        0.025,
+        0.297,
+        0.374
+      ],
+      "confidence": 0.998,
+      "reason": "Large dark rounded rectangular panel with a gold outline, heading, and repeated list controls; clearly pre-rendered shared UI.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-1"
+    },
+    {
+      "severity": "critical",
+      "type": "list-row",
+      "bbox": [
+        0.055,
+        0.109,
+        0.243,
+        0.042
+      ],
+      "confidence": 0.997,
+      "reason": "Outlined horizontal row with formal label and percentage.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-2"
+    },
+    {
+      "severity": "critical",
+      "type": "list-row",
+      "bbox": [
+        0.055,
+        0.162,
+        0.243,
+        0.042
+      ],
+      "confidence": 0.997,
+      "reason": "Outlined horizontal row with formal label and percentage.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-3"
+    },
+    {
+      "severity": "critical",
+      "type": "list-row",
+      "bbox": [
+        0.055,
+        0.215,
+        0.243,
+        0.042
+      ],
+      "confidence": 0.998,
+      "reason": "Outlined horizontal row with formal label and percentage.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-4"
+    },
+    {
+      "severity": "critical",
+      "type": "list-row",
+      "bbox": [
+        0.055,
+        0.269,
+        0.243,
+        0.042
+      ],
+      "confidence": 0.997,
+      "reason": "Outlined horizontal row with formal label and percentage.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-5"
+    },
+    {
+      "severity": "critical",
+      "type": "list-row",
+      "bbox": [
+        0.055,
+        0.321,
+        0.243,
+        0.042
+      ],
+      "confidence": 0.997,
+      "reason": "Outlined horizontal row with formal label and percentage.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-6"
+    },
+    {
+      "severity": "critical",
+      "type": "resource-bar",
+      "bbox": [
+        0.717,
+        0.028,
+        0.251,
+        0.064
+      ],
+      "confidence": 0.999,
+      "reason": "Top-right rounded, outlined resource display containing a label and numeric value.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-7"
+    },
+    {
+      "severity": "critical",
+      "type": "primary-button",
+      "bbox": [
+        0.681,
+        0.856,
+        0.279,
+        0.078
+      ],
+      "confidence": 0.999,
+      "reason": "Large bottom-right rounded action-button silhouette with centered formal text.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-8"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.057,
+        0.061,
+        0.214,
+        0.028
+      ],
+      "confidence": 0.999,
+      "reason": "Clearly legible mission heading and progress count: 'MISSIONS 12/20'.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-9"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.069,
+        0.122,
+        0.17,
+        0.021
+      ],
+      "confidence": 0.999,
+      "reason": "Clearly legible label and percentage: 'OUTPOST 01 · 40%'.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-10"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.069,
+        0.175,
+        0.17,
+        0.021
+      ],
+      "confidence": 0.999,
+      "reason": "Clearly legible label and percentage: 'OUTPOST 02 · 52%'.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-11"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.069,
+        0.228,
+        0.17,
+        0.021
+      ],
+      "confidence": 0.999,
+      "reason": "Clearly legible label and percentage: 'OUTPOST 03 · 64%'.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-12"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.069,
+        0.282,
+        0.17,
+        0.021
+      ],
+      "confidence": 0.999,
+      "reason": "Clearly legible label and percentage: 'OUTPOST 04 · 76%'.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-13"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.069,
+        0.334,
+        0.17,
+        0.021
+      ],
+      "confidence": 0.999,
+      "reason": "Clearly legible label and percentage: 'OUTPOST 05 · 88%'.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-14"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.74,
+        0.049,
+        0.187,
+        0.027
+      ],
+      "confidence": 0.999,
+      "reason": "Clearly legible resource text: 'SUPPLY 12,480'.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-15"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.751,
+        0.88,
+        0.125,
+        0.028
+      ],
+      "confidence": 0.999,
+      "reason": "Clearly legible action text: 'DEPLOY'.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-16"
+    },
+    {
+      "severity": "critical",
+      "type": "content-panel-and-list-rows",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.0078125,
+        0.1953125,
+        0.17578125,
+        0.0625
+      ],
+      "confidence": 0.999,
+      "reason": "content-panel-and-list-rows",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-17"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.0078125,
+        0.1953125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-18"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.0078125,
+        0.1953125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-19"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.0078125,
+        0.1953125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-20"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.0078125,
+        0.1953125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "edge=0.10067555711528338, contrast=0.4642803171763151, color=0.23958333333333334",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-21"
+    },
+    {
+      "severity": "critical",
+      "type": "resource-bar-bottom-edge",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.8046875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "confidence": 0.97,
+      "reason": "resource-bar-bottom-edge",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-22"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.8046875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-23"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.8046875,
+        0.0859375,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-24"
+    },
+    {
+      "severity": "critical",
+      "type": "content-panel-heading-and-list-row",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.0546875,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "confidence": 1,
+      "reason": "content-panel-heading-and-list-row",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-25"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.0546875,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-26"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.0546875,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-27"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.0546875,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-28"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.0546875,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "reason": "edge=0.08831655206286837, contrast=0.4783502896168741, color=0.23958333333333334",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-29"
+    },
+    {
+      "severity": "critical",
+      "type": "content-panel-list-row-and-percentage-text",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1953125,
+        0.1796875,
+        0.0625,
+        0.0625
+      ],
+      "confidence": 0.999,
+      "reason": "content-panel-list-row-and-percentage-text",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-30"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1953125,
+        0.1796875,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-31"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1953125,
+        0.1796875,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-32"
+    },
+    {
+      "severity": "critical",
+      "type": "hard-edge-crossing",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1953125,
+        0.1796875,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge crossing is corroborated by perimeter pixels.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-33"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1953125,
+        0.1796875,
+        0.0625,
+        0.0625
+      ],
+      "reason": "edge=0.13405257936507936, contrast=0.4765125847059595, color=0.17708333333333334",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-34"
+    },
+    {
+      "severity": "critical",
+      "type": "resource-bar-with-formal-text-and-number",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.6640625,
+        0.0078125,
+        0.2734375,
+        0.0546875
+      ],
+      "confidence": 1,
+      "reason": "resource-bar-with-formal-text-and-number",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-35"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.6640625,
+        0.0078125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-36"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.6640625,
+        0.0078125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-37"
+    },
+    {
+      "severity": "critical",
+      "type": "hard-edge-crossing",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.6640625,
+        0.0078125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic hard-edge crossing is corroborated by perimeter pixels.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-38"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.6640625,
+        0.0078125,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "edge=0.049606756059824654, contrast=0.3427999730022365, color=0.1875",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-39"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.0390625,
+        0.9296875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-40"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.0390625,
+        0.9296875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-41"
+    }
+  ],
+  "result": "failed",
+  "manual_review": {
+    "required": false,
+    "approved": false
+  },
+  "manual_waivers": []
+}

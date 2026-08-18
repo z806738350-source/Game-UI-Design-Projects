@@ -1,0 +1,114 @@
+{
+  "schema_version": "2.0",
+  "id": "existing-continuation-component-bindings",
+  "version": 1,
+  "status": "approved",
+  "source": {
+    "screen_contract": "existing-continuation-screen-contract"
+  },
+  "bindings": [
+    {
+      "control_id": "primary-action",
+      "component_id": "primary-button",
+      "slot_id": "slot-primary-action",
+      "state": "default",
+      "approved": true,
+      "label": "Primary",
+      "text": "Primary",
+      "font_role": "button-label"
+    },
+    {
+      "control_id": "navigation",
+      "component_id": "bottom-navigation",
+      "slot_id": "slot-navigation",
+      "state": "default",
+      "approved": true,
+      "label": "Navigation",
+      "text": "Navigation"
+    },
+    {
+      "control_id": "tab",
+      "component_id": "section-tab",
+      "slot_id": "slot-tab",
+      "state": "default",
+      "approved": true,
+      "label": "Items",
+      "text": "Items",
+      "font_role": "button-label"
+    },
+    {
+      "control_id": "resources",
+      "component_id": "resource-bar",
+      "slot_id": "slot-resources",
+      "state": "default",
+      "approved": true,
+      "label": "88880",
+      "text": "88880",
+      "font_role": "numeric"
+    },
+    {
+      "control_id": "content",
+      "component_id": "content-panel",
+      "slot_id": "slot-content",
+      "state": "default",
+      "approved": true,
+      "label": "Golden Sample",
+      "text": "Golden Sample",
+      "font_role": "display"
+    },
+    {
+      "control_id": "icon-a",
+      "component_id": "action-icon",
+      "slot_id": "slot-icon-a",
+      "state": "default",
+      "approved": true,
+      "label": "Action A",
+      "text": "Action A"
+    },
+    {
+      "control_id": "badge",
+      "component_id": "status-badge",
+      "slot_id": "slot-badge",
+      "state": "default",
+      "approved": true,
+      "label": "MAX",
+      "text": "MAX",
+      "font_role": "numeric"
+    },
+    {
+      "control_id": "row",
+      "component_id": "list-row",
+      "slot_id": "slot-row",
+      "state": "default",
+      "approved": true,
+      "label": "Row 01",
+      "text": "Row 01",
+      "font_role": "body"
+    },
+    {
+      "control_id": "secondary-action",
+      "component_id": "primary-button",
+      "slot_id": "slot-secondary-action",
+      "state": "default",
+      "approved": true,
+      "label": "Save",
+      "text": "Save",
+      "font_role": "button-label"
+    },
+    {
+      "control_id": "icon-b",
+      "component_id": "action-icon",
+      "slot_id": "slot-icon-b",
+      "state": "default",
+      "approved": true,
+      "label": "Action B",
+      "text": "Action B"
+    }
+  ],
+  "coverage": {
+    "required_controls": 10,
+    "bound_required_controls": 10,
+    "unbound_required_controls": []
+  },
+  "approved_at": "2026-08-18T05:18:25.537Z"
+}

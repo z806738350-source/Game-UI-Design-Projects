@@ -1,0 +1,223 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-contract",
+  "version": 2,
+  "status": "approved",
+  "source": {
+    "approved_layout": "functional-dense-approved-layout",
+    "component_bindings": "functional-dense-component-bindings"
+  },
+  "canvas": [
+    1024,
+    1024
+  ],
+  "focal_regions": [
+    {
+      "id": "focal-centre",
+      "bbox": [
+        0.32,
+        0.2,
+        0.4,
+        0.52
+      ]
+    }
+  ],
+  "reserved_regions": [
+    {
+      "slot_id": "slot-primary-action",
+      "binding_id": "primary-action",
+      "bbox": [
+        0.78515625,
+        0.8828125,
+        0.17578125,
+        0.0625
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-navigation",
+      "binding_id": "navigation",
+      "bbox": [
+        0.0390625,
+        0.8828125,
+        0.17578125,
+        0.0625
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-tab",
+      "binding_id": "tab",
+      "bbox": [
+        0.23828125,
+        0.8828125,
+        0.17578125,
+        0.0625
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-resources",
+      "binding_id": "resources",
+      "bbox": [
+        0.74609375,
+        0.0390625,
+        0.21484375,
+        0.046875
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-content",
+      "binding_id": "content",
+      "bbox": [
+        0.2998046875,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-icon-a",
+      "binding_id": "icon-a",
+      "bbox": [
+        0.439453125,
+        0.1953125,
+        0.0625,
+        0.0625
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-badge",
+      "binding_id": "badge",
+      "bbox": [
+        0.517578125,
+        0.20703125,
+        0.09375,
+        0.0390625
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-row",
+      "binding_id": "row",
+      "bbox": [
+        0.2998046875,
+        0.46875,
+        0.2734375,
+        0.0546875
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-secondary-action",
+      "binding_id": "secondary-action",
+      "bbox": [
+        0.3359375,
+        0.30859375,
+        0.17578125,
+        0.0625
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    },
+    {
+      "slot_id": "slot-icon-b",
+      "binding_id": "icon-b",
+      "bbox": [
+        0.53515625,
+        0.30859375,
+        0.0625,
+        0.0625
+      ],
+      "treatment": "low-detail",
+      "subject_overlap": false,
+      "hard_edge_overlap": false,
+      "text_like_shapes": false,
+      "ui_like_shapes": false,
+      "detail_level": "low",
+      "contrast_role": "surface-behind-ui",
+      "visual_noise_budget": 0.18
+    }
+  ],
+  "global_rules": {
+    "do_not_render_shared_ui": true,
+    "do_not_render_formal_text": true,
+    "do_not_place_main_subject_inside_reserved_regions": true
+  },
+  "approved_at": "2026-08-18T04:37:17.197Z",
+  "layout_guide": {
+    "id": "main-underlay-layout-guide",
+    "path": "screens/main/underlay-layout-guide.png",
+    "image_hash": "sha256:d4d8dc8eee85f571af080ccb63c4044d09e0c885683864ff203d052c5efcaae5",
+    "width": 384,
+    "height": 384,
+    "source": {
+      "underlay_contract": "main-underlay-contract"
+    }
+  }
+}

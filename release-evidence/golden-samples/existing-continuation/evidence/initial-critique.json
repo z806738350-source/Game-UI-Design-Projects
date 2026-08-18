@@ -1,0 +1,1177 @@
+{
+  "schema_version": "2.0",
+  "id": "main-underlay-critique-known-contaminated",
+  "version": 1,
+  "status": "reviewed",
+  "source": {
+    "underlay": "known-contaminated",
+    "underlay_contract": "main-underlay-contract",
+    "prompt_hash": "sha256:095887b0676bd4dc6a0240ea5134b632fbc790c0f15212a5ecf518fa794f2dda",
+    "model": "gpt-5.6-sol"
+  },
+  "global_scan": {
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.027,
+          0.027,
+          0.276,
+          0.148
+        ],
+        "type": "status-panel",
+        "confidence": 0.99,
+        "reason": "Large dark rounded rectangular panel with a gold outline and formal status text is already composited into the upper-left underlay.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.02,
+          0.861,
+          0.96,
+          0.109
+        ],
+        "type": "bottom-navigation",
+        "confidence": 0.99,
+        "reason": "Wide rounded navigation container with a dark fill, gold border, and five aligned controls is already present.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.045,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.226,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.407,
+          0.883,
+          0.159,
+          0.066
+        ],
+        "type": "selected-button",
+        "confidence": 0.99,
+        "reason": "Gold-filled rounded control with centered label, clearly representing a selected navigation item.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.588,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.768,
+          0.884,
+          0.159,
+          0.065
+        ],
+        "type": "button",
+        "confidence": 0.99,
+        "reason": "Outlined rounded button silhouette containing a centered menu label.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.056,
+          0.066,
+          0.219,
+          0.029
+        ],
+        "type": "formal-status-text",
+        "confidence": 0.99,
+        "reason": "Clearly legible uppercase word and numeric value: POWER 999,999.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.056,
+          0.115,
+          0.098,
+          0.021
+        ],
+        "type": "formal-status-text",
+        "confidence": 0.99,
+        "reason": "Clearly legible status label: LV. MAX.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 1 label inside the first navigation button.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.25,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 2 label inside the second navigation button.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.431,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 3 label inside the selected navigation button.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.612,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 4 label inside the fourth navigation button.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.793,
+          0.906,
+          0.087,
+          0.022
+        ],
+        "type": "button-label",
+        "confidence": 0.99,
+        "reason": "Clearly legible MENU 5 label inside the fifth navigation button.",
+        "bbox_normalization": "already-normalized"
+      }
+    ]
+  },
+  "slot_checks": [
+    {
+      "slot_id": "slot-primary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "low",
+      "contrast_conflict": true,
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-navigation",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "medium",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-tab",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-resources",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "bottom-navigation-container-and-button",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-content",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "status-panel-with-formal-text",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-icon-a",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": false,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "status-panel-and-numeric-text",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-badge",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "medium",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    },
+    {
+      "slot_id": "slot-row",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "navigation-buttons-and-labels",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-secondary-action",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "high",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": true,
+        "type": "bottom-navigation-container-and-selected-button",
+        "confidence": 0.99
+      }
+    },
+    {
+      "slot_id": "slot-icon-b",
+      "subject_overlap": false,
+      "subject_overlap_confidence": 0.99,
+      "background_busyness": "medium",
+      "contrast_conflict": true,
+      "hard_edge_crossing": true,
+      "ui_like_contamination": {
+        "detected": false,
+        "type": "none",
+        "confidence": 0.98
+      }
+    }
+  ],
+  "deterministic_metrics": {
+    "threshold_version": "underlay-metrics-v1",
+    "thresholds": {
+      "version": "underlay-metrics-v1",
+      "edge_density": 0.22,
+      "local_contrast": 0.32,
+      "color_complexity": 0.42,
+      "highlight_density": 0.18,
+      "hard_edge_crossing": 0.2
+    },
+    "image_hash": "sha256:46ae89599e90ee6d94f030af364728ed3843a220561bdb106246a4ba116800ac",
+    "width": 1024,
+    "height": 1024,
+    "slots": {
+      "slot-primary-action": {
+        "edge_density": 0,
+        "local_contrast": 0.0745520294435207,
+        "color_complexity": 0.0625,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-navigation": {
+        "edge_density": 0,
+        "local_contrast": 0.09605393623810414,
+        "color_complexity": 0.11458333333333333,
+        "highlight_density": 0.003298611111111111,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-tab": {
+        "edge_density": 0,
+        "local_contrast": 0.0962989076507775,
+        "color_complexity": 0.13541666666666666,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 11520
+      },
+      "slot-resources": {
+        "edge_density": 0.05980241703433723,
+        "local_contrast": 0.4332873351105603,
+        "color_complexity": 0.25,
+        "highlight_density": 0.03428030303030303,
+        "hard_edge_crossing": 0.022556390977443608,
+        "pixel_count": 10560
+      },
+      "slot-content": {
+        "edge_density": 0.014918958742632613,
+        "local_contrast": 0.5900966096460526,
+        "color_complexity": 0.3229166666666667,
+        "highlight_density": 0.050323486328125,
+        "hard_edge_crossing": 0.011780104712041885,
+        "pixel_count": 32768
+      },
+      "slot-icon-a": {
+        "edge_density": 0.08854166666666667,
+        "local_contrast": 0.4679654177362333,
+        "color_complexity": 0.1875,
+        "highlight_density": 0.08740234375,
+        "hard_edge_crossing": 0.10317460317460317,
+        "pixel_count": 4096
+      },
+      "slot-badge": {
+        "edge_density": 0,
+        "local_contrast": 0.04481969920552788,
+        "color_complexity": 0.0625,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 3840
+      },
+      "slot-row": {
+        "edge_density": 0.05537648272305312,
+        "local_contrast": 0.4371277379293846,
+        "color_complexity": 0.23958333333333334,
+        "highlight_density": 0.036989795918367346,
+        "hard_edge_crossing": 0.03592814371257485,
+        "pixel_count": 15680
+      },
+      "slot-secondary-action": {
+        "edge_density": 0.05092998771714336,
+        "local_contrast": 0.5221630724642685,
+        "color_complexity": 0.25,
+        "highlight_density": 0.04774305555555555,
+        "hard_edge_crossing": 0.0743801652892562,
+        "pixel_count": 11520
+      },
+      "slot-icon-b": {
+        "edge_density": 0,
+        "local_contrast": 0.06055680826119342,
+        "color_complexity": 0.052083333333333336,
+        "highlight_density": 0,
+        "hard_edge_crossing": 0,
+        "pixel_count": 4096
+      }
+    }
+  },
+  "evidence": {
+    "underlay": {
+      "path": "screens/main/underlays/known-contaminated.png",
+      "absolute_path": "/var/folders/qc/58d4jj9x3mzgmr6j4kzphy9r0000gn/T/game-ui-golden-existing-continuation-PYLGVz/golden-existing-continuation-mywpiww2/screens/main/underlays/known-contaminated.png",
+      "hash": "sha256:46ae89599e90ee6d94f030af364728ed3843a220561bdb106246a4ba116800ac",
+      "width": 1024,
+      "height": 1024
+    },
+    "overlay": {
+      "path": "screens/main/underlays/known-contaminated-review-input.png",
+      "hash": "sha256:e396de3f7ef1cc3bcf3307ab16d1845e5338f30b049296dde4137ab2f6bd305e",
+      "width": 1024,
+      "height": 1024
+    },
+    "annotated_overlay": {
+      "path": "screens/main/underlays/known-contaminated-review-overlay.png",
+      "hash": "sha256:6f4992e46502a2d6e6a39e48834a7341238b156a449c54a3a9bacebd675d8834",
+      "width": 1024,
+      "height": 1024
+    },
+    "component_board": {
+      "path": "screens/main/underlays/component-review-board.png",
+      "hash": "sha256:fe2e443718e9ddaf1b8156132208cb3c62a4ba4456642aa52decd964c2f9ec02",
+      "count": 8,
+      "width": 800,
+      "height": 280
+    },
+    "semantic_raw": {
+      "path": "screens/main/reviews/known-contaminated-semantic-response.json",
+      "hash": "sha256:8bde38abd0b9f96aac4e928679168dfd74619c04565af9a7ff40ea5d07e7e0f0",
+      "byte_length": 24235,
+      "media_type": "application/json"
+    },
+    "prompt_hash": "sha256:095887b0676bd4dc6a0240ea5134b632fbc790c0f15212a5ecf518fa794f2dda",
+    "model": "gpt-5.6-sol"
+  },
+  "issues": [
+    {
+      "severity": "critical",
+      "type": "status-panel",
+      "bbox": [
+        0.027,
+        0.027,
+        0.276,
+        0.148
+      ],
+      "confidence": 0.99,
+      "reason": "Large dark rounded rectangular panel with a gold outline and formal status text is already composited into the upper-left underlay.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-1"
+    },
+    {
+      "severity": "critical",
+      "type": "bottom-navigation",
+      "bbox": [
+        0.02,
+        0.861,
+        0.96,
+        0.109
+      ],
+      "confidence": 0.99,
+      "reason": "Wide rounded navigation container with a dark fill, gold border, and five aligned controls is already present.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-2"
+    },
+    {
+      "severity": "critical",
+      "type": "button",
+      "bbox": [
+        0.045,
+        0.884,
+        0.159,
+        0.065
+      ],
+      "confidence": 0.99,
+      "reason": "Outlined rounded button silhouette containing a centered menu label.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-3"
+    },
+    {
+      "severity": "critical",
+      "type": "button",
+      "bbox": [
+        0.226,
+        0.884,
+        0.159,
+        0.065
+      ],
+      "confidence": 0.99,
+      "reason": "Outlined rounded button silhouette containing a centered menu label.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-4"
+    },
+    {
+      "severity": "critical",
+      "type": "selected-button",
+      "bbox": [
+        0.407,
+        0.883,
+        0.159,
+        0.066
+      ],
+      "confidence": 0.99,
+      "reason": "Gold-filled rounded control with centered label, clearly representing a selected navigation item.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-5"
+    },
+    {
+      "severity": "critical",
+      "type": "button",
+      "bbox": [
+        0.588,
+        0.884,
+        0.159,
+        0.065
+      ],
+      "confidence": 0.99,
+      "reason": "Outlined rounded button silhouette containing a centered menu label.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-6"
+    },
+    {
+      "severity": "critical",
+      "type": "button",
+      "bbox": [
+        0.768,
+        0.884,
+        0.159,
+        0.065
+      ],
+      "confidence": 0.99,
+      "reason": "Outlined rounded button silhouette containing a centered menu label.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-7"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.056,
+        0.066,
+        0.219,
+        0.029
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible uppercase word and numeric value: POWER 999,999.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-8"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.056,
+        0.115,
+        0.098,
+        0.021
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible status label: LV. MAX.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-9"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.069,
+        0.906,
+        0.087,
+        0.022
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible MENU 1 label inside the first navigation button.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-10"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.25,
+        0.906,
+        0.087,
+        0.022
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible MENU 2 label inside the second navigation button.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-11"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.431,
+        0.906,
+        0.087,
+        0.022
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible MENU 3 label inside the selected navigation button.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-12"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.612,
+        0.906,
+        0.087,
+        0.022
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible MENU 4 label inside the fourth navigation button.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-13"
+    },
+    {
+      "severity": "critical",
+      "type": "text-like",
+      "bbox": [
+        0.793,
+        0.906,
+        0.087,
+        0.022
+      ],
+      "confidence": 0.99,
+      "reason": "Clearly legible MENU 5 label inside the fifth navigation button.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-14"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-primary-action",
+      "bbox": [
+        0.8046875,
+        0.0546875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-15"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.5390625,
+        0.3046875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-16"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.5390625,
+        0.3046875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-17"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-navigation",
+      "bbox": [
+        0.5390625,
+        0.3046875,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-18"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.2734375,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-19"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.2734375,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-20"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-tab",
+      "bbox": [
+        0.2734375,
+        0.3203125,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-21"
+    },
+    {
+      "severity": "critical",
+      "type": "bottom-navigation-container-and-button",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.0078125,
+        0.8515625,
+        0.21484375,
+        0.046875
+      ],
+      "confidence": 0.99,
+      "reason": "bottom-navigation-container-and-button",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-22"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.0078125,
+        0.8515625,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-23"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.0078125,
+        0.8515625,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-24"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.0078125,
+        0.8515625,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-25"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-resources",
+      "bbox": [
+        0.0078125,
+        0.8515625,
+        0.21484375,
+        0.046875
+      ],
+      "reason": "edge=0.05980241703433723, contrast=0.4332873351105603, color=0.25",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-26"
+    },
+    {
+      "severity": "critical",
+      "type": "status-panel-with-formal-text",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.2265625,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "confidence": 0.99,
+      "reason": "status-panel-with-formal-text",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-27"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.2265625,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-28"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.2265625,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-29"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.2265625,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-30"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-content",
+      "bbox": [
+        0.2265625,
+        0.0390625,
+        0.25,
+        0.125
+      ],
+      "reason": "edge=0.014918958742632613, contrast=0.5900966096460526, color=0.3229166666666667",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-31"
+    },
+    {
+      "severity": "critical",
+      "type": "status-panel-and-numeric-text",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1484375,
+        0.0703125,
+        0.0625,
+        0.0625
+      ],
+      "confidence": 0.99,
+      "reason": "status-panel-and-numeric-text",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-32"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1484375,
+        0.0703125,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-33"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1484375,
+        0.0703125,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-34"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-icon-a",
+      "bbox": [
+        0.1484375,
+        0.0703125,
+        0.0625,
+        0.0625
+      ],
+      "reason": "edge=0.08854166666666667, contrast=0.4679654177362333, color=0.1875",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-35"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.5078125,
+        0.2421875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-36"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.5078125,
+        0.2421875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-37"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-badge",
+      "bbox": [
+        0.5078125,
+        0.2421875,
+        0.09375,
+        0.0390625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-38"
+    },
+    {
+      "severity": "critical",
+      "type": "navigation-buttons-and-labels",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.1484375,
+        0.9296875,
+        0.2734375,
+        0.0546875
+      ],
+      "confidence": 0.99,
+      "reason": "navigation-buttons-and-labels",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-39"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.1484375,
+        0.9296875,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-40"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.1484375,
+        0.9296875,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-41"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.1484375,
+        0.9296875,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-42"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-row",
+      "bbox": [
+        0.1484375,
+        0.9296875,
+        0.2734375,
+        0.0546875
+      ],
+      "reason": "edge=0.05537648272305312, contrast=0.4371277379293846, color=0.23958333333333334",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-43"
+    },
+    {
+      "severity": "critical",
+      "type": "bottom-navigation-container-and-selected-button",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.3203125,
+        0.8515625,
+        0.17578125,
+        0.0625
+      ],
+      "confidence": 0.99,
+      "reason": "bottom-navigation-container-and-selected-button",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-44"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.3203125,
+        0.8515625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic busyness is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-45"
+    },
+    {
+      "severity": "major",
+      "type": "contrast-conflict",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.3203125,
+        0.8515625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is corroborated by pixel metrics.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-46"
+    },
+    {
+      "severity": "critical",
+      "type": "hard-edge-crossing",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.3203125,
+        0.8515625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge crossing is corroborated by perimeter pixels.",
+      "action": "regenerate-or-inpaint",
+      "issue_id": "known-contaminated-issue-47"
+    },
+    {
+      "severity": "major",
+      "type": "background-busyness",
+      "slot_id": "slot-secondary-action",
+      "bbox": [
+        0.3203125,
+        0.8515625,
+        0.17578125,
+        0.0625
+      ],
+      "reason": "edge=0.05092998771714336, contrast=0.5221630724642685, color=0.25",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-48"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-background-busyness-unconfirmed",
+      "slot_id": "slot-icon-b",
+      "bbox": [
+        0.2109375,
+        0.2109375,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic busyness is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-49"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-contrast-unconfirmed",
+      "slot_id": "slot-icon-b",
+      "bbox": [
+        0.2109375,
+        0.2109375,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic contrast conflict is below deterministic warning thresholds.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-50"
+    },
+    {
+      "severity": "minor",
+      "type": "semantic-hard-edge-unconfirmed",
+      "slot_id": "slot-icon-b",
+      "bbox": [
+        0.2109375,
+        0.2109375,
+        0.0625,
+        0.0625
+      ],
+      "reason": "Semantic hard-edge claim is not corroborated by perimeter pixels.",
+      "action": "manual-review",
+      "issue_id": "known-contaminated-issue-51"
+    }
+  ],
+  "result": "failed",
+  "manual_review": {
+    "required": false,
+    "approved": false
+  },
+  "manual_waivers": []
+}

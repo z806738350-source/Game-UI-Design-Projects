@@ -1,0 +1,461 @@
+{
+  "schema_version": "2.0",
+  "id": "main-fidelity-report",
+  "version": 1,
+  "status": "passed",
+  "source": {
+    "composition_manifest": "main-composition-final",
+    "composition_manifest_version": 1,
+    "composition_output": "main-composition-final-output",
+    "composition_output_version": 1,
+    "composition_output_hash": "sha256:df66baab3fa3998701fe4f07424a360f0e46ab800d405b8f319d534de9fff64a",
+    "underlay_critique": "main-underlay-critique-known-contaminated-repair-v1-repair-v2"
+  },
+  "output": {
+    "path": "screens/main/compositions/final-v1.png",
+    "hash": "sha256:df66baab3fa3998701fe4f07424a360f0e46ab800d405b8f319d534de9fff64a",
+    "width": 1024,
+    "height": 1024,
+    "renderer_version": "composition-v1/sharp-0.35.3/libvips-8.18.3",
+    "verified": true
+  },
+  "coverage": {
+    "required_controls": 10,
+    "rendered_controls": 10
+  },
+  "underlay": {
+    "critique_id": "main-underlay-critique-known-contaminated-repair-v1-repair-v2",
+    "result": "passed",
+    "manual_waivers": []
+  },
+  "typography": {
+    "identity_critical_roles": 4,
+    "exact_roles": 4,
+    "actual_verified_layers": 7
+  },
+  "manifest_consistency": {
+    "passed": true,
+    "checks": []
+  },
+  "visual_fidelity": {
+    "passed": true,
+    "checks": []
+  },
+  "evidence": {
+    "check_version": "pixel-fidelity-v1",
+    "thresholds": {
+      "visible_alpha_minimum": 1,
+      "safe_area_ratio": 0.05,
+      "allowed_component_overlap_pixels": 0,
+      "text_may_touch_boundary": false,
+      "nine_slice_fixed_hash_must_match": true
+    },
+    "output": {
+      "path": "screens/main/compositions/final-v1.png",
+      "expected_hash": "sha256:df66baab3fa3998701fe4f07424a360f0e46ab800d405b8f319d534de9fff64a",
+      "actual_hash": "sha256:df66baab3fa3998701fe4f07424a360f0e46ab800d405b8f319d534de9fff64a",
+      "format": "png",
+      "width": 1024,
+      "height": 1024,
+      "has_alpha": true,
+      "alpha_min": 255,
+      "alpha_max": 255,
+      "byte_length": 1816896,
+      "version": 1
+    },
+    "assets": [
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/default.png",
+        "expected_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f",
+        "actual_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/default.png",
+        "expected_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f",
+        "actual_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/default.png",
+        "expected_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f",
+        "actual_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "kind": "component",
+        "id": "resource-bar",
+        "path": "style/components/resource-bar/default.png",
+        "expected_hash": "sha256:14e804a59ba0088e40c465c9ba3e845cd9d3bf59bb709f129154604d8e89e92c",
+        "actual_hash": "sha256:14e804a59ba0088e40c465c9ba3e845cd9d3bf59bb709f129154604d8e89e92c"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "content-panel",
+        "path": "style/components/content-panel/default.png",
+        "expected_hash": "sha256:34739e955595309e241e5950196462a6e6f041f885ea010af8d83534fc98d59c",
+        "actual_hash": "sha256:34739e955595309e241e5950196462a6e6f041f885ea010af8d83534fc98d59c"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "action-icon",
+        "path": "style/components/action-icon/default.png",
+        "expected_hash": "sha256:06455ebe7cf2f91531d3b600f4980e7c8e3b5a6de0242ac264d99906b06229b4",
+        "actual_hash": "sha256:06455ebe7cf2f91531d3b600f4980e7c8e3b5a6de0242ac264d99906b06229b4"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "status-badge",
+        "path": "style/components/status-badge/default.png",
+        "expected_hash": "sha256:92128012af7061829bea9eaddf779ded4ef16797b2a726488c4cb9673857fb97",
+        "actual_hash": "sha256:92128012af7061829bea9eaddf779ded4ef16797b2a726488c4cb9673857fb97"
+      },
+      {
+        "kind": "component",
+        "id": "list-row",
+        "path": "style/components/list-row/default.png",
+        "expected_hash": "sha256:8d7499b1ddbc3392f607b6cde2249b4b2c954921d3c1d8ba8a9036ffdf7dae79",
+        "actual_hash": "sha256:8d7499b1ddbc3392f607b6cde2249b4b2c954921d3c1d8ba8a9036ffdf7dae79"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/default.png",
+        "expected_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f",
+        "actual_hash": "sha256:cea106de3a75deafd5205b5a53ce355ee93cff22852d36647fa2df9968370c9f"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "action-icon",
+        "path": "style/components/action-icon/default.png",
+        "expected_hash": "sha256:06455ebe7cf2f91531d3b600f4980e7c8e3b5a6de0242ac264d99906b06229b4",
+        "actual_hash": "sha256:06455ebe7cf2f91531d3b600f4980e7c8e3b5a6de0242ac264d99906b06229b4"
+      },
+      {
+        "kind": "font",
+        "id": "oxanium",
+        "path": "style/fonts/oxanium.ttf",
+        "expected_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "actual_hash": "sha256:2ce01d946e1e1ffc8d7eecfffbda8623bedd63eaf811a20488c4b69af45babb0",
+        "family": "Oxanium ExtraLight",
+        "postscript_name": "Oxanium-ExtraLight"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/pressed.png",
+        "expected_hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f",
+        "actual_hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f"
+      },
+      {
+        "kind": "component",
+        "id": "primary-button",
+        "path": "style/components/primary-button/disabled.png",
+        "expected_hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695",
+        "actual_hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/selected.png",
+        "expected_hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f",
+        "actual_hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f"
+      },
+      {
+        "kind": "component",
+        "id": "bottom-navigation",
+        "path": "style/components/bottom-navigation/disabled.png",
+        "expected_hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695",
+        "actual_hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/selected.png",
+        "expected_hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f",
+        "actual_hash": "sha256:ce3017512f21ef62e011cce6f44fa9549a6e1f3238841a04464ae2ebc686e84f"
+      },
+      {
+        "kind": "component",
+        "id": "section-tab",
+        "path": "style/components/section-tab/disabled.png",
+        "expected_hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695",
+        "actual_hash": "sha256:f730c46de06f14bad0f9a0ae78449739cdc4f4a2f110308aecbc1f6aed7e9695"
+      }
+    ],
+    "layout": [
+      {
+        "control_id": "primary-action",
+        "type": "component",
+        "rect": {
+          "left": 804,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:85ab50459c6a2c9c4ec74922462fae90d39fb46f9b670ad7c191ad472036e9df"
+      },
+      {
+        "control_id": "navigation",
+        "type": "component",
+        "rect": {
+          "left": 40,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:51c9a9fc234d7ba0f705c52401989c5b0a4bd756b767926a04254dab11b72398"
+      },
+      {
+        "control_id": "primary-action",
+        "type": "text",
+        "rect": {
+          "left": 804,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:85ab50459c6a2c9c4ec74922462fae90d39fb46f9b670ad7c191ad472036e9df"
+      },
+      {
+        "control_id": "tab",
+        "type": "component",
+        "rect": {
+          "left": 244,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:0508afab1d14ef1daebc88be32aafb28b843d0bd542c7b9cca4b265ce2c69454"
+      },
+      {
+        "control_id": "resources",
+        "type": "component",
+        "rect": {
+          "left": 764,
+          "top": 40,
+          "width": 220,
+          "height": 48
+        },
+        "crop_hash": "sha256:161ea4e9a7cb69fc3d38e1798f480eed066809800e3e895cb351821625f68f51"
+      },
+      {
+        "control_id": "tab",
+        "type": "text",
+        "rect": {
+          "left": 244,
+          "top": 904,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:0508afab1d14ef1daebc88be32aafb28b843d0bd542c7b9cca4b265ce2c69454"
+      },
+      {
+        "control_id": "content",
+        "type": "component",
+        "rect": {
+          "left": 307,
+          "top": 40,
+          "width": 256,
+          "height": 128
+        },
+        "crop_hash": "sha256:3c79c2398149b34da4f77199548fa0f51dd98b4772b592b609a637f13081851e"
+      },
+      {
+        "control_id": "resources",
+        "type": "text",
+        "rect": {
+          "left": 764,
+          "top": 40,
+          "width": 220,
+          "height": 48
+        },
+        "crop_hash": "sha256:161ea4e9a7cb69fc3d38e1798f480eed066809800e3e895cb351821625f68f51"
+      },
+      {
+        "control_id": "icon-a",
+        "type": "component",
+        "rect": {
+          "left": 450,
+          "top": 200,
+          "width": 64,
+          "height": 64
+        },
+        "crop_hash": "sha256:4db2978b2dced76dfe7fe6790bf5952721a0d6fe928d60f3f8449aa792ff970e"
+      },
+      {
+        "control_id": "content",
+        "type": "text",
+        "rect": {
+          "left": 307,
+          "top": 40,
+          "width": 256,
+          "height": 128
+        },
+        "crop_hash": "sha256:3c79c2398149b34da4f77199548fa0f51dd98b4772b592b609a637f13081851e"
+      },
+      {
+        "control_id": "badge",
+        "type": "component",
+        "rect": {
+          "left": 530,
+          "top": 212,
+          "width": 96,
+          "height": 40
+        },
+        "crop_hash": "sha256:ac5fe1f283d657ba3da3b4b1ba1f4fea4bd668614540291f4ad49862c3f30943"
+      },
+      {
+        "control_id": "row",
+        "type": "component",
+        "rect": {
+          "left": 307,
+          "top": 480,
+          "width": 280,
+          "height": 56
+        },
+        "crop_hash": "sha256:55eabf1b4dda7587d74bb6de5de60acd32a1d952e83badff8696d288115863d5"
+      },
+      {
+        "control_id": "badge",
+        "type": "text",
+        "rect": {
+          "left": 530,
+          "top": 212,
+          "width": 96,
+          "height": 40
+        },
+        "crop_hash": "sha256:ac5fe1f283d657ba3da3b4b1ba1f4fea4bd668614540291f4ad49862c3f30943"
+      },
+      {
+        "control_id": "secondary-action",
+        "type": "component",
+        "rect": {
+          "left": 344,
+          "top": 316,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:a168429da6c4eb9c64bde97ea4096ecacd04d427b5d78dd31a549f66b6669d28"
+      },
+      {
+        "control_id": "row",
+        "type": "text",
+        "rect": {
+          "left": 307,
+          "top": 480,
+          "width": 280,
+          "height": 56
+        },
+        "crop_hash": "sha256:55eabf1b4dda7587d74bb6de5de60acd32a1d952e83badff8696d288115863d5"
+      },
+      {
+        "control_id": "icon-b",
+        "type": "component",
+        "rect": {
+          "left": 548,
+          "top": 316,
+          "width": 64,
+          "height": 64
+        },
+        "crop_hash": "sha256:314bd417576efaa4c29484cdc4ccabb25f87fb5941c7634fcbf954c6b26a7392"
+      },
+      {
+        "control_id": "secondary-action",
+        "type": "text",
+        "rect": {
+          "left": 344,
+          "top": 316,
+          "width": 180,
+          "height": 64
+        },
+        "crop_hash": "sha256:a168429da6c4eb9c64bde97ea4096ecacd04d427b5d78dd31a549f66b6669d28"
+      }
+    ],
+    "renderer_version": "composition-v1/sharp-0.35.3/libvips-8.18.3",
+    "manifest": {
+      "id": "main-composition-final",
+      "version": 1,
+      "hash": "sha256:cb659b1f20071a230db4bf03716bb9acddb328a3df5b27e7d8feb924cafd3674"
+    }
+  },
+  "evidence_digest": "sha256:db38b4e3cb3a3c827e3d212368ab77e6978d827db99ef747039fefb05f2cfc9a",
+  "checks": [
+    "composition-output",
+    "decoded-pixels",
+    "alpha",
+    "asset-rehash",
+    "rendered-bbox",
+    "overlap",
+    "safe-area",
+    "text-overflow",
+    "nine-slice-fixed-regions",
+    "control-coverage",
+    "underlay-gate",
+    "font-render-evidence",
+    "dependency-freshness"
+  ],
+  "issues": [],
+  "manual_review": {
+    "required": false,
+    "approved": false
+  },
+  "checked_at": "2026-08-18T04:46:59.369Z"
+}

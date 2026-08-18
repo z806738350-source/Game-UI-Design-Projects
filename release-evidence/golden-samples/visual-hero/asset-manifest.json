@@ -1,0 +1,252 @@
+{
+  "schema_version": "1.0",
+  "id": "visual-hero",
+  "status": "prepared",
+  "canvas": [
+    1024,
+    1024
+  ],
+  "provenance": {
+    "source_board": {
+      "path": "release-evidence/golden-samples/_sources/visual-hero-board.png",
+      "hash": "sha256:eae4d3817e16bb28c803d4c652a23bd832457bf472831a4e6641e27783611392"
+    },
+    "source_prompt": "Privacy-safe original game UI source board: two panels; a premium sci-fantasy moonlit heroine event/gacha screen, and a matching UI-free celestial observatory environment. No brand, franchise, watermark, or real person.",
+    "generation_mode": "OpenAI built-in image generation",
+    "privacy": "original synthetic artwork; no personal data, real person, franchise, logo, or watermark requested",
+    "prepared_by": "scripts/prepare-real-golden-assets.cjs"
+  },
+  "inputs": {
+    "references": [
+      {
+        "path": "release-evidence/golden-samples/visual-hero/inputs/references/reference-1.png",
+        "hash": "sha256:94055e0cb14d4ceb1bf389ec7cc8a4ee764089bf1b2f039f03ae420a1105644f"
+      },
+      {
+        "path": "release-evidence/golden-samples/visual-hero/inputs/references/reference-2.png",
+        "hash": "sha256:038f8b73cf432c08fa05de7583e9fd26e825c4531c335d43c48642ccee6c60da"
+      },
+      {
+        "path": "release-evidence/golden-samples/visual-hero/inputs/references/reference-3.png",
+        "hash": "sha256:7dec0036dd10638d1cc9b5b326602ea3ee3ed45934b2ee0ff802ba36ad95bfc5"
+      }
+    ],
+    "clean_underlay": {
+      "path": "release-evidence/golden-samples/visual-hero/inputs/clean-underlay.png",
+      "hash": "sha256:521565cf55a7daded8a6f2b7e5af357406ae0d7760e8f188566516560ef4e489"
+    },
+    "wireframe": {
+      "path": "release-evidence/golden-samples/visual-hero/inputs/wireframe.png",
+      "hash": "sha256:d8024353649b333956137a438be619732f9bd151335a10fa354b8436543b58a5"
+    },
+    "known_contaminated_underlay": {
+      "path": "release-evidence/golden-samples/visual-hero/inputs/known-contaminated-underlay.png",
+      "hash": "sha256:411c2d92a7e3b26d9625c9dbfb2e169375a1cece26c15ee1e99c0e1c6f67ecd6"
+    },
+    "components": [
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/primary-button/default.png",
+        "hash": "sha256:7e1c1d0d679d0848c13a35a7150aef7992dd330992534e539848bfc100f73833"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "pressed",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/primary-button/pressed.png",
+        "hash": "sha256:1d52930a28d7d0843aa23a978e621db5bb40e4ad90ee75ef218d3b94b058e30b"
+      },
+      {
+        "family_id": "primary-button",
+        "category": "button",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/primary-button/disabled.png",
+        "hash": "sha256:0fb2613b920f697c561ada266e8cc42205436173364383f7bdc9972be1b26b64"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/bottom-navigation/default.png",
+        "hash": "sha256:7e1c1d0d679d0848c13a35a7150aef7992dd330992534e539848bfc100f73833"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/bottom-navigation/selected.png",
+        "hash": "sha256:1d52930a28d7d0843aa23a978e621db5bb40e4ad90ee75ef218d3b94b058e30b"
+      },
+      {
+        "family_id": "bottom-navigation",
+        "category": "navigation",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/bottom-navigation/disabled.png",
+        "hash": "sha256:0fb2613b920f697c561ada266e8cc42205436173364383f7bdc9972be1b26b64"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "default",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/section-tab/default.png",
+        "hash": "sha256:7e1c1d0d679d0848c13a35a7150aef7992dd330992534e539848bfc100f73833"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "selected",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/section-tab/selected.png",
+        "hash": "sha256:1d52930a28d7d0843aa23a978e621db5bb40e4ad90ee75ef218d3b94b058e30b"
+      },
+      {
+        "family_id": "section-tab",
+        "category": "tab",
+        "state": "disabled",
+        "width": 180,
+        "height": 64,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/section-tab/disabled.png",
+        "hash": "sha256:0fb2613b920f697c561ada266e8cc42205436173364383f7bdc9972be1b26b64"
+      },
+      {
+        "family_id": "resource-bar",
+        "category": "resource-bar",
+        "state": "default",
+        "width": 220,
+        "height": 48,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/resource-bar/default.png",
+        "hash": "sha256:14dbafc15bc8197ef4c7b6e2b707094b426d99ee9bc4578415e4ce6017dc8918"
+      },
+      {
+        "family_id": "content-panel",
+        "category": "panel",
+        "state": "default",
+        "width": 256,
+        "height": 128,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/content-panel/default.png",
+        "hash": "sha256:10d06cb9e62ff7eb8edb77a989fce07153ab368e4c42c015329ecd7531a89060"
+      },
+      {
+        "family_id": "action-icon",
+        "category": "icon",
+        "state": "default",
+        "width": 64,
+        "height": 64,
+        "text_policy": "none",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/action-icon/default.png",
+        "hash": "sha256:2e3b2b967f15ff77c06d7f2f7078020599130becd49b69440709393c2c42d9e2"
+      },
+      {
+        "family_id": "status-badge",
+        "category": "badge",
+        "state": "default",
+        "width": 96,
+        "height": 40,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/status-badge/default.png",
+        "hash": "sha256:156981401c3f57a7b5183a7701f7414bdc355daa1c9a100ff85ec2bc70526059"
+      },
+      {
+        "family_id": "list-row",
+        "category": "list-row",
+        "state": "default",
+        "width": 280,
+        "height": 56,
+        "text_policy": "text-slot",
+        "path": "release-evidence/golden-samples/visual-hero/inputs/components/list-row/default.png",
+        "hash": "sha256:2f3c753c61a70c5ff6c320b803e245599dbcd8d6714c3a5f0efcb6208edc2d04"
+      }
+    ]
+  },
+  "font": {
+    "id": "oxanium",
+    "path": "release-evidence/golden-samples/_shared/fonts/Oxanium-wght.ttf",
+    "license_path": "release-evidence/golden-samples/_shared/fonts/OFL.txt",
+    "license": "Google Fonts / SIL OFL 1.1",
+    "coverage": [
+      "latin"
+    ]
+  },
+  "required_font_roles": [
+    "display",
+    "body",
+    "numeric",
+    "button-label"
+  ],
+  "required_component_families": [
+    "primary-button",
+    "bottom-navigation",
+    "section-tab",
+    "resource-bar",
+    "content-panel",
+    "action-icon",
+    "status-badge",
+    "list-row"
+  ],
+  "acceptance": {
+    "provider_e2e": "passed",
+    "negative_control_critical_detected": true,
+    "negative_control_auto_pass": false,
+    "pipeline_gate": "passed",
+    "designer_signoff": "pending",
+    "formal_release": "blocked-until-signoff"
+  },
+  "outputs": {
+    "final_png": {
+      "path": "release-evidence/golden-samples/visual-hero/final.png",
+      "hash": "sha256:b614ea5d13b2f21fac1a8c497879fb22da9591d14f6cd313ff764481c70f383a"
+    },
+    "critique": {
+      "id": "main-underlay-critique-known-contaminated-repair-v1",
+      "result": "passed",
+      "raw_hash": "sha256:32f294322b1fe4515c11ca568bb5929e82cc75b564e4066ab7163b37ec144d0b"
+    },
+    "fidelity": {
+      "id": "main-fidelity-report",
+      "status": "passed",
+      "evidence_digest": "sha256:db1dd60583ae9583ad3207b20828e5dfddc26e61399730e5b92eab18f253ab32"
+    }
+  },
+  "last_run": {
+    "status": "pipeline-passed",
+    "started_at": "2026-08-18T05:14:02.924Z",
+    "completed_at": "2026-08-18T05:18:25.274Z",
+    "safe_provider": {
+      "configured": true,
+      "mode": "direct",
+      "envSource": ".env",
+      "modelSource": ".env",
+      "visionModel": "gpt-5.6-sol",
+      "critiqueModel": "gpt-5.6-sol",
+      "imageModel": "Image-GPT2"
+    }
+  }
+}

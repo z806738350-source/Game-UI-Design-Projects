@@ -1,0 +1,154 @@
+{
+  "schema_version": "2.0",
+  "project_id": "golden-existing-continuation-mywpiww2",
+  "active_screen_id": "main",
+  "current_stage": "fidelity_review",
+  "stages": {
+    "input": {
+      "status": "draft"
+    },
+    "wireframe_interpretation": {
+      "status": "approved",
+      "output": "screens/main/screen-contract.json",
+      "updated_at": "2026-08-18T05:18:25.533Z"
+    },
+    "layout_design": {
+      "status": "draft"
+    },
+    "style_resolution": {
+      "status": "approved",
+      "output": "style/style-contract.json",
+      "updated_at": "2026-08-18T05:18:25.541Z"
+    },
+    "visual_exploration": {
+      "status": "stale",
+      "updated_at": "2026-08-18T05:18:25.430Z"
+    },
+    "reference_analysis": {
+      "status": "approved",
+      "output": "style/reference-inventory.json",
+      "updated_at": "2026-08-18T05:18:25.431Z"
+    },
+    "typography_resolution": {
+      "status": "approved",
+      "output": "style/font-manifest.json",
+      "updated_at": "2026-08-18T05:18:25.454Z"
+    },
+    "component_resolution": {
+      "status": "approved",
+      "output": "style/component-contract.json",
+      "updated_at": "2026-08-18T05:18:25.529Z"
+    },
+    "component_binding": {
+      "status": "approved",
+      "output": "screens/main/component-bindings.json",
+      "updated_at": "2026-08-18T05:18:25.538Z"
+    },
+    "underlay_specification": {
+      "status": "approved",
+      "output": "screens/main/underlay-contract.json",
+      "updated_at": "2026-08-18T05:18:25.550Z"
+    },
+    "underlay_review": {
+      "status": "approved",
+      "output": "screens/main/underlay-critique.json",
+      "blocking_issues": 0,
+      "updated_at": "2026-08-18T05:21:45.932Z"
+    },
+    "underlay_generation": {
+      "status": "reviewed",
+      "output": "screens/main/underlay-repair-task.json",
+      "updated_at": "2026-08-18T05:20:45.691Z"
+    },
+    "composition": {
+      "status": "reviewed",
+      "output": "screens/main/composition-output.json",
+      "png_path": "screens/main/compositions/final-v1.png",
+      "png_hash": "sha256:66c6f7ccdbc6dce0f0026f3bbc5176b6d9474d223cae4ccdec52100861a7fbc5",
+      "updated_at": "2026-08-18T05:21:46.270Z"
+    },
+    "fidelity_review": {
+      "status": "approved",
+      "output": "screens/main/composition-manifest.json",
+      "updated_at": "2026-08-18T05:21:46.542Z"
+    }
+  },
+  "global_stages": {
+    "input": {
+      "status": "draft"
+    },
+    "reference_analysis": {
+      "status": "approved",
+      "output": "style/reference-inventory.json",
+      "updated_at": "2026-08-18T05:18:25.431Z"
+    },
+    "style_resolution": {
+      "status": "approved",
+      "output": "style/style-contract.json",
+      "updated_at": "2026-08-18T05:18:25.541Z"
+    },
+    "typography_resolution": {
+      "status": "approved",
+      "output": "style/font-manifest.json",
+      "updated_at": "2026-08-18T05:18:25.454Z"
+    },
+    "component_resolution": {
+      "status": "approved",
+      "output": "style/component-contract.json",
+      "updated_at": "2026-08-18T05:18:25.529Z"
+    }
+  },
+  "screen_stages": {
+    "main": {
+      "screen_definition": {
+        "status": "draft"
+      },
+      "component_binding": {
+        "status": "approved",
+        "output": "screens/main/component-bindings.json",
+        "updated_at": "2026-08-18T05:18:25.538Z"
+      },
+      "layout_design": {
+        "status": "draft"
+      },
+      "underlay_specification": {
+        "status": "approved",
+        "output": "screens/main/underlay-contract.json",
+        "updated_at": "2026-08-18T05:18:25.550Z"
+      },
+      "underlay_generation": {
+        "status": "reviewed",
+        "output": "screens/main/underlay-repair-task.json",
+        "updated_at": "2026-08-18T05:20:45.691Z"
+      },
+      "underlay_review": {
+        "status": "approved",
+        "output": "screens/main/underlay-critique.json",
+        "blocking_issues": 0,
+        "updated_at": "2026-08-18T05:21:45.932Z"
+      },
+      "composition": {
+        "status": "reviewed",
+        "output": "screens/main/composition-output.json",
+        "png_path": "screens/main/compositions/final-v1.png",
+        "png_hash": "sha256:66c6f7ccdbc6dce0f0026f3bbc5176b6d9474d223cae4ccdec52100861a7fbc5",
+        "updated_at": "2026-08-18T05:21:46.270Z"
+      },
+      "fidelity_review": {
+        "status": "approved",
+        "output": "screens/main/composition-manifest.json",
+        "updated_at": "2026-08-18T05:21:46.542Z"
+      },
+      "visual_exploration": {
+        "status": "stale",
+        "updated_at": "2026-08-18T05:18:25.430Z"
+      },
+      "wireframe_interpretation": {
+        "status": "approved",
+        "output": "screens/main/screen-contract.json",
+        "updated_at": "2026-08-18T05:18:25.533Z"
+      }
+    }
+  },
+  "updated_at": "2026-08-18T05:21:46.542Z"
+}

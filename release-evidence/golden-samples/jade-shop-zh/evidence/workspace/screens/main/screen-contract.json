@@ -1,0 +1,153 @@
+{
+  "schema_version": "2.0",
+  "id": "jade-shop-zh-screen-contract",
+  "version": 1,
+  "status": "approved",
+  "source": {
+    "wireframe": "release-evidence/golden-samples/jade-shop-zh/inputs/wireframe.png"
+  },
+  "screen_id": "main",
+  "screen_name": "jade-shop-zh",
+  "purpose": "Exercise the complete strict production path with real bitmap evidence.",
+  "primary_action": "立即购买",
+  "secondary_actions": [
+    "加入购物车"
+  ],
+  "required_information": [
+    "¥68",
+    "今日特惠 VIP 专享",
+    "-25%",
+    "限时礼包 仅剩2天"
+  ],
+  "required_controls": [
+    {
+      "id": "primary-action",
+      "label": "立即购买",
+      "role": "primary",
+      "required": true
+    },
+    {
+      "id": "navigation",
+      "label": "商店",
+      "role": "navigation",
+      "required": true
+    },
+    {
+      "id": "tab",
+      "label": "礼包",
+      "role": "navigation",
+      "required": true
+    },
+    {
+      "id": "resources",
+      "label": "¥68",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "content",
+      "label": "今日特惠 VIP 专享",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "icon-a",
+      "label": "领取",
+      "role": "action",
+      "required": true
+    },
+    {
+      "id": "badge",
+      "label": "-25%",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "row",
+      "label": "限时礼包 仅剩2天",
+      "role": "information",
+      "required": true
+    },
+    {
+      "id": "secondary-action",
+      "label": "加入购物车",
+      "role": "secondary",
+      "required": true
+    },
+    {
+      "id": "icon-b",
+      "label": "分享",
+      "role": "action",
+      "required": true
+    }
+  ],
+  "states": [
+    "default",
+    "pressed",
+    "disabled",
+    "selected"
+  ],
+  "edge_cases": [
+    "long labels",
+    "dense numeric content"
+  ],
+  "data_dependencies": [
+    "golden fixture"
+  ],
+  "design_constraints": {
+    "canvas": [
+      1024,
+      1024
+    ],
+    "minimum_controls": 10,
+    "exact_assets": true
+  },
+  "source_inventory": {
+    "requirement_functions": [
+      "立即购买",
+      "商店",
+      "礼包",
+      "¥68",
+      "今日特惠 VIP 专享",
+      "领取",
+      "-25%",
+      "限时礼包 仅剩2天",
+      "加入购物车",
+      "分享"
+    ],
+    "wireframe_controls": [
+      "立即购买",
+      "商店",
+      "礼包",
+      "¥68",
+      "今日特惠 VIP 专享",
+      "领取",
+      "-25%",
+      "限时礼包 仅剩2天",
+      "加入购物车",
+      "分享"
+    ],
+    "wireframe_information": [
+      "¥68",
+      "今日特惠 VIP 专享",
+      "-25%",
+      "限时礼包 仅剩2天"
+    ]
+  },
+  "coverage": {
+    "covered_items": [
+      "立即购买",
+      "商店",
+      "礼包",
+      "¥68",
+      "今日特惠 VIP 专享",
+      "领取",
+      "-25%",
+      "限时礼包 仅剩2天",
+      "加入购物车",
+      "分享"
+    ],
+    "uncovered_items": []
+  },
+  "approved_at": "2026-08-18T05:00:58.478Z"
+}

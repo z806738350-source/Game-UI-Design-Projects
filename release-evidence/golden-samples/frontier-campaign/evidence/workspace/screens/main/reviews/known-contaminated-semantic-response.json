@@ -1,0 +1,668 @@
+{
+  "schema_version": "1.0",
+  "source": {
+    "underlay_id": "known-contaminated",
+    "prompt_hash": "sha256:f1737ab3d4f97fde515402711fc4e957e01d29051abcfdc0c81c5e8bef372ae1",
+    "model": "gpt-5.6-sol",
+    "input_hashes": {
+      "underlay": "sha256:9b6a4bfb48763d7529d83492ba3aea91df945bb8c9c5eb3fe62a47574e2e7221",
+      "overlay": "sha256:4f90b5f78a4fc07c62185d12a6177a806b751ef4fe1b1225b0218dddebec2132",
+      "component_board": "sha256:a0241d49e1067a15a541b6c4d25ad9bed89e4d707af02b29a4b76be1822717fe"
+    }
+  },
+  "provider": {
+    "response_id": "chatcmpl-EE6OBqa9DsQOFcu4ayoctqZzZtVxM",
+    "model": "gpt-5.6-sol-2026-07-09",
+    "created": 1787029859
+  },
+  "attempt": 1,
+  "raw_text": "{\n  \"confidence\": 0.99,\n  \"suspected_ui_regions\": [\n    {\n      \"bbox\": [0.031, 0.025, 0.297, 0.374],\n      \"type\": \"content-panel\",\n      \"confidence\": 0.998,\n      \"reason\": \"Large dark rounded rectangular panel with a gold outline, heading, and repeated list controls; clearly pre-rendered shared UI.\"\n    },\n    {\n      \"bbox\": [0.055, 0.109, 0.243, 0.042],\n      \"type\": \"list-row\",\n      \"confidence\": 0.997,\n      \"reason\": \"Outlined horizontal row with formal label and percentage.\"\n    },\n    {\n      \"bbox\": [0.055, 0.162, 0.243, 0.042],\n      \"type\": \"list-row\",\n      \"confidence\": 0.997,\n      \"reason\": \"Outlined horizontal row with formal label and percentage.\"\n    },\n    {\n      \"bbox\": [0.055, 0.215, 0.243, 0.042],\n      \"type\": \"list-row\",\n      \"confidence\": 0.998,\n      \"reason\": \"Outlined horizontal row with formal label and percentage.\"\n    },\n    {\n      \"bbox\": [0.055, 0.269, 0.243, 0.042],\n      \"type\": \"list-row\",\n      \"confidence\": 0.997,\n      \"reason\": \"Outlined horizontal row with formal label and percentage.\"\n    },\n    {\n      \"bbox\": [0.055, 0.321, 0.243, 0.042],\n      \"type\": \"list-row\",\n      \"confidence\": 0.997,\n      \"reason\": \"Outlined horizontal row with formal label and percentage.\"\n    },\n    {\n      \"bbox\": [0.717, 0.028, 0.251, 0.064],\n      \"type\": \"resource-bar\",\n      \"confidence\": 0.999,\n      \"reason\": \"Top-right rounded, outlined resource display containing a label and numeric value.\"\n    },\n    {\n      \"bbox\": [0.681, 0.856, 0.279, 0.078],\n      \"type\": \"primary-button\",\n      \"confidence\": 0.999,\n      \"reason\": \"Large bottom-right rounded action-button silhouette with centered formal text.\"\n    }\n  ],\n  \"text_like_regions\": [\n    {\n      \"bbox\": [0.057, 0.061, 0.214, 0.028],\n      \"type\": \"formal-heading\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible mission heading and progress count: 'MISSIONS 12/20'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.122, 0.17, 0.021],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible label and percentage: 'OUTPOST 01 · 40%'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.175, 0.17, 0.021],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible label and percentage: 'OUTPOST 02 · 52%'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.228, 0.17, 0.021],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible label and percentage: 'OUTPOST 03 · 64%'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.282, 0.17, 0.021],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible label and percentage: 'OUTPOST 04 · 76%'.\"\n    },\n    {\n      \"bbox\": [0.069, 0.334, 0.17, 0.021],\n      \"type\": \"formal-list-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible label and percentage: 'OUTPOST 05 · 88%'.\"\n    },\n    {\n      \"bbox\": [0.74, 0.049, 0.187, 0.027],\n      \"type\": \"resource-label-and-number\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible resource text: 'SUPPLY 12,480'.\"\n    },\n    {\n      \"bbox\": [0.751, 0.88, 0.125, 0.028],\n      \"type\": \"action-label\",\n      \"confidence\": 0.999,\n      \"reason\": \"Clearly legible action text: 'DEPLOY'.\"\n    }\n  ],\n  \"slot_checks\": [\n    {\n      \"slot_id\": \"slot-primary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.99,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": \"high\",\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"content-panel-and-list-rows\",\n        \"confidence\": 0.999\n      }\n    },\n    {\n      \"slot_id\": \"slot-navigation\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.998,\n      \"background_busyness\": \"low\",\n      \"contrast_conflict\": \"low\",\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.995\n      }\n    },\n    {\n      \"slot_id\": \"slot-tab\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.998,\n      \"background_busyness\": \"low\",\n      \"contrast_conflict\": \"medium\",\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"resource-bar-bottom-edge\",\n        \"confidence\": 0.97\n      }\n    },\n    {\n      \"slot_id\": \"slot-resources\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.998,\n      \"background_busyness\": \"low\",\n      \"contrast_conflict\": \"low\",\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.996\n      }\n    },\n    {\n      \"slot_id\": \"slot-content\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": \"high\",\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"content-panel-heading-and-list-row\",\n        \"confidence\": 1.0\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-a\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": \"high\",\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"content-panel-list-row-and-percentage-text\",\n        \"confidence\": 0.999\n      }\n    },\n    {\n      \"slot_id\": \"slot-badge\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"low\",\n      \"contrast_conflict\": \"low\",\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.997\n      }\n    },\n    {\n      \"slot_id\": \"slot-row\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.999,\n      \"background_busyness\": \"high\",\n      \"contrast_conflict\": \"high\",\n      \"hard_edge_crossing\": true,\n      \"ui_like_contamination\": {\n        \"detected\": true,\n        \"type\": \"resource-bar-with-formal-text-and-number\",\n        \"confidence\": 1.0\n      }\n    },\n    {\n      \"slot_id\": \"slot-secondary-action\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.997,\n      \"background_busyness\": \"medium\",\n      \"contrast_conflict\": \"medium\",\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.995\n      }\n    },\n    {\n      \"slot_id\": \"slot-icon-b\",\n      \"subject_overlap\": false,\n      \"subject_overlap_confidence\": 0.998,\n      \"background_busyness\": \"low\",\n      \"contrast_conflict\": \"low\",\n      \"hard_edge_crossing\": false,\n      \"ui_like_contamination\": {\n        \"detected\": false,\n        \"type\": \"none\",\n        \"confidence\": 0.996\n      }\n    }\n  ]\n}",
+  "parsed": {
+    "confidence": 0.99,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.031,
+          0.025,
+          0.297,
+          0.374
+        ],
+        "type": "content-panel",
+        "confidence": 0.998,
+        "reason": "Large dark rounded rectangular panel with a gold outline, heading, and repeated list controls; clearly pre-rendered shared UI."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.109,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.162,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.215,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Outlined horizontal row with formal label and percentage."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.269,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage."
+      },
+      {
+        "bbox": [
+          0.055,
+          0.321,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage."
+      },
+      {
+        "bbox": [
+          0.717,
+          0.028,
+          0.251,
+          0.064
+        ],
+        "type": "resource-bar",
+        "confidence": 0.999,
+        "reason": "Top-right rounded, outlined resource display containing a label and numeric value."
+      },
+      {
+        "bbox": [
+          0.681,
+          0.856,
+          0.279,
+          0.078
+        ],
+        "type": "primary-button",
+        "confidence": 0.999,
+        "reason": "Large bottom-right rounded action-button silhouette with centered formal text."
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.057,
+          0.061,
+          0.214,
+          0.028
+        ],
+        "type": "formal-heading",
+        "confidence": 0.999,
+        "reason": "Clearly legible mission heading and progress count: 'MISSIONS 12/20'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.122,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 01 · 40%'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.175,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 02 · 52%'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.228,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 03 · 64%'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.282,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 04 · 76%'."
+      },
+      {
+        "bbox": [
+          0.069,
+          0.334,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 05 · 88%'."
+      },
+      {
+        "bbox": [
+          0.74,
+          0.049,
+          0.187,
+          0.027
+        ],
+        "type": "resource-label-and-number",
+        "confidence": 0.999,
+        "reason": "Clearly legible resource text: 'SUPPLY 12,480'."
+      },
+      {
+        "bbox": [
+          0.751,
+          0.88,
+          0.125,
+          0.028
+        ],
+        "type": "action-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible action text: 'DEPLOY'."
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": "high",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "content-panel-and-list-rows",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "low",
+        "contrast_conflict": "low",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.995
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "low",
+        "contrast_conflict": "medium",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource-bar-bottom-edge",
+          "confidence": 0.97
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "low",
+        "contrast_conflict": "low",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.996
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": "high",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "content-panel-heading-and-list-row",
+          "confidence": 1
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": "high",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "content-panel-list-row-and-percentage-text",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "low",
+        "contrast_conflict": "low",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.997
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": "high",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource-bar-with-formal-text-and-number",
+          "confidence": 1
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.997,
+        "background_busyness": "medium",
+        "contrast_conflict": "medium",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.995
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "low",
+        "contrast_conflict": "low",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.996
+        }
+      }
+    ]
+  },
+  "normalized": {
+    "confidence": 0.99,
+    "suspected_ui_regions": [
+      {
+        "bbox": [
+          0.031,
+          0.025,
+          0.297,
+          0.374
+        ],
+        "type": "content-panel",
+        "confidence": 0.998,
+        "reason": "Large dark rounded rectangular panel with a gold outline, heading, and repeated list controls; clearly pre-rendered shared UI.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.109,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.162,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.215,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.998,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.269,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.055,
+          0.321,
+          0.243,
+          0.042
+        ],
+        "type": "list-row",
+        "confidence": 0.997,
+        "reason": "Outlined horizontal row with formal label and percentage.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.717,
+          0.028,
+          0.251,
+          0.064
+        ],
+        "type": "resource-bar",
+        "confidence": 0.999,
+        "reason": "Top-right rounded, outlined resource display containing a label and numeric value.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.681,
+          0.856,
+          0.279,
+          0.078
+        ],
+        "type": "primary-button",
+        "confidence": 0.999,
+        "reason": "Large bottom-right rounded action-button silhouette with centered formal text.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "text_like_regions": [
+      {
+        "bbox": [
+          0.057,
+          0.061,
+          0.214,
+          0.028
+        ],
+        "type": "formal-heading",
+        "confidence": 0.999,
+        "reason": "Clearly legible mission heading and progress count: 'MISSIONS 12/20'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.122,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 01 · 40%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.175,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 02 · 52%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.228,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 03 · 64%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.282,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 04 · 76%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.069,
+          0.334,
+          0.17,
+          0.021
+        ],
+        "type": "formal-list-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible label and percentage: 'OUTPOST 05 · 88%'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.74,
+          0.049,
+          0.187,
+          0.027
+        ],
+        "type": "resource-label-and-number",
+        "confidence": 0.999,
+        "reason": "Clearly legible resource text: 'SUPPLY 12,480'.",
+        "bbox_normalization": "already-normalized"
+      },
+      {
+        "bbox": [
+          0.751,
+          0.88,
+          0.125,
+          0.028
+        ],
+        "type": "action-label",
+        "confidence": 0.999,
+        "reason": "Clearly legible action text: 'DEPLOY'.",
+        "bbox_normalization": "already-normalized"
+      }
+    ],
+    "slot_checks": [
+      {
+        "slot_id": "slot-primary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.99,
+        "background_busyness": "high",
+        "contrast_conflict": "high",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "content-panel-and-list-rows",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-navigation",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "low",
+        "contrast_conflict": "low",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.995
+        }
+      },
+      {
+        "slot_id": "slot-tab",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "low",
+        "contrast_conflict": "medium",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource-bar-bottom-edge",
+          "confidence": 0.97
+        }
+      },
+      {
+        "slot_id": "slot-resources",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "low",
+        "contrast_conflict": "low",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.996
+        }
+      },
+      {
+        "slot_id": "slot-content",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": "high",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "content-panel-heading-and-list-row",
+          "confidence": 1
+        }
+      },
+      {
+        "slot_id": "slot-icon-a",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": "high",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "content-panel-list-row-and-percentage-text",
+          "confidence": 0.999
+        }
+      },
+      {
+        "slot_id": "slot-badge",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "low",
+        "contrast_conflict": "low",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.997
+        }
+      },
+      {
+        "slot_id": "slot-row",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.999,
+        "background_busyness": "high",
+        "contrast_conflict": "high",
+        "hard_edge_crossing": true,
+        "ui_like_contamination": {
+          "detected": true,
+          "type": "resource-bar-with-formal-text-and-number",
+          "confidence": 1
+        }
+      },
+      {
+        "slot_id": "slot-secondary-action",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.997,
+        "background_busyness": "medium",
+        "contrast_conflict": "medium",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.995
+        }
+      },
+      {
+        "slot_id": "slot-icon-b",
+        "subject_overlap": false,
+        "subject_overlap_confidence": 0.998,
+        "background_busyness": "low",
+        "contrast_conflict": "low",
+        "hard_edge_crossing": false,
+        "ui_like_contamination": {
+          "detected": false,
+          "type": "none",
+          "confidence": 0.996
+        }
+      }
+    ],
+    "coordinate_space": "normalized-0-1"
+  },
+  "captured_at": "2026-08-18T05:11:38.288Z"
+}
