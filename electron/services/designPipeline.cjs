@@ -8,6 +8,8 @@ const { validateArtifact } = require('./contracts.cjs');
 const { confirmFontUsage: confirmFontUsageContract, importFontAsset } = require('./typographyAssets.cjs');
 const { importComponentAsset, importForgeManifest, validateComponentAssets } = require('./componentKit.cjs');
 const { validateBindings, withCoverage } = require('./componentBindings.cjs');
+const { BINDING_POLICY_VERSION } = require('./controlRolePolicy.cjs');
+const { normalizeControls } = require('./screenControls.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
 const { changedKindsForInput, downstreamArtifacts, isGlobalChange } = require('./artifactDependencies.cjs');
 const { GLOBAL_ARTIFACTS } = require('./artifactRegistry.cjs');
@@ -180,7 +182,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (strict) {
         if (project.artifacts.fontManifest?.status !== 'approved') throw Object.assign(new Error('Strict layout requires an approved Font Manifest.'), { code: 'FONT_MANIFEST_REQUIRED' });
         if (project.artifacts.componentContract?.status !== 'approved') throw Object.assign(new Error('Strict layout requires an approved Component Contract.'), { code: 'COMPONENT_CONTRACT_REQUIRED' });
-        const bindingResult = validateBindings(project.artifacts.bindings, screen, project.artifacts.componentContract);
+        const bindingResult = validateBindings(project.artifacts.bindings, screen, project.artifacts.componentContract, project.artifacts.fontManifest, { strict });
         if (project.artifacts.bindings?.status !== 'approved' || bindingResult.errors.length) throw Object.assign(new Error(`Strict layout requires complete approved bindings: ${bindingResult.errors.join('; ')}`), { code: 'BINDING_COVERAGE_INCOMPLETE' });
       }
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
@@ -357,11 +359,19 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     } else if (kind === 'component-bindings') {
       const current = project.artifacts.bindings;
       if (!current) throw new Error('Component Bindings do not exist.');
-      const covered = withCoverage(current, project.artifacts.screenContract, project.artifacts.componentContract);
-      const result = validateBindings(covered, project.artifacts.screenContract, project.artifacts.componentContract);
+      const strictBindings = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
+      const covered = withCoverage(current, project.artifacts.screenContract, project.artifacts.componentContract, project.artifacts.fontManifest, { strict: strictBindings });
+      const result = validateBindings(covered, project.artifacts.screenContract, project.artifacts.componentContract, project.artifacts.fontManifest, { strict: strictBindings });
       if (result.errors.length) throw Object.assign(new Error(result.errors.join('; ')), { code: 'BINDING_COVERAGE_INCOMPLETE' });
+      // Approval is a backend fact: stamp each binding and record the policy
+      // version; client-supplied approved flags are never trusted.
+      covered.bindings = (covered.bindings || []).map((binding) => ({ ...binding, approved: true }));
+      const approvedAt = new Date().toISOString();
       await invalidateArtifacts(projectId, 'component-bindings');
-      await projectStore.saveArtifact(projectId, kind, { ...covered, status: 'approved', approved_at: new Date().toISOString() });
+      await projectStore.saveArtifact(projectId, kind, {
+        ...covered, status: 'approved', approved_at: approvedAt,
+        approval: { approved_at: approvedAt, approved_by: 'ui-designer', validation_version: BINDING_POLICY_VERSION }
+      });
       await projectStore.updateWorkflow(projectId, 'component_binding', 'approved', `screens/${project.screen_id}/component-bindings.json`);
     } else if (kind === 'underlay-contract') {
       const current = project.artifacts.underlayContract;
@@ -468,6 +478,12 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
 
   async function updateArtifact(projectId, kind, patch = {}) {
     const { screenId, ...artifactPatch } = patch;
+    if (kind === 'component-bindings') {
+      // Approval is a backend fact stamped by approveArtifact; ignore any
+      // client-supplied approved/approval values instead of trusting them.
+      delete artifactPatch.approval;
+      if (Array.isArray(artifactPatch.bindings)) artifactPatch.bindings = artifactPatch.bindings.map(({ approved, ...binding }) => ({ ...binding, approved: false }));
+    }
     const project = ['style-contract', 'font-manifest', 'component-contract'].includes(kind)
       ? await openProject(projectId) : await openScreen(projectId, screenId);
     if (kind === 'composition-manifest' || kind === 'fidelity-report') throw Object.assign(new Error(`${kind} is generated evidence and cannot be edited.`), { code: 'GENERATED_EVIDENCE_READ_ONLY' });
@@ -488,10 +504,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const definition = definitions[kind];
     if (!definition?.artifact) throw new Error('当前 Artifact 不存在。');
     const screenContractContentKeys = ['screen_name', 'purpose', 'primary_action', 'required_controls', 'required_information', 'states', 'edge_cases'];
-    const screenContractContentChanged = kind === 'screen-contract' && screenContractContentKeys.some((key) => (
-      Object.prototype.hasOwnProperty.call(artifactPatch, key)
-      && JSON.stringify(artifactPatch[key]) !== JSON.stringify(definition.artifact[key])
-    ));
+    // Label-only edits must not invalidate bindings; role/required/id edits must.
+    const controlsSemanticSignature = (items) => JSON.stringify(normalizeControls(items || []).map(({ id, role, required }) => ({ id, role, required })));
+    const screenContractContentChanged = kind === 'screen-contract' && screenContractContentKeys.some((key) => {
+      if (!Object.prototype.hasOwnProperty.call(artifactPatch, key)) return false;
+      if (key === 'required_controls') return controlsSemanticSignature(artifactPatch[key]) !== controlsSemanticSignature(definition.artifact[key]);
+      return JSON.stringify(artifactPatch[key]) !== JSON.stringify(definition.artifact[key]);
+    });
     if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
     const nextStatus = artifactPatch.status === 'rejected'
       ? 'rejected'
@@ -506,7 +525,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       source: { ...(definition.artifact.source || {}), edited_by: 'ui-designer' },
       edited_at: new Date().toISOString()
     };
-    if (kind === 'component-bindings') next = withCoverage(next, project.artifacts.screenContract, project.artifacts.componentContract);
+    if (kind === 'component-bindings') {
+      // Editing demotes the artifact to reviewed; drop any stale approval
+      // stamp from the previous version so approval remains a current fact.
+      delete next.approval;
+      delete next.approved_at;
+      next = withCoverage(next, project.artifacts.screenContract, project.artifacts.componentContract, project.artifacts.fontManifest, { strict: project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation' });
+    }
     await projectStore.saveArtifact(projectId, kind, next);
     await projectStore.updateWorkflow(projectId, definition.stage, next.status, undefined, {
       progress: undefined

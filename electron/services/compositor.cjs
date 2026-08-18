@@ -40,7 +40,7 @@ function createCompositionManifest({ project, underlay, layout, bindings, compon
   const errors = [];
   const underlayGate = reviewGate(critique);
   if (!underlayGate.passed) errors.push(`Underlay review has ${underlayGate.blocking.length} blocking issues`);
-  const bindingResult = validateBindings(bindings, project.artifacts?.screenContract, componentContract);
+  const bindingResult = validateBindings(bindings, project.artifacts?.screenContract, componentContract, fontManifest, { strict });
   errors.push(...bindingResult.errors);
   errors.push(...validateLayout(layout, bindings, componentContract, project.canvas_spec, { strict }));
   if (mode === 'final') errors.push(...validateFontManifest(fontManifest, { strict }));

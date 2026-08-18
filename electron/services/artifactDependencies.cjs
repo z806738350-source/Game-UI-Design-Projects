@@ -8,7 +8,7 @@ const DIRECT_DEPENDENCIES = Object.freeze({
   'reference-inventory': ['reference-pack'],
   'reference-pack': ['style-contract'],
   'style-contract': ['font-manifest', 'component-contract', 'layout-proposals', 'underlay-contract', 'visual-task'],
-  'font-manifest': ['composition-manifest'],
+  'font-manifest': ['component-bindings', 'composition-manifest'],
   'component-contract': ['component-bindings'],
   'screen-contract': ['component-bindings', 'layout-proposals'],
   'component-bindings': ['layout-proposals'],

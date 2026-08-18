@@ -5,7 +5,7 @@ const { validateLayout } = require('./layoutValidator.cjs');
 const { downstreamArtifacts } = require('./artifactDependencies.cjs');
 
 const screen = { required_controls: [{ id: 'save', label: '保存', required: true }, { id: 'help', label: '帮助', required: false }] };
-const components = { families: [{ id: 'button.primary', status: 'approved', reuse_mode: 'nine-slice', intrinsic_size: [200, 80], slice: { margins: [20, 20, 12, 12] }, states: { default: { asset_path: 'button.png', asset_hash: 'hash' } } }] };
+const components = { families: [{ id: 'button.primary', category: 'button', status: 'approved', reuse_mode: 'nine-slice', intrinsic_size: [200, 80], slice: { margins: [20, 20, 12, 12] }, states: { default: { asset_path: 'button.png', asset_hash: 'hash' } } }] };
 
 test('bindings require 100 percent coverage and an existing component state', () => {
   const incomplete = validateBindings({ bindings: [] }, screen, components);
@@ -28,4 +28,15 @@ test('component contract invalidates bindings through fidelity', () => {
   assert.ok(downstream.includes('component-bindings'));
   assert.ok(downstream.includes('underlay-contract'));
   assert.ok(downstream.includes('fidelity-report'));
+});
+
+test('label-only control edits keep bindings valid while role edits do not', () => {
+  const legacy = { required_controls: [{ id: 'save', label: '保存', required: true }] };
+  const complete = validateBindings({ bindings: [{ control_id: 'save', component_id: 'button.primary', state: 'default', slot_id: 'bottom-primary' }] }, legacy, components);
+  assert.deepEqual(complete.errors, []);
+  const relabeled = { required_controls: [{ id: 'save', label: '保存阵容', required: true }] };
+  assert.deepEqual(validateBindings({ bindings: [{ control_id: 'save', component_id: 'button.primary', state: 'default', slot_id: 'bottom-primary' }] }, relabeled, components).errors, []);
+  const reRole = { required_controls: [{ id: 'save', label: '保存', role: 'resource', required: true }] };
+  const mismatched = validateBindings({ bindings: [{ control_id: 'save', component_id: 'button.primary', state: 'default', slot_id: 'bottom-primary' }] }, reRole, components, null, { strict: true });
+  assert.ok(mismatched.errors.some((error) => error.startsWith('BINDING_COMPONENT_CATEGORY_MISMATCH')));
 });
