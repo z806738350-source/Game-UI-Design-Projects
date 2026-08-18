@@ -62,4 +62,16 @@ describe('LayoutWorkbench（布局批准）', () => {
     render(<LayoutWorkbench project={project} busy={false} />);
     expect(screen.queryByTestId('layout-approve')).toBeNull();
   });
+
+  it('回归：stale 布局只能用于对照，批准按钮保持隐藏', () => {
+    const project = makeProject({
+      artifacts: {
+        layouts: makeArtifact({ id: 'layouts-1', status: 'stale', proposals: [{ id: 'layout-a', name: '效率优先', strategy: 'efficiency' }] }),
+        approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'stale', source_proposal: 'layout-a' })
+      }
+    });
+    render(<LayoutWorkbench project={project} busy={false} />);
+    expect(screen.queryByTestId('layout-approve')).toBeNull();
+    expect(screen.getByText(/旧布局只能用于对照/)).toBeTruthy();
+  });
 });
