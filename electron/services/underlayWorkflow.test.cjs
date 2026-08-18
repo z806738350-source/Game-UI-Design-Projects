@@ -65,6 +65,20 @@ test('semantic hard-edge and low-confidence architecture findings do not block w
   assert.ok(critique.issues.every((item) => item.severity === 'minor'));
 });
 
+test('missing or null confidence fails closed instead of silently downgrading findings', () => {
+  const contract = contractFixture();
+  const evidence = { underlay: { hash: 'h' }, overlay: { hash: 'o' }, component_board: { hash: 'c' } };
+  const base = { screenId: 'main', contract, evidence, deterministic: { thresholds: { edge_density: 0.22, local_contrast: 0.32, color_complexity: 0.42, highlight_density: 0.18, hard_edge_crossing: 0.2 }, slots: { 'bottom-primary': { edge_density: 0, local_contrast: 0, color_complexity: 0, highlight_density: 0, hard_edge_crossing: 0 } } } };
+  const missing = buildUnderlayCritique({ ...base, underlayId: 'missing-confidence', semantic: { confidence: 0.95, suspected_ui_regions: [{ type: 'ui-like', bbox: [0.2, 0.2, 0.2, 0.2] }], text_like_regions: [], slot_checks: [] } });
+  const uiIssue = missing.issues.find((item) => item.type === 'ui-like');
+  assert.equal(uiIssue.severity, 'major');
+  assert.equal(reviewGate(missing).passed, false);
+  const nullSubject = buildUnderlayCritique({ ...base, underlayId: 'null-subject-confidence', semantic: { confidence: 0.95, suspected_ui_regions: [], text_like_regions: [], slot_checks: [{ slot_id: 'bottom-primary', subject_overlap: true, subject_overlap_confidence: null }] } });
+  const subjectIssue = nullSubject.issues.find((item) => item.type === 'subject-overlap');
+  assert.equal(subjectIssue.severity, 'critical');
+  assert.equal(reviewGate(nullSubject).passed, false);
+});
+
 test('strict critique cannot pass with only an Underlay and no overlay/component evidence', () => {
   const critique = buildUnderlayCritique({ screenId: 'main', underlayId: 'u3', contract: contractFixture(), evidence: { underlay: { hash: 'only-underlay' } }, semantic: { confidence: 0.95, suspected_ui_regions: [], text_like_regions: [], slot_checks: [] } });
   assert.equal(critique.result, 'manual-review');

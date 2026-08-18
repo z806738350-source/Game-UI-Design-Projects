@@ -7,9 +7,11 @@ function asserted(value) {
 }
 
 function confidenceSeverity(confidence, { critical = 0.85, major = 0.7 } = {}) {
+  if (confidence == null) return 'major';
   const value = Number(confidence);
-  if (Number.isFinite(value) && value >= critical) return 'critical';
-  if (Number.isFinite(value) && value >= major) return 'major';
+  if (!Number.isFinite(value)) return 'major';
+  if (value >= critical) return 'critical';
+  if (value >= major) return 'major';
   return 'minor';
 }
 
@@ -28,9 +30,9 @@ function buildUnderlayCritique({ screenId, underlayId, contract, deterministic =
     const semanticSlot = (semantic.slot_checks || []).find((item) => item.slot_id === region.slot_id) || {};
     const thresholds = deterministic.thresholds || {};
     if (semanticSlot.subject_overlap) issues.push(issue(
-      Number.isFinite(Number(semanticSlot.subject_overlap_confidence))
-        ? confidenceSeverity(semanticSlot.subject_overlap_confidence, { critical: 0.85, major: 0.7 })
-        : 'critical',
+      semanticSlot.subject_overlap_confidence == null
+        ? 'critical'
+        : confidenceSeverity(semanticSlot.subject_overlap_confidence, { critical: 0.85, major: 0.7 }),
       'subject-overlap', { ...semanticSlot, slot_id: region.slot_id, bbox: region.bbox, confidence: semanticSlot.subject_overlap_confidence }
     ));
     if (semanticSlot.ui_like_contamination?.detected) issues.push(issue(confidenceSeverity(semanticSlot.ui_like_contamination.confidence, { critical: 0.8, major: 0.7 }), semanticSlot.ui_like_contamination.type || 'ui-like', { slot_id: region.slot_id, bbox: region.bbox, confidence: semanticSlot.ui_like_contamination.confidence }));

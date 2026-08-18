@@ -139,3 +139,37 @@ test('repairImage snapshots signed Kunpo CDN results instead of persisting trans
     assert.equal(result.source_location.has_query, true);
   } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
 });
+
+test('snapshot download refuses redirects and oversized bodies without following them', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-provider-redirect-'));
+  const originalFetch = global.fetch;
+  try {
+    const source = path.join(root, 'source.png'); await fs.writeFile(source, pngHeader(128, 64));
+    const seen = [];
+    global.fetch = async (url, options = {}) => {
+      if (String(url).endsWith('/images/tasks')) return new Response(JSON.stringify({ result_url: 'https://kunpoapiimg.ziy.cc/output/repair.png?token=temporary', task_id: 'redirect-repair' }), { status: 200 });
+      seen.push({ url: String(url), redirect: options.redirect });
+      if (options.redirect !== 'error') throw new TypeError('fetch must not be allowed to follow redirects in this test');
+      const error = new TypeError('redirect not allowed'); error.name = 'TypeError'; throw error;
+    };
+    await assert.rejects(repairImage({ configured: true, baseUrl: 'https://example.test', imageModel: 'Image-GPT2', mode: 'gateway' }, {
+      mode: 'regenerate', prompt: 'repair', sourcePath: source, overlayPath: source, componentBoardPath: source, size: '128x64', maxReferenceImages: 6
+    }), /Unable to snapshot the transient Kunpo image/);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].redirect, 'error');
+  } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('snapshot download rejects bodies declared larger than the 25MB limit', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-provider-oversize-'));
+  const originalFetch = global.fetch;
+  try {
+    const source = path.join(root, 'source.png'); await fs.writeFile(source, pngHeader(128, 64));
+    global.fetch = async (url) => String(url).endsWith('/images/tasks')
+      ? new Response(JSON.stringify({ result_url: 'https://kunpoapiimg.ziy.cc/output/repair.png?token=temporary', task_id: 'oversize-repair' }), { status: 200 })
+      : new Response(pngHeader(128, 64), { status: 200, headers: { 'content-type': 'image/png', 'content-length': String(26 * 1024 * 1024) } });
+    await assert.rejects(repairImage({ configured: true, baseUrl: 'https://example.test', imageModel: 'Image-GPT2', mode: 'gateway' }, {
+      mode: 'regenerate', prompt: 'repair', sourcePath: source, overlayPath: source, componentBoardPath: source, size: '128x64', maxReferenceImages: 6
+    }), /25MB snapshot limit/);
+  } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
+});

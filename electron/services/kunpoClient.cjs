@@ -255,8 +255,17 @@ async function transientImageSnapshot(url, id, requestedSize) {
     if (!match) throw Object.assign(new Error('Kunpo returned an unsupported inline image payload.'), { code: 'TRANSIENT_IMAGE_UNSUPPORTED' });
     bytes = Buffer.from(match[2], 'base64');
   } else if (location.protocol === 'https:' && location.hostname === 'kunpoapiimg.ziy.cc') {
-    const response = await fetch(url);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120000);
+    let response;
+    try {
+      response = await fetch(url, { redirect: 'error', signal: controller.signal });
+    } catch (error) {
+      throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (${error?.name === 'AbortError' ? 'timeout after 120s' : error?.message || 'fetch failed'}).`), { code: 'TRANSIENT_IMAGE_DOWNLOAD_FAILED' });
+    } finally { clearTimeout(timer); }
     if (!response.ok) throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (HTTP ${response.status}).`), { code: 'TRANSIENT_IMAGE_DOWNLOAD_FAILED' });
+    const contentLength = Number(response.headers.get('content-length'));
+    if (Number.isFinite(contentLength) && contentLength > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image exceeds the 25MB snapshot limit.'), { code: 'TRANSIENT_IMAGE_SIZE_INVALID' });
     bytes = Buffer.from(await response.arrayBuffer());
   } else {
     const error = new Error(`Kunpo returned an untrusted image location (${JSON.stringify(location)}). The result was not fetched or persisted.`);
