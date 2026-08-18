@@ -27,6 +27,33 @@ function pixelRect(bbox, width, height) {
   return { left, top, width: Math.max(1, Math.round((x + w) * width) - left), height: Math.max(1, Math.round((y + h) * height) - top) };
 }
 
+function normalizedBbox(bbox, width, height) {
+  if (!Array.isArray(bbox) || bbox.length !== 4 || bbox.some((value) => !Number.isFinite(Number(value)))) return null;
+  let [x, y, w, h] = bbox.map(Number);
+  if ([x, y, w, h].some((value) => value > 1)) {
+    x /= width; w /= width; y /= height; h /= height;
+  }
+  x = Math.max(0, Math.min(1, x)); y = Math.max(0, Math.min(1, y));
+  w = Math.max(0, Math.min(1 - x, w)); h = Math.max(0, Math.min(1 - y, h));
+  if (w <= 0 || h <= 0) return null;
+  return [x, y, w, h];
+}
+
+function normalizeSemanticEvidence(semantic = {}, width, height) {
+  const normalizeFindings = (findings) => (Array.isArray(findings) ? findings : []).map((finding) => {
+    const bbox = normalizedBbox(finding?.bbox, width, height);
+    if (!bbox) return { ...finding, bbox: undefined, bbox_normalization: 'invalid-omitted' };
+    const changed = JSON.stringify(bbox) !== JSON.stringify(finding.bbox);
+    return { ...finding, bbox, ...(changed ? { source_bbox: finding.bbox, bbox_normalization: 'pixel-to-normalized-or-clamped' } : { bbox_normalization: 'already-normalized' }) };
+  });
+  return {
+    ...semantic,
+    suspected_ui_regions: normalizeFindings(semantic.suspected_ui_regions),
+    text_like_regions: normalizeFindings(semantic.text_like_regions),
+    coordinate_space: 'normalized-0-1'
+  };
+}
+
 async function regionMetrics(bytes, rect) {
   const { data, info } = await sharp(bytes).extract(rect).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const pixels = info.width * info.height;
@@ -79,7 +106,9 @@ async function writeReviewOverlay(projectPath, screenId, imagePath, contract, se
     return `<rect x="${rect.left}" y="${rect.top}" width="${rect.width}" height="${rect.height}" fill="rgba(0,170,255,.12)" stroke="#00d9ff" stroke-width="3"/><rect x="${rect.left}" y="${rect.top}" width="${Math.min(rect.width, 220)}" height="28" fill="rgba(0,0,0,.78)"/><text x="${rect.left + 8}" y="${rect.top + 20}" fill="#fff" font-family="sans-serif" font-size="16">${escapeXml(region.slot_id)}</text>`;
   }).join('');
   const findings = [...(semantic.suspected_ui_regions || []), ...(semantic.text_like_regions || [])].map((finding) => {
-    const rect = pixelRect(finding.bbox, width, height);
+    const bbox = normalizedBbox(finding.bbox, width, height);
+    if (!bbox) return '';
+    const rect = pixelRect(bbox, width, height);
     return `<rect x="${rect.left}" y="${rect.top}" width="${rect.width}" height="${rect.height}" fill="rgba(255,0,70,.1)" stroke="#ff1744" stroke-width="3" stroke-dasharray="8 5"/><text x="${rect.left + 6}" y="${Math.max(18, rect.top - 5)}" fill="#ff1744" font-family="sans-serif" font-size="15">${escapeXml(finding.type || 'semantic')}</text>`;
   }).join('');
   const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="rgba(0,0,0,.18)"/>${regions}${findings}</svg>`);
@@ -122,4 +151,4 @@ async function writeRepairMask(projectPath, screenId, task, contract, width, hei
   return { path: relative, hash: hashBuffer(output), width, height };
 }
 
-module.exports = { METRIC_THRESHOLDS, computeDeterministicMetrics, hashBuffer, safePath, writeComponentBoard, writeRepairMask, writeReviewOverlay };
+module.exports = { METRIC_THRESHOLDS, computeDeterministicMetrics, hashBuffer, normalizeSemanticEvidence, safePath, writeComponentBoard, writeRepairMask, writeReviewOverlay };

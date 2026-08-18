@@ -121,3 +121,21 @@ test('repairImage submits distinct inpaint and regenerate payloads with real evi
     assert.equal(bodies[1].operation, undefined); assert.equal(bodies[1].images.length, 3);
   } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
 });
+
+test('repairImage snapshots signed Kunpo CDN results instead of persisting transient URLs', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-provider-snapshot-'));
+  const originalFetch = global.fetch;
+  try {
+    const source = path.join(root, 'source.png'); await fs.writeFile(source, pngHeader(128, 64));
+    global.fetch = async (url) => String(url).endsWith('/images/tasks')
+      ? new Response(JSON.stringify({ result_url: 'https://kunpoapiimg.ziy.cc/output/repair.png?token=temporary', task_id: 'signed-repair' }), { status: 200 })
+      : new Response(pngHeader(128, 64), { status: 200, headers: { 'content-type': 'image/png' } });
+    const result = await repairImage({ configured: true, baseUrl: 'https://example.test', imageModel: 'Image-GPT2', mode: 'gateway' }, {
+      mode: 'regenerate', prompt: 'repair', sourcePath: source, overlayPath: source, componentBoardPath: source, size: '128x64', maxReferenceImages: 6
+    });
+    assert.equal(result.storageMode, 'inline_snapshot');
+    assert.equal(result.remoteOnly, false);
+    assert.match(result.url, /^data:image\/png;base64,/);
+    assert.equal(result.source_location.has_query, true);
+  } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
+});
