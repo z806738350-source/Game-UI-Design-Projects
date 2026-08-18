@@ -17,7 +17,7 @@ These review units follow the dependency order required by `Game-UI-Design-Copil
 | Style Contract 2.0 (P0) | Merged | GitHub PR #11; executable style schema with numeric bounds, required semantic colors, vague-word blacklist, and failing tests; `main` merge `e0b233e`. |
 | PR-8B | Merged (GitHub #12, main@6d01004) | Fixture E2E evidence chain, model lineage, evidence tiering, CI additions (fixture job, gitleaks, macOS), reserved + Chinese font samples; runbook `docs/baseline/pr8-golden-release.md`. |
 | PR-8C | Merged (GitHub #13, main@f404378) | Five samples APPROVED by designer signoff (韩枫，UI设计师；all criteria 5/5); index derived `released`; execution docs, README/CHANGELOG, signoff archive. |
-| Release 0.2.0 | Ready to release | Version bump `0.2.0-alpha.1 → 0.2.0`, CHANGELOG formal entry, README/milestones updated; tag and GitHub Release to be created from the verified main commit after merge. |
+| Release 0.2.0 | Released (tag v0.2.0, GitHub Release) | Version bump `0.2.0-alpha.1 → 0.2.0`, CHANGELOG formal entry, README/milestones updated; tag and GitHub Release created from merged main@d907c05 (PR #14). |
 
 1. **Release correction, CI, and baseline** — mark the current build as an architecture alpha, preserve the independent audit, add PR/main CI, and freeze reproducible facts without claiming formal acceptance.
 2. **Composition output and renderers** — persist real preview/final PNG output; implement exact, nine-slice, and vector-token renderer dispatch; export the verified final artifact.
