@@ -11,6 +11,6 @@ Status: APPROVED
 
 Required: every score ≥ 4, no unresolved blocker/critical/major issue, signer name, and date.
 
-Signer: 人工审核员
+Signer: 韩枫（UI设计师）
 Date: 2026-08-18
 Decision: APPROVED
