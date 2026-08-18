@@ -8,8 +8,8 @@
 | --- | --- | --- |
 | PR-8A | 真实 E2E 暴露的运行时修复：signed COS URL 快照、语义置信度分级、BBox 归一化、字体颜色与安全处理 | 已合并（GitHub #9、#10） |
 | Style Contract 2.0（P0） | JSON schema、数值类型/单位/上下界、必填语义色与字体效果、模糊词黑名单（根级 `negative_style_constraints` 豁免）、失败测试 | 已合并（GitHub #11，main@e0b233e） |
-| PR-8B | fixture E2E 替换合成测试、Model Lineage、证据分层与路径归一化、index 派生、CI（fixture job、gitleaks 秘密扫描、macOS validate）、保留样本与中文字体样本 | 本分支 `codex/audit-pr8b-fixture-e2e-ci` |
-| PR-8C | 设计师签核、执行级文档、README/CHANGELOG/版本、最终发布证据 | 签核需人工，文档随本基线更新 |
+| PR-8B | fixture E2E 替换合成测试、Model Lineage、证据分层与路径归一化、index 派生、CI（fixture job、gitleaks 秘密扫描、macOS validate）、保留样本与中文字体样本 | 已合并（GitHub #12，main@6d01004） |
+| PR-8C | 设计师签核、执行级文档、README/CHANGELOG/版本、最终发布证据 | 签核已完成（`codex/audit-pr8c-docs-signoff`）：五组样本均 APPROVED（各项 ≥ 4、签名与日期齐备），导出归档于 `release-evidence/golden-samples/signoff-results-2026-08-18.json` |
 
 ## 2. 样本集合与阈值固定
 
@@ -60,3 +60,5 @@ Git 保留：`inputs/`（可复现 fixture）、`asset-manifest.json`、`evidenc
 ## 7. 发布门禁
 
 正式发布必须满足：五组样本 `pipeline-passed`、fixture E2E 全绿、三组校准样本设计师真人签核（每项 ≥4 分、无未决 blocker/critical/major、签名与日期）、PR-8B/8C 独立 Code Review 通过。版本保持 `0.2.0-alpha.1` prerelease，直到门禁全部关闭。
+
+当前状态（2026-08-18）：五组样本 pipeline-passed，fixture E2E 与单元测试全绿，五组签核均 APPROVED，`index.json` 派生为 `released`；PR-8B 已合并（#12），PR-8C 随签核记录提交中。门禁关闭后的正式版本提升（恢复 `0.2.0`）与发布通道在 PR-8C 合并后由负责人确认。

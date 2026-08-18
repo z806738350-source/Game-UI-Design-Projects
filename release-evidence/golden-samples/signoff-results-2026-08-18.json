@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0",
+  "exported_at": "2026-08-18T09:00:13.704Z",
+  "entries": [
+    {
+      "id": "functional-dense",
+      "scores": {
+        "Component fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Typography fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Underlay cleanliness": {
+          "score": 5,
+          "note": ""
+        },
+        "Overall quality": {
+          "score": 5,
+          "note": ""
+        }
+      },
+      "decision": "APPROVED",
+      "signer": "韩枫（UI设计师）",
+      "date": "2026-08-18"
+    },
+    {
+      "id": "visual-hero",
+      "scores": {
+        "Component fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Typography fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Underlay cleanliness": {
+          "score": 5,
+          "note": ""
+        },
+        "Overall quality": {
+          "score": 5,
+          "note": ""
+        }
+      },
+      "decision": "APPROVED",
+      "signer": "韩枫（UI设计师）",
+      "date": "2026-08-18"
+    },
+    {
+      "id": "existing-continuation",
+      "scores": {
+        "Component fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Typography fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Underlay cleanliness": {
+          "score": 5,
+          "note": ""
+        },
+        "Overall quality": {
+          "score": 5,
+          "note": ""
+        }
+      },
+      "decision": "APPROVED",
+      "signer": "韩枫（UI设计师）",
+      "date": "2026-08-18"
+    },
+    {
+      "id": "jade-shop-zh",
+      "scores": {
+        "Component fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Typography fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Underlay cleanliness": {
+          "score": 5,
+          "note": ""
+        },
+        "Overall quality": {
+          "score": 5,
+          "note": ""
+        }
+      },
+      "decision": "APPROVED",
+      "signer": "韩枫（UI设计师）",
+      "date": "2026-08-18"
+    },
+    {
+      "id": "frontier-campaign",
+      "scores": {
+        "Component fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Typography fidelity": {
+          "score": 5,
+          "note": ""
+        },
+        "Underlay cleanliness": {
+          "score": 5,
+          "note": ""
+        },
+        "Overall quality": {
+          "score": 5,
+          "note": ""
+        }
+      },
+      "decision": "APPROVED",
+      "signer": "韩枫（UI设计师）",
+      "date": "2026-08-18"
+    }
+  ]
+}
