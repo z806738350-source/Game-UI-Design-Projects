@@ -66,4 +66,22 @@ test('final rendering blocks missing font files instead of falling back', async 
   }), (error) => error.code === 'FONT_ACTUAL_LOAD_FAILED');
 });
 
+test('solid typography fill colors the glyph pixels instead of leaving the black source mask', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-type-color-'));
+  try {
+    const relative = 'style/fonts/exact.ttf'; const targetPath = path.join(root, relative);
+    await fs.mkdir(path.dirname(targetPath), { recursive: true }); await fs.copyFile(systemFont, targetPath);
+    const inspected = await inspectFont(targetPath);
+    const rendered = await renderTextLayer({
+      projectPath: root, target: { width: 240, height: 80 }, resolveProjectPath, hashBuffer,
+      layer: { control_id: 'label', font_role: 'body', content: 'WHITE', composition_mode: 'final', font_path: relative, font_hash: inspected.file_hash, font_family: inspected.family_name, postscript_name: inspected.postscript_name, font_license_status: 'confirmed', font_license_confirmation: { confirmed: true }, fidelity_mode: 'exact', exact_confirmation: { confirmed: true }, typography: { size: 28, fill: '#ffffff' } }
+    });
+    const { data, info } = await sharp(rendered.input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const visible = [];
+    for (let index = 0; index < data.length; index += info.channels) if (data[index + 3] > 128) visible.push(data[index]);
+    assert.ok(visible.length > 0);
+    assert.ok(visible.reduce((sum, value) => sum + value, 0) / visible.length > 240);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
 test.after(async () => { await fs.rm(fontconfigRoot, { recursive: true, force: true }); });

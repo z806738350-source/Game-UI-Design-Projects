@@ -15,7 +15,7 @@ const { generateUnderlayContract } = require('./underlayContract.cjs');
 const { writeLayoutGuide } = require('./layoutGuideRenderer.cjs');
 const { buildUnderlayCritique, reviewGate } = require('./underlayCritique.cjs');
 const { executeRepairTask, planRepairTask } = require('./underlayRepair.cjs');
-const { computeDeterministicMetrics, hashBuffer: hashEvidence, safePath, writeComponentBoard, writeRepairMask, writeReviewOverlay } = require('./underlayReview.cjs');
+const { computeDeterministicMetrics, hashBuffer: hashEvidence, normalizeSemanticEvidence, safePath, writeComponentBoard, writeRepairMask, writeReviewOverlay } = require('./underlayReview.cjs');
 const { createCompositionManifest } = require('./compositor.cjs');
 const { renderComposition, verifyCompositionOutput } = require('./compositionRenderer.cjs');
 const { finalApprovalGate, runFidelityChecks } = require('./fidelity.cjs');
@@ -49,6 +49,31 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const normalized = await sharp(bytes).png().toBuffer({ resolveWithObject: true });
     await fs.writeFile(target, normalized.data);
     return { path: relative, absolute_path: target, hash: hashEvidence(normalized.data), width: normalized.info.width, height: normalized.info.height };
+  }
+
+  async function persistCritiqueResponse(project, resolved, underlayId, input) {
+    const safeId = String(underlayId).replace(/[^A-Za-z0-9_-]/g, '-');
+    const relative = `screens/${project.screen_id}/reviews/${safeId}-semantic-response.json`;
+    const target = safePath(resolved.workspacePath, relative);
+    const payload = {
+      schema_version: '1.0',
+      source: {
+        underlay_id: underlayId,
+        prompt_hash: input.promptHash,
+        model: input.model,
+        input_hashes: input.inputHashes
+      },
+      provider: input.envelope?.provider || { model: input.model },
+      attempt: input.envelope?.attempt || 1,
+      raw_text: input.envelope?.raw_text || JSON.stringify(input.semantic),
+      parsed: input.semantic,
+      normalized: input.normalizedSemantic,
+      captured_at: new Date().toISOString()
+    };
+    const bytes = Buffer.from(`${JSON.stringify(payload, null, 2)}\n`);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, bytes);
+    return { path: relative, hash: hashEvidence(bytes), byte_length: bytes.length, media_type: 'application/json' };
   }
 
   function inputSource(project) {
@@ -502,7 +527,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const project = await openProject(projectId);
     const current = project.artifacts.fontManifest;
     if (!current) throw new Error('Import a font before confirming its usage.');
-    const confirmed = confirmFontUsageContract(current, input);
+    const confirmed = confirmFontUsageContract(current, input, {
+      confirmedBy: String(input.confirmedBy || 'ui-designer').trim() || 'ui-designer'
+    });
     await invalidateArtifacts(projectId, 'font-manifest', 'font_usage_confirmed');
     await projectStore.saveArtifact(projectId, 'font-manifest', {
       ...confirmed,
@@ -582,9 +609,29 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const componentBoard = await writeComponentBoard(resolved.workspacePath, project.screen_id, project.artifacts.componentContract);
     const prompt = underlayCritiquePrompt(contract, project.artifacts.componentContract);
     const model = kunpoConfig.critiqueModel || kunpoConfig.visionModel;
-    const semantic = await kunpoClient.requestJson({ ...kunpoConfig, visionModel: model }, { prompt, imagePaths: [underlay.absolute_path, safePath(resolved.workspacePath, overlayInput.path), safePath(resolved.workspacePath, componentBoard.path)] });
+    const semanticEnvelope = await kunpoClient.requestJson({ ...kunpoConfig, visionModel: model }, {
+      prompt,
+      imagePaths: [underlay.absolute_path, safePath(resolved.workspacePath, overlayInput.path), safePath(resolved.workspacePath, componentBoard.path)],
+      captureRaw: true
+    });
+    const captured = semanticEnvelope?.capture_version === '1.0';
+    const rawSemantic = captured ? semanticEnvelope.value : semanticEnvelope;
+    const semantic = normalizeSemanticEvidence(rawSemantic, underlay.width, underlay.height);
+    const promptHash = hashEvidence(Buffer.from(prompt));
+    const semanticRaw = await persistCritiqueResponse(project, resolved, underlayId, {
+      semantic: rawSemantic,
+      normalizedSemantic: semantic,
+      envelope: captured ? semanticEnvelope : undefined,
+      promptHash,
+      model,
+      inputHashes: {
+        underlay: underlay.hash,
+        overlay: overlayInput.hash,
+        component_board: componentBoard.hash
+      }
+    });
     const annotatedOverlay = await writeReviewOverlay(resolved.workspacePath, project.screen_id, underlay.absolute_path, contract, semantic, `${underlayId.replace(/[^A-Za-z0-9_-]/g, '-')}-review-overlay.png`);
-    const evidence = { underlay, overlay: overlayInput, annotated_overlay: annotatedOverlay, component_board: componentBoard, prompt_hash: hashEvidence(Buffer.from(prompt)), model };
+    const evidence = { underlay, overlay: overlayInput, annotated_overlay: annotatedOverlay, component_board: componentBoard, semantic_raw: semanticRaw, prompt_hash: promptHash, model };
     const critique = buildUnderlayCritique({ screenId: project.screen_id, underlayId, contract, deterministic, semantic, evidence, strict: true });
     await invalidateArtifacts(projectId, 'underlay-critique', 'underlay_recritiqued');
     await projectStore.saveArtifact(projectId, 'underlay-critique', critique);
@@ -621,7 +668,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const repairedId = `${critique.source.underlay}-repair-v${task.attempt}`;
       const repaired = await materializeUnderlay(project, resolved, { id: repairedId, image_url: result.image_url });
       const currentResults = project.artifacts.visualResults;
-      const variation = { id: repairedId, strategy: 'underlay-repair', image_url: result.image_url, image_path: repaired.path, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay, repair_task_id: task.id, repair_mode: task.repair_mode, status: 'generated', created_at: new Date().toISOString(), canvas_spec: project.canvas_spec };
+      const variation = { id: repairedId, strategy: 'underlay-repair', ...(result.storageMode === 'inline_snapshot' ? {} : { image_url: result.image_url }), image_path: repaired.path, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay, repair_task_id: task.id, repair_mode: task.repair_mode, storage_mode: result.storageMode, status: 'generated', created_at: new Date().toISOString(), canvas_spec: project.canvas_spec };
       await invalidateArtifacts(projectId, 'underlay-critique', 'underlay_repaired');
       await projectStore.saveArtifact(projectId, 'visual-results', { ...currentResults, version: Number(currentResults.version || 1) + 1, status: 'generated', variations: [...(currentResults.variations || []), variation] });
       await projectStore.saveArtifact(projectId, 'underlay-repair-task', { ...task, status: 'completed', completed_at: new Date().toISOString(), output: { underlay_id: repairedId, path: repaired.path, hash: repaired.hash, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay } });

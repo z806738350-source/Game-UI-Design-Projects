@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const sharp = require('sharp');
-const { computeDeterministicMetrics, writeComponentBoard, writeRepairMask, writeReviewOverlay } = require('./underlayReview.cjs');
+const { computeDeterministicMetrics, normalizeSemanticEvidence, writeComponentBoard, writeRepairMask, writeReviewOverlay } = require('./underlayReview.cjs');
 
 test('real pixels produce deterministic slot metrics, review overlay, component board, and repair mask', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-review-'));
@@ -32,4 +32,19 @@ test('real pixels produce deterministic slot metrics, review overlay, component 
     const mask = await writeRepairMask(root, 'main', { id: 'repair-1', target_regions: ['busy'], preserve_regions: [] }, contract, width, height);
     const maskStats = await sharp(path.join(root, mask.path)).stats(); assert.ok(maskStats.channels[0].max > maskStats.channels[0].min);
   } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('semantic review normalizes pixel-space model boxes before overlay rendering', () => {
+  const normalized = normalizeSemanticEvidence({
+    confidence: 0.97,
+    suspected_ui_regions: [
+      { type: 'row-like', bbox: [40, 320, 280, 56], confidence: 0.7 },
+      { type: 'clamped', bbox: [980, 980, 100, 100], confidence: 0.8 },
+      { type: 'invalid', bbox: ['bad', 0, 1, 1], confidence: 0.3 }
+    ]
+  }, 1024, 1024);
+  assert.deepEqual(normalized.suspected_ui_regions[0].bbox, [40 / 1024, 320 / 1024, 280 / 1024, 56 / 1024]);
+  assert.deepEqual(normalized.suspected_ui_regions[1].bbox, [980 / 1024, 980 / 1024, 44 / 1024, 44 / 1024]);
+  assert.equal(normalized.suspected_ui_regions[2].bbox, undefined);
+  assert.equal(normalized.coordinate_space, 'normalized-0-1');
 });

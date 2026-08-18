@@ -160,8 +160,9 @@ function underlayCritiquePrompt(contract, componentContract) {
   return `You are an independent game UI underlay reviewer. Three images are attached in order: raw Underlay, labeled Review Overlay, and approved component board. Inspect the raw pixels before any shared UI is composed.\n` +
     `Underlay contract: ${JSON.stringify(contract)}\nComponent thumbnails and categories: ${JSON.stringify((componentContract?.families || []).map((family) => ({ id: family.id, category: family.category, intrinsic_size: family.intrinsic_size })))}\n` +
     `Return one JSON object with confidence number 0..1, suspected_ui_regions[], text_like_regions[], and slot_checks[]. ` +
-    `Every region needs bbox [x,y,w,h], type, confidence, and reason. Every slot check needs slot_id, subject_overlap boolean, background_busyness, contrast_conflict, hard_edge_crossing, and ui_like_contamination{detected,type,confidence}. ` +
-    `Scan the whole canvas and every reserved slot. Treat button/tab/navigation silhouettes, fake text or numbers, subject/weapon/building crossings, and visually busy slot backgrounds as evidence. Do not return only a score.`;
+    `Every region needs bbox [x,y,w,h] in normalized 0..1 canvas coordinates (never pixels), type, confidence, and reason. Every slot check needs slot_id, subject_overlap boolean, subject_overlap_confidence number 0..1, background_busyness, contrast_conflict, hard_edge_crossing, and ui_like_contamination{detected,type,confidence}. ` +
+    `Scan the whole canvas and every reserved slot. Treat button/tab/navigation silhouettes, fake text or numbers, a dominant foreground character/weapon/main focal silhouette crossing a slot, and visually busy slot backgrounds as evidence. ` +
+    `Set subject_overlap=false for ordinary background architecture, stairs, railings, floor, sky, clouds, ambient props, or perspective lines; report those only as busyness, contrast, hard-edge, or UI-like findings when applicable. Do not return only a score.`;
 }
 
 function underlayRepairPrompt(task, contract, critique) {

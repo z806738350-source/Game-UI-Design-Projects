@@ -33,14 +33,50 @@ test('critique blocks known UI contamination and bounded repair uses provider ca
   assert.throws(() => planRepairTask(critique, { supports_inpaint: false }, { attempt: 3, maxAutomaticAttempts: 2 }), /limit reached/);
 });
 
-test('semantic busyness, contrast, hard-edge, and low confidence become blocking issues', () => {
+test('corroborated semantic busyness, contrast, hard-edge, and low confidence become blocking issues', () => {
   const contract = contractFixture();
   const evidence = { underlay: { hash: 'h' }, overlay: { hash: 'o' }, component_board: { hash: 'c' } };
-  const critique = buildUnderlayCritique({ screenId: 'main', underlayId: 'u2', contract, evidence, semantic: { confidence: 0.4, text_like_regions: [{ type: 'fake-text', confidence: 0.9, bbox: [0.2, 0.8, 0.2, 0.1] }], slot_checks: [{ slot_id: 'bottom-primary', subject_overlap: true, background_busyness: true, contrast_conflict: true, hard_edge_crossing: true }] } });
+  const critique = buildUnderlayCritique({ screenId: 'main', underlayId: 'u2', contract, evidence, deterministic: { thresholds: { edge_density: 0.22, local_contrast: 0.32, color_complexity: 0.42, highlight_density: 0.18, hard_edge_crossing: 0.2 }, slots: { 'bottom-primary': { edge_density: 0.3, local_contrast: 0.4, color_complexity: 0.5, highlight_density: 0.17, hard_edge_crossing: 0.12 } } }, semantic: { confidence: 0.4, text_like_regions: [{ type: 'fake-text', confidence: 0.9, bbox: [0.2, 0.8, 0.2, 0.1] }], slot_checks: [{ slot_id: 'bottom-primary', subject_overlap: true, subject_overlap_confidence: 0.92, background_busyness: true, contrast_conflict: true, hard_edge_crossing: true }] } });
   assert.equal(critique.result, 'manual-review');
   assert.equal(critique.manual_review.required, true);
   assert.deepEqual(new Set(critique.issues.map((item) => item.type)), new Set(['text-like', 'subject-overlap', 'background-busyness', 'contrast-conflict', 'hard-edge-crossing', 'low-critique-confidence']));
   assert.equal(reviewGate(critique).passed, false);
+});
+
+test('low-confidence subject overlap is advisory while a high-confidence focal crossing blocks', () => {
+  const contract = contractFixture(); const evidence = { underlay: { hash: 'h' }, overlay: { hash: 'o' }, component_board: { hash: 'c' } };
+  const base = { screenId: 'main', contract, evidence, deterministic: { thresholds: { edge_density: 0.22, local_contrast: 0.32, color_complexity: 0.42, highlight_density: 0.18, hard_edge_crossing: 0.2 }, slots: { 'bottom-primary': { edge_density: 0, local_contrast: 0, color_complexity: 0, highlight_density: 0, hard_edge_crossing: 0 } } } };
+  const advisory = buildUnderlayCritique({ ...base, underlayId: 'advisory', semantic: { confidence: 0.95, slot_checks: [{ slot_id: 'bottom-primary', subject_overlap: true, subject_overlap_confidence: 0.55 }] } });
+  const blocking = buildUnderlayCritique({ ...base, underlayId: 'blocking', semantic: { confidence: 0.95, slot_checks: [{ slot_id: 'bottom-primary', subject_overlap: true, subject_overlap_confidence: 0.92 }] } });
+  assert.equal(reviewGate(advisory).passed, true);
+  assert.equal(reviewGate(blocking).passed, false);
+});
+
+test('semantic hard-edge and low-confidence architecture findings do not block when pixels contradict them', () => {
+  const contract = contractFixture();
+  const evidence = { underlay: { hash: 'h' }, overlay: { hash: 'o' }, component_board: { hash: 'c' } };
+  const critique = buildUnderlayCritique({
+    screenId: 'main', underlayId: 'clean', contract, evidence,
+    deterministic: { thresholds: { edge_density: 0.22, local_contrast: 0.32, color_complexity: 0.42, highlight_density: 0.18, hard_edge_crossing: 0.2 }, slots: { 'bottom-primary': { edge_density: 0, local_contrast: 0.03, color_complexity: 0.04, highlight_density: 0, hard_edge_crossing: 0 } } },
+    semantic: { confidence: 0.97, suspected_ui_regions: [{ type: 'architectural-panel', confidence: 0.63, bbox: [0.2, 0.2, 0.2, 0.2] }], text_like_regions: [], slot_checks: [{ slot_id: 'bottom-primary', subject_overlap: false, background_busyness: 0.55, contrast_conflict: true, hard_edge_crossing: true, ui_like_contamination: { detected: false, confidence: 0.98 } }] }
+  });
+  assert.equal(critique.result, 'passed');
+  assert.equal(reviewGate(critique).passed, true);
+  assert.ok(critique.issues.every((item) => item.severity === 'minor'));
+});
+
+test('missing or null confidence fails closed instead of silently downgrading findings', () => {
+  const contract = contractFixture();
+  const evidence = { underlay: { hash: 'h' }, overlay: { hash: 'o' }, component_board: { hash: 'c' } };
+  const base = { screenId: 'main', contract, evidence, deterministic: { thresholds: { edge_density: 0.22, local_contrast: 0.32, color_complexity: 0.42, highlight_density: 0.18, hard_edge_crossing: 0.2 }, slots: { 'bottom-primary': { edge_density: 0, local_contrast: 0, color_complexity: 0, highlight_density: 0, hard_edge_crossing: 0 } } } };
+  const missing = buildUnderlayCritique({ ...base, underlayId: 'missing-confidence', semantic: { confidence: 0.95, suspected_ui_regions: [{ type: 'ui-like', bbox: [0.2, 0.2, 0.2, 0.2] }], text_like_regions: [], slot_checks: [] } });
+  const uiIssue = missing.issues.find((item) => item.type === 'ui-like');
+  assert.equal(uiIssue.severity, 'major');
+  assert.equal(reviewGate(missing).passed, false);
+  const nullSubject = buildUnderlayCritique({ ...base, underlayId: 'null-subject-confidence', semantic: { confidence: 0.95, suspected_ui_regions: [], text_like_regions: [], slot_checks: [{ slot_id: 'bottom-primary', subject_overlap: true, subject_overlap_confidence: null }] } });
+  const subjectIssue = nullSubject.issues.find((item) => item.type === 'subject-overlap');
+  assert.equal(subjectIssue.severity, 'critical');
+  assert.equal(reviewGate(nullSubject).passed, false);
 });
 
 test('strict critique cannot pass with only an Underlay and no overlay/component evidence', () => {

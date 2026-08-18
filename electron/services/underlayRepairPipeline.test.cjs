@@ -37,6 +37,10 @@ async function runRepair(supportsInpaint) {
     assert.equal(critiqueInputs.length, 3);
     assert.equal(result.artifacts.underlayCritique.source.underlay, 'parent-repair-v1');
     assert.equal(result.artifacts.underlayCritique.result, 'passed');
+    assert.match(result.artifacts.underlayCritique.evidence.semantic_raw.hash, /^sha256:[a-f0-9]{64}$/);
+    const rawResponse = JSON.parse(await fs.readFile(path.join(result.workspacePath, result.artifacts.underlayCritique.evidence.semantic_raw.path), 'utf8'));
+    assert.equal(rawResponse.source.underlay_id, 'parent-repair-v1');
+    assert.equal(rawResponse.parsed.confidence, 0.95);
     assert.equal(result.artifacts.underlayRepairTask.status, 'completed');
     assert.equal(result.artifacts.underlayRepairTask.output.parent_underlay_id, 'parent');
     assert.equal(result.artifacts.visualResults.variations.length, 2);

@@ -88,7 +88,7 @@ async function requestArtifact(config, { kind, prompt, imagePaths = [], id, sour
   throw new Error(`结构化结果连续 3 次未通过自动修复：${lastError?.message || '未知格式错误'}`);
 }
 
-async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys = [] }) {
+async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys = [], captureRaw = false }) {
   if (!config.configured) throw new Error('Kunpo is not configured. Set a Gateway URL or local API URL + key.');
   const images = await Promise.all(imagePaths.filter(Boolean).map(fileDataUrl));
   let feedback = '';
@@ -112,6 +112,19 @@ async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys
       if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('result must be a JSON object');
       const missing = requiredStringKeys.filter((key) => typeof value[key] !== 'string' || !value[key].trim());
       if (missing.length) throw new Error(`missing required text: ${missing.join(', ')}`);
+      if (captureRaw) {
+        return {
+          capture_version: '1.0',
+          value,
+          raw_text: text,
+          attempt,
+          provider: {
+            response_id: typeof payload?.id === 'string' ? payload.id : undefined,
+            model: typeof payload?.model === 'string' ? payload.model : config.visionModel,
+            created: payload?.created
+          }
+        };
+      }
       return value;
     } catch (error) {
       lastError = error;
@@ -210,9 +223,7 @@ async function validateGeneratedCanvas(url, requestedSize) {
 }
 
 async function permanentImageResult(url, id, requestedSize) {
-  if (!isTrustedKunpoCdnUrl(url)) {
-    throw new Error('Kunpo returned an image URL that is not a trusted permanent CDN asset. The result was not persisted.');
-  }
+  if (!isTrustedKunpoCdnUrl(url)) throw new Error('Kunpo returned an image URL that is not a trusted permanent CDN asset. The result was not persisted.');
   const metadata = await validateGeneratedCanvas(url, requestedSize);
   return {
     url,
@@ -225,6 +236,57 @@ async function permanentImageResult(url, id, requestedSize) {
     trustedPermanentCdn: true,
     width: metadata?.width,
     height: metadata?.height
+  };
+}
+
+function kunpoCdnLocation(url) {
+  if (String(url).startsWith('data:image/')) return { kind: 'inline-data' };
+  try {
+    const parsed = new URL(url);
+    return { kind: 'remote', protocol: parsed.protocol, hostname: parsed.hostname, pathname: parsed.pathname, has_query: Boolean(parsed.search), has_hash: Boolean(parsed.hash) };
+  } catch { return { kind: 'invalid' }; }
+}
+
+async function transientImageSnapshot(url, id, requestedSize) {
+  const location = kunpoCdnLocation(url);
+  let bytes;
+  if (location.kind === 'inline-data') {
+    const match = String(url).match(/^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/i);
+    if (!match) throw Object.assign(new Error('Kunpo returned an unsupported inline image payload.'), { code: 'TRANSIENT_IMAGE_UNSUPPORTED' });
+    bytes = Buffer.from(match[2], 'base64');
+  } else if (location.protocol === 'https:' && location.hostname === 'kunpoapiimg.ziy.cc') {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120000);
+    let response;
+    try {
+      response = await fetch(url, { redirect: 'error', signal: controller.signal });
+    } catch (error) {
+      throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (${error?.name === 'AbortError' ? 'timeout after 120s' : error?.message || 'fetch failed'}).`), { code: 'TRANSIENT_IMAGE_DOWNLOAD_FAILED' });
+    } finally { clearTimeout(timer); }
+    if (!response.ok) throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (HTTP ${response.status}).`), { code: 'TRANSIENT_IMAGE_DOWNLOAD_FAILED' });
+    const contentLength = Number(response.headers.get('content-length'));
+    if (Number.isFinite(contentLength) && contentLength > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image exceeds the 25MB snapshot limit.'), { code: 'TRANSIENT_IMAGE_SIZE_INVALID' });
+    bytes = Buffer.from(await response.arrayBuffer());
+  } else {
+    const error = new Error(`Kunpo returned an untrusted image location (${JSON.stringify(location)}). The result was not fetched or persisted.`);
+    error.code = 'UNTRUSTED_IMAGE_LOCATION';
+    throw error;
+  }
+  if (!bytes.length || bytes.length > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image is empty or exceeds the 25MB snapshot limit.'), { code: 'TRANSIENT_IMAGE_SIZE_INVALID' });
+  const metadata = imageMetadataFromBuffer(bytes);
+  if (!metadata) throw Object.assign(new Error('Transient Kunpo image is not a supported PNG, JPEG, or WebP bitmap.'), { code: 'TRANSIENT_IMAGE_DECODE_FAILED' });
+  const [expectedWidth, expectedHeight] = String(requestedSize || '').split('x').map(Number);
+  if (expectedWidth && expectedHeight) {
+    const expectedRatio = expectedWidth / expectedHeight; const actualRatio = metadata.width / metadata.height;
+    if (Math.abs(expectedRatio - actualRatio) / expectedRatio > 0.03) throw Object.assign(new Error(`生成结果比例为 ${metadata.width}:${metadata.height}，目标比例为 ${expectedWidth}:${expectedHeight}`), { code: 'TRANSIENT_IMAGE_RATIO_MISMATCH' });
+  }
+  return {
+    url: `data:${metadata.mime};base64,${bytes.toString('base64')}`,
+    task_id: id,
+    status: 'succeeded',
+    storageMode: 'inline_snapshot', storageProvider: 'local-materialization', storageDurability: 'materialize-immediately',
+    remoteOnly: false, trustedPermanentCdn: false, width: metadata.width, height: metadata.height,
+    source_location: location
   };
 }
 
@@ -252,7 +314,7 @@ async function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function generateImage(config, { prompt, imagePaths = [], size = '1536x864', model, maxReferenceImages = 6, operation = 'generate', maskPath }) {
+async function generateImage(config, { prompt, imagePaths = [], size = '1536x864', model, maxReferenceImages = 6, operation = 'generate', maskPath, snapshotTransient = false }) {
   if (!config.configured) throw new Error('Kunpo is not configured.');
   const selectedModel = model || config.imageModel;
   const paths = imagePaths.filter(Boolean);
@@ -275,7 +337,11 @@ async function generateImage(config, { prompt, imagePaths = [], size = '1536x864
     method: 'POST', headers: headers(config), body: JSON.stringify(body)
   }, 120000);
   const immediate = imageUrl(submitted.payload);
-  if (immediate) return permanentImageResult(immediate, taskId(submitted.payload, submitted.response), size);
+  if (immediate) return isTrustedKunpoCdnUrl(immediate)
+    ? permanentImageResult(immediate, taskId(submitted.payload, submitted.response), size)
+    : snapshotTransient
+      ? transientImageSnapshot(immediate, taskId(submitted.payload, submitted.response), size)
+      : permanentImageResult(immediate, taskId(submitted.payload, submitted.response), size);
   const id = taskId(submitted.payload, submitted.response);
   if (!id) throw new Error('Kunpo image submission returned no task id.');
   const failed = new Set(['failed', 'fail', 'error', 'cancelled', 'canceled', 'idle']);
@@ -289,7 +355,9 @@ async function generateImage(config, { prompt, imagePaths = [], size = '1536x864
       }, 30000);
       transientErrors = 0;
       const url = imageUrl(polled.payload);
-      if (url) return permanentImageResult(url, id, size);
+      if (url) return isTrustedKunpoCdnUrl(url)
+        ? permanentImageResult(url, id, size)
+        : snapshotTransient ? transientImageSnapshot(url, id, size) : permanentImageResult(url, id, size);
       const status = taskStatus(polled.payload);
       if (failed.has(status)) throw new Error(`Kunpo image task failed: ${status}`);
       if (['success', 'succeeded', 'completed'].includes(status)) throw new Error('Kunpo image task completed without an image URL.');
@@ -311,7 +379,8 @@ async function repairImage(config, input) {
     model: input.model,
     maxReferenceImages: input.maxReferenceImages,
     operation: mode === 'inpaint' ? 'inpaint' : 'generate',
-    maskPath: input.maskPath
+    maskPath: input.maskPath,
+    snapshotTransient: true
   });
 }
 

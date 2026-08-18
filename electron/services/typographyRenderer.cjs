@@ -24,7 +24,11 @@ async function colorize(text, typography, width, height) {
   if (typography.gradient) {
     return sharp(gradientSvg(width, height, typography.gradient)).composite([{ input: text, blend: 'dest-in' }]).png().toBuffer();
   }
-  return sharp(text).tint(typography.fill || '#ffffff').png().toBuffer();
+  return sharp({ create: { width, height, channels: 4, background: typography.fill || '#ffffff' } }).composite([{ input: text, blend: 'dest-in' }]).png().toBuffer();
+}
+
+async function coloredMask(mask, color, width, height) {
+  return sharp({ create: { width, height, channels: 4, background: color } }).composite([{ input: mask, blend: 'dest-in' }]).png().toBuffer();
 }
 
 async function alphaInkBounds(buffer, width, height) {
@@ -69,7 +73,8 @@ async function renderGlyphs(layer, target, fontfile, family) {
   const strokeWidth = Math.round(finite(stroke.width, 0, 0, 64));
   let glyphs = fill;
   if (strokeWidth > 0) {
-    const outline = await sharp(result.data).dilate(strokeWidth).tint(stroke.color || '#000000').png().toBuffer();
+    const outlineMask = await sharp(result.data).dilate(strokeWidth).png().toBuffer();
+    const outline = await coloredMask(outlineMask, stroke.color || '#000000', result.info.width, result.info.height);
     glyphs = await sharp({ create: { width: result.info.width, height: result.info.height, channels: 4, background: '#00000000' } }).composite([{ input: outline }, { input: fill }]).png().toBuffer();
   }
   const baselineOffset = Math.round(finite(typography.baseline_offset ?? typography.baselineOffset, 0, -target.height, target.height));
@@ -79,7 +84,7 @@ async function renderGlyphs(layer, target, fontfile, family) {
   const shadow = typography.shadow || {};
   if (shadow.enabled !== false && (shadow.color || shadow.blur || shadow.offset_x || shadow.offset_y)) {
     const blur = finite(shadow.blur, 0, 0, 64);
-    let shadowInput = sharp(result.data).tint(shadow.color || '#000000');
+    let shadowInput = sharp(await coloredMask(result.data, shadow.color || '#000000', result.info.width, result.info.height));
     if (blur > 0.3) shadowInput = shadowInput.blur(blur);
     overlays.push({
       input: await shadowInput.png().toBuffer(),
