@@ -8,8 +8,8 @@
 | --- | --- | --- |
 | PR-8A | 真实 E2E 暴露的运行时修复：signed COS URL 快照、语义置信度分级、BBox 归一化、字体颜色与安全处理 | 已合并（GitHub #9、#10） |
 | Style Contract 2.0（P0） | JSON schema、数值类型/单位/上下界、必填语义色与字体效果、模糊词黑名单（根级 `negative_style_constraints` 豁免）、失败测试 | 已合并（GitHub #11，main@e0b233e） |
-| PR-8B | fixture E2E 替换合成测试、Model Lineage、证据分层与路径归一化、index 派生、CI（fixture job、gitleaks 秘密扫描、macOS validate）、保留样本与中文字体样本 | 本分支 `codex/audit-pr8b-fixture-e2e-ci` |
-| PR-8C | 设计师签核、执行级文档、README/CHANGELOG/版本、最终发布证据 | 签核需人工，文档随本基线更新 |
+| PR-8B | fixture E2E 替换合成测试、Model Lineage、证据分层与路径归一化、index 派生、CI（fixture job、gitleaks 秘密扫描、macOS validate）、保留样本与中文字体样本 | 已合并（GitHub #12，main@6d01004） |
+| PR-8C | 设计师签核、执行级文档、README/CHANGELOG/版本、最终发布证据 | 进行中（`codex/audit-pr8c-docs-signoff`） |
 
 ## 2. 样本集合与阈值固定
 
