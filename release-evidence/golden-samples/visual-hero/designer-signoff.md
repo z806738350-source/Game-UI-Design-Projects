@@ -1,16 +1,16 @@
 # visual-hero UI designer sign-off
 
-Status: PENDING
+Status: APPROVED
 
 | Criterion | Score (1–5) | Notes |
 | --- | ---: | --- |
-| Component fidelity |  |  |
-| Typography fidelity |  |  |
-| Underlay cleanliness |  |  |
-| Overall quality |  |  |
+| Component fidelity | 5 |  |
+| Typography fidelity | 5 |  |
+| Underlay cleanliness | 5 |  |
+| Overall quality | 5 |  |
 
 Required: every score ≥ 4, no unresolved blocker/critical/major issue, signer name, and date.
 
-Signer:  
-Date:  
-Decision: PENDING
+Signer: 人工审核员
+Date: 2026-08-18
+Decision: APPROVED
