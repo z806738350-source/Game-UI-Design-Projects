@@ -44,6 +44,12 @@ test('negative_style_constraints may phrase prohibitions without tripping the va
   assert.deepEqual(validateStyleContract(contract).filter((error) => error.includes('negative_style_constraints')), []);
 });
 
+test('nested keys named negative_style_constraints cannot smuggle vague terms', () => {
+  const contract = executableStyleContract({ visual_identity: { theme: 'functional-dense', mood: ['disciplined'], keywords: ['dark lacquer'], negative_style_constraints: ['适当有点质感'] } });
+  const errors = validateStyleContract(contract);
+  assert.ok(errors.some((error) => error.includes('visual_identity.negative_style_constraints[0]') && error.includes('vague')), errors.join('; '));
+});
+
 test('numeric fields reject unitless strings, missing values, and out-of-range values', () => {
   const stringSize = executableStyleContract();
   stringSize.typography.display.size = '14px';

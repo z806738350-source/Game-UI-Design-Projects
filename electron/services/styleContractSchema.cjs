@@ -58,20 +58,17 @@ function findVagueTerms(text) {
   return [...hits];
 }
 
-function scanVagueStrings(path, value, errors, exemptKeys) {
+function scanVagueStrings(path, value, errors) {
   if (typeof value === 'string') {
     for (const term of findVagueTerms(value)) errors.push(`${path} contains a vague style term: ${term}`);
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach((item, index) => scanVagueStrings(`${path}[${index}]`, item, errors, exemptKeys));
+    value.forEach((item, index) => scanVagueStrings(`${path}[${index}]`, item, errors));
     return;
   }
   if (isObject(value)) {
-    for (const [key, child] of Object.entries(value)) {
-      if (exemptKeys.has(key)) continue;
-      scanVagueStrings(`${path}.${key}`, child, errors, exemptKeys);
-    }
+    for (const [key, child] of Object.entries(value)) scanVagueStrings(`${path}.${key}`, child, errors);
   }
 }
 
@@ -145,6 +142,10 @@ function validateStyleContract(value) {
     if (value.lighting.intensity !== undefined) errors.push(...numberErrors('lighting.intensity', value.lighting.intensity, { min: 0, max: 1, unit: '0..1 ratio' }));
   }
 
+  // composition values stay elastic on purpose: hierarchy strategies are
+  // named strings (e.g. 'wireframe-locked') while numeric weights must stay
+  // within 0..1. components keeps a non-empty requirement because family
+  // coverage is enforced earlier by the component contract gate.
   if (!isObject(value.composition) || !Object.keys(value.composition).length) errors.push('composition must be a non-empty object');
   else for (const [key, item] of Object.entries(value.composition)) {
     if (isFiniteNumber(item) && (item < 0 || item > 1)) errors.push(`composition.${key} must be between 0 and 1 when numeric (received ${item})`);
@@ -154,7 +155,11 @@ function validateStyleContract(value) {
 
   if (!Array.isArray(value.materials) || !value.materials.length) errors.push('materials must be a non-empty array of concrete material descriptions');
 
-  scanVagueStrings('style-contract', value, errors, new Set(['negative_style_constraints']));
+  // Only the root-level negative_style_constraints field is exempt: it
+  // expresses prohibitions, not executable style values. Nested keys with
+  // the same name are ordinary values and must not smuggle vague terms.
+  const { negative_style_constraints: _prohibitions, ...scannable } = value;
+  scanVagueStrings('style-contract', scannable, errors);
   return errors;
 }
 

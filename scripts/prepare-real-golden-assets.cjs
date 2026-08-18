@@ -169,7 +169,10 @@ async function cropBoard(boardPath, crop, outputPath) {
 async function prepareSample(sample) {
   const boardPath = path.join(evidenceRoot, '_sources', sample.board);
   const sampleRoot = path.join(evidenceRoot, sample.id);
-  await fs.rm(sampleRoot, { recursive: true, force: true });
+  // Only regenerate the reproducible inputs; published evidence (evidence/,
+  // attempts/, final.png) and designer sign-off records must survive re-prep.
+  await fs.rm(path.join(sampleRoot, 'inputs'), { recursive: true, force: true });
+  await fs.rm(path.join(sampleRoot, 'asset-manifest.json'), { force: true });
   await fs.mkdir(path.join(sampleRoot, 'inputs', 'references'), { recursive: true });
   const references = [];
   for (const [index, crop] of sample.references.entries()) {
@@ -213,7 +216,9 @@ async function prepareSample(sample) {
     acceptance: { provider_e2e: 'pending', designer_signoff: 'pending', formal_release: 'blocked-until-signoff' }
   };
   await fs.writeFile(path.join(sampleRoot, 'asset-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-  await fs.writeFile(path.join(sampleRoot, 'designer-signoff.md'), `# ${sample.id} UI designer sign-off\n\nStatus: PENDING\n\n| Criterion | Score (1–5) | Notes |\n| --- | ---: | --- |\n| Component fidelity |  |  |\n| Typography fidelity |  |  |\n| Underlay cleanliness |  |  |\n| Overall quality |  |  |\n\nRequired: every score ≥ 4, no unresolved blocker/critical/major issue, signer name, and date.\n\nSigner:  \nDate:  \nDecision: PENDING\n`);
+  const signoffPath = path.join(sampleRoot, 'designer-signoff.md');
+  const signoffExists = await fs.access(signoffPath).then(() => true, () => false);
+  if (!signoffExists) await fs.writeFile(signoffPath, `# ${sample.id} UI designer sign-off\n\nStatus: PENDING\n\n| Criterion | Score (1–5) | Notes |\n| --- | ---: | --- |\n| Component fidelity |  |  |\n| Typography fidelity |  |  |\n| Underlay cleanliness |  |  |\n| Overall quality |  |  |\n\nRequired: every score ≥ 4, no unresolved blocker/critical/major issue, signer name, and date.\n\nSigner:  \nDate:  \nDecision: PENDING\n`);
   return manifest;
 }
 
