@@ -173,3 +173,39 @@ test('snapshot download rejects bodies declared larger than the 25MB limit', asy
     }), /25MB snapshot limit/);
   } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
 });
+
+test('repairImage snapshots signed Tencent COS delivery URLs from the provider', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-provider-cos-'));
+  const originalFetch = global.fetch;
+  try {
+    const source = path.join(root, 'source.png'); await fs.writeFile(source, pngHeader(128, 64));
+    const cosUrl = 'https://vcg-prod-1258344699.cos.ap-guangzhou.tencentcos.cn/imagegeneration/results/1328005011/ac5c2bae.png?sign=abc&q-sign-algorithm=sha1';
+    global.fetch = async (url) => String(url).endsWith('/images/tasks')
+      ? new Response(JSON.stringify({ result_url: cosUrl, task_id: 'cos-repair' }), { status: 200 })
+      : new Response(pngHeader(128, 64), { status: 200, headers: { 'content-type': 'image/png' } });
+    const result = await repairImage({ configured: true, baseUrl: 'https://example.test', imageModel: 'Image-GPT2', mode: 'gateway' }, {
+      mode: 'regenerate', prompt: 'repair', sourcePath: source, overlayPath: source, componentBoardPath: source, size: '128x64', maxReferenceImages: 6
+    });
+    assert.equal(result.storageMode, 'inline_snapshot');
+    assert.equal(result.source_location.hostname, 'vcg-prod-1258344699.cos.ap-guangzhou.tencentcos.cn');
+    assert.match(result.url, /^data:image\/png;base64,/);
+  } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
+});
+
+test('snapshot host allowlist rejects lookalike hosts and non-image content types', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-provider-lookalike-'));
+  const originalFetch = global.fetch;
+  try {
+    const source = path.join(root, 'source.png'); await fs.writeFile(source, pngHeader(128, 64));
+    const run = async (resultUrl, contentType) => {
+      global.fetch = async (url) => String(url).endsWith('/images/tasks')
+        ? new Response(JSON.stringify({ result_url: resultUrl, task_id: 'lookalike' }), { status: 200 })
+        : new Response(pngHeader(128, 64), { status: 200, headers: { 'content-type': contentType } });
+      return repairImage({ configured: true, baseUrl: 'https://example.test', imageModel: 'Image-GPT2', mode: 'gateway' }, {
+        mode: 'regenerate', prompt: 'repair', sourcePath: source, overlayPath: source, componentBoardPath: source, size: '128x64', maxReferenceImages: 6
+      });
+    };
+    await assert.rejects(run('https://vcg-prod-1258344699.cos.ap-guangzhou.tencentcos.cn.evil.test/x.png', 'image/png'), /untrusted image location/);
+    await assert.rejects(run('https://kunpoapiimg.ziy.cc/output/repair.png?token=temporary', 'text/html'), /unexpected content type/);
+  } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
+});

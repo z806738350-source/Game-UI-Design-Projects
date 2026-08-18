@@ -247,6 +247,15 @@ function kunpoCdnLocation(url) {
   } catch { return { kind: 'invalid' }; }
 }
 
+// Exact hosts observed as Kunpo provider delivery locations. Only these may be
+// snapshotted; lookalike suffixes (e.g. host + '.evil.test') are rejected by
+// the strict equality check.
+const SNAPSHOT_HOSTS = new Set(['kunpoapiimg.ziy.cc', 'vcg-prod-1258344699.cos.ap-guangzhou.tencentcos.cn']);
+
+function isSnapshotHost(location) {
+  return location.kind === 'remote' && location.protocol === 'https:' && SNAPSHOT_HOSTS.has(location.hostname);
+}
+
 async function transientImageSnapshot(url, id, requestedSize) {
   const location = kunpoCdnLocation(url);
   let bytes;
@@ -254,7 +263,7 @@ async function transientImageSnapshot(url, id, requestedSize) {
     const match = String(url).match(/^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/i);
     if (!match) throw Object.assign(new Error('Kunpo returned an unsupported inline image payload.'), { code: 'TRANSIENT_IMAGE_UNSUPPORTED' });
     bytes = Buffer.from(match[2], 'base64');
-  } else if (location.protocol === 'https:' && location.hostname === 'kunpoapiimg.ziy.cc') {
+  } else if (isSnapshotHost(location)) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 120000);
     let response;
@@ -264,6 +273,8 @@ async function transientImageSnapshot(url, id, requestedSize) {
       throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (${error?.name === 'AbortError' ? 'timeout after 120s' : error?.message || 'fetch failed'}).`), { code: 'TRANSIENT_IMAGE_DOWNLOAD_FAILED' });
     } finally { clearTimeout(timer); }
     if (!response.ok) throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (HTTP ${response.status}).`), { code: 'TRANSIENT_IMAGE_DOWNLOAD_FAILED' });
+    const contentType = String(response.headers.get('content-type') || '');
+    if (!/^image\/(png|jpe?g|webp)/i.test(contentType)) throw Object.assign(new Error(`Transient Kunpo image response declared an unexpected content type (${contentType || 'none'}).`), { code: 'TRANSIENT_IMAGE_UNSUPPORTED' });
     const contentLength = Number(response.headers.get('content-length'));
     if (Number.isFinite(contentLength) && contentLength > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image exceeds the 25MB snapshot limit.'), { code: 'TRANSIENT_IMAGE_SIZE_INVALID' });
     bytes = Buffer.from(await response.arrayBuffer());
