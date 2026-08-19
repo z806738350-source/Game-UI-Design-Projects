@@ -10,15 +10,59 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-// A required path is documented when its basename token appears in the tree
-// and (for nested paths) each parent directory name appears too. Glob or
-// templated entries only require their leading directory.
-function documentedInTree(tree, relativePath) {
-  const segments = relativePath.split('/');
-  const leaf = segments[segments.length - 1];
-  const needsLeaf = !leaf.includes('*') && !leaf.includes('{');
-  const tokens = needsLeaf ? segments : segments.slice(0, -1);
-  return tokens.every((segment) => tree.includes(segment));
+// Rebuild the set of full relative paths documented by a box-drawing tree
+// block. Depth comes from the column of the ├─/└─ connector (4 columns per
+// level); a bare top-level directory entry (e.g. `project/`) is treated as
+// the container root and stripped from every path. A leaf documented under
+// the wrong parent therefore never matches its required path.
+function documentedTreePaths(treeText) {
+  const paths = new Set();
+  const dirStack = []; // dirStack[i] = directory name at depth i
+  let hasRootDir = false;
+  for (const rawLine of treeText.split('\n')) {
+    const line = rawLine.trimEnd();
+    if (!line.trim()) continue;
+    const connectorIndexes = [line.indexOf('├── '), line.indexOf('└── ')].filter((index) => index !== -1);
+    const connectorIndex = connectorIndexes.length ? Math.min(...connectorIndexes) : -1;
+    let depth;
+    let name;
+    if (connectorIndex === -1) {
+      depth = 0;
+      name = line.trim();
+      dirStack.length = 0;
+      hasRootDir = false;
+    } else {
+      depth = Math.floor(connectorIndex / 4) + 1;
+      name = line.slice(connectorIndex + 4).trim();
+      dirStack.length = Math.max(hasRootDir ? 1 : 0, depth);
+    }
+    name = (name.split(/\s+#/)[0] || '').trim(); // drop trailing annotation
+    if (!name) continue;
+    const isDir = name.endsWith('/');
+    const entry = isDir ? name.slice(0, -1) : name;
+    if (depth === 0 && isDir) {
+      hasRootDir = true;
+      dirStack[0] = entry;
+      continue;
+    }
+    const segments = [...dirStack.slice(0, depth), entry];
+    paths.add((hasRootDir ? segments.slice(1) : segments).join('/'));
+    if (isDir) dirStack[depth] = entry;
+  }
+  return paths;
+}
+
+// Screen-scoped entries live under screens/{screen_id}/ in the tree, so they
+// match any documented path that ends with the required suffix beneath a
+// screens/ directory; all other groups require an exact path.
+function isDocumented(paths, relativePath, screenScoped) {
+  if (screenScoped) {
+    for (const documented of paths) {
+      if (documented.endsWith(`/${relativePath}`) && documented.includes('screens/')) return true;
+    }
+    return false;
+  }
+  return paths.has(relativePath);
 }
 
 // Returns an array of problem strings (empty = all three sources agree).
@@ -42,9 +86,11 @@ function checkProjectTree(root) {
       problems.push('README.md: missing or misordered <!-- PROJECT_TREE:BEGIN/END --> markers');
     }
     const tree = begin !== -1 && end > begin ? readme.slice(begin, end) : '';
+    const paths = documentedTreePaths(tree);
     for (const group of ['root_files', 'workflow_files', 'global_artifact_paths', 'screen_artifact_files', 'screen_support_paths']) {
+      const screenScoped = group === 'screen_artifact_files' || group === 'screen_support_paths';
       for (const required of fact[group] || []) {
-        if (!documentedInTree(tree, required)) problems.push(`README.md PROJECT_TREE: missing required path ${required} (${group})`);
+        if (!isDocumented(paths, required, screenScoped)) problems.push(`README.md PROJECT_TREE: missing required path ${required} (${group})`);
       }
     }
   }

@@ -49,7 +49,9 @@ function checkDocCommands(root) {
     if (EXEMPT_DOCS.includes(rel)) continue;
     const text = fs.readFileSync(file, 'utf8');
     // Match `pnpm <name>` and `pnpm run <name>` anywhere (fences or inline).
-    for (const match of text.matchAll(/\bpnpm(?:\s+run)?\s+([A-Za-z0-9:_-]+)/g)) {
+    // The first captured character must be alphanumeric/colon/underscore so
+    // flag-style invocations like `pnpm --filter app run build` never match.
+    for (const match of text.matchAll(/\bpnpm(?:\s+run)?\s+([A-Za-z0-9:_][A-Za-z0-9:_-]*)/g)) {
       const name = match[1];
       if (PNPM_BUILTINS.has(name)) continue;
       if (!scripts.has(name)) problems.push(`${rel}: pnpm command references missing script \`${name}\``);

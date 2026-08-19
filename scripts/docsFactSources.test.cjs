@@ -114,6 +114,17 @@ test('check-error-docs: missing catalog section fails', (t) => {
   assert.ok(problems.some((p) => p.includes('missing catalog section')), problems.join('\n'));
 });
 
+test('check-error-docs: missing trailing boundary heading fails instead of swallowing prose', (t) => {
+  const catalog = catalogFixture({
+    pipelineRow: '| `PIPELINE_OK` | ok |',
+    fidelityRow: '| `FIDELITY_OK` | ok |',
+    bindingRow: '| `BINDING_OK` | ok |'
+  }).replace('## 四、校验机制', '## 四、别的标题');
+  const root = buildErrorDocsFixture(t, catalog);
+  const problems = checkErrorDocs(root);
+  assert.ok(problems.some((p) => p.includes('missing catalog section "## 四、校验机制"')), problems.join('\n'));
+});
+
 // --- check-doc-commands --------------------------------------------------------
 
 function buildCommandFixture(t, readmeText, scripts = { build: 'vite build' }) {
@@ -143,6 +154,11 @@ test('check-doc-commands: broken command inside docs/ also fails', (t) => {
   assert.ok(problems[0].includes('docs/dev/GUIDE.md'), problems[0]);
 });
 
+test('check-doc-commands: flag-style invocation is not mistaken for a script', (t) => {
+  const root = buildCommandFixture(t, '# T\n\n```bash\npnpm --filter app run build\npnpm -w build\n```\n', { build: 'vite build' });
+  assert.deepEqual(checkDocCommands(root), []);
+});
+
 // --- check-project-tree --------------------------------------------------------
 
 const PROJECT_TREE_FACT = {
@@ -166,12 +182,17 @@ const TREE_REGISTRY_FIXTURE = `module.exports = {
 `;
 
 const COMPLETE_TREE_LINES = [
-  'project.json',
-  'workflow/state.json',
-  'style/style-contract.json',
-  'composition-output.json',
-  'fidelity-report.json',
-  'inputs.json'
+  'project/',
+  '├── project.json',
+  '├── workflow/',
+  '│   └── state.json',
+  '├── style/',
+  '│   └── style-contract.json',
+  '└── screens/',
+  '    └── main/',
+  '        ├── composition-output.json',
+  '        ├── fidelity-report.json',
+  '        └── inputs.json'
 ];
 
 function buildTreeFixture(t, { treeLines = COMPLETE_TREE_LINES, fact = PROJECT_TREE_FACT, registry = TREE_REGISTRY_FIXTURE, goldenFiles = ['project.json'] } = {}) {
@@ -189,7 +210,7 @@ test('check-project-tree: consistent synthetic workspace passes', (t) => {
 });
 
 test('check-project-tree: README missing a key artifact fails', (t) => {
-  const root = buildTreeFixture(t, { treeLines: COMPLETE_TREE_LINES.filter((line) => line !== 'composition-output.json') });
+  const root = buildTreeFixture(t, { treeLines: COMPLETE_TREE_LINES.filter((line) => !line.includes('composition-output.json')) });
   const problems = checkProjectTree(root);
   assert.ok(problems.some((p) => p.includes('README.md PROJECT_TREE: missing required path composition-output.json')), problems.join('\n'));
 });
@@ -199,6 +220,53 @@ test('check-project-tree: missing PROJECT_TREE markers fails', (t) => {
   write(root, 'README.md', '# T\n\nproject.json\n');
   const problems = checkProjectTree(root);
   assert.ok(problems.some((p) => p.includes('PROJECT_TREE:BEGIN/END')), problems.join('\n'));
+});
+
+test('check-project-tree: leaf documented under the wrong parent fails', (t) => {
+  // Regression guard for the inputs/requirement.md migration: every token is
+  // present in the tree text, but requirement.md sits at the workspace root
+  // instead of under screens/main/inputs/, so the gate must still fail.
+  const fact = { ...PROJECT_TREE_FACT, screen_support_paths: ['inputs/requirement.md'] };
+  const wrongParentTree = [
+    'project/',
+    '├── inputs/',
+    '│   └── requirement.md',
+    '└── screens/',
+    '    └── main/',
+    '        ├── inputs/',
+    '        └── composition-output.json'
+  ];
+  const root = buildTreeFixture(t, { fact, treeLines: wrongParentTree });
+  const problems = checkProjectTree(root);
+  assert.ok(problems.some((p) => p.includes('missing required path inputs/requirement.md')), problems.join('\n'));
+});
+
+test('check-project-tree: nested leaf under the correct screen parent passes', (t) => {
+  const fact = {
+    schema_version: '1.0',
+    root_files: [],
+    workflow_files: [],
+    global_artifact_paths: [],
+    screen_artifact_files: ['composition-output.json'],
+    screen_support_paths: ['inputs/requirement.md'],
+    golden_workspace: 'golden',
+    golden_required_files: ['project.json']
+  };
+  const registry = `module.exports = {
+  GLOBAL_ARTIFACTS: Object.freeze({}),
+  SCREEN_ARTIFACTS: Object.freeze({ 'composition-output': 'composition-output.json' })
+};
+`;
+  const correctTree = [
+    'project/',
+    '└── screens/',
+    '    └── main/',
+    '        ├── composition-output.json',
+    '        └── inputs/',
+    '            └── requirement.md'
+  ];
+  const root = buildTreeFixture(t, { fact, registry, treeLines: correctTree });
+  assert.deepEqual(checkProjectTree(root), []);
 });
 
 test('check-project-tree: golden workspace missing core evidence fails', (t) => {

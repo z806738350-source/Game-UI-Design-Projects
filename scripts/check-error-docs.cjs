@@ -48,8 +48,12 @@ function checkErrorDocs(root) {
   for (const [group, beginHeading, endHeading] of sectionBounds) {
     const begin = catalog.indexOf(beginHeading);
     if (begin === -1) return [`missing catalog section "${beginHeading}"`];
+    // Every boundary heading is mandatory: a missing end heading would let a
+    // section silently swallow the following prose and produce confusing
+    // diagnostics (or hide real drift).
     const end = catalog.indexOf(endHeading, begin + beginHeading.length);
-    sections[group] = end === -1 ? catalog.slice(begin) : catalog.slice(begin, end);
+    if (end === -1) return [`missing catalog section "${endHeading}"`];
+    sections[group] = catalog.slice(begin, end);
   }
 
   const problems = [];
