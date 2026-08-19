@@ -1,5 +1,6 @@
 const { normalizeControls } = require('./screenControls.cjs');
 const { rolePolicy } = require('./controlRolePolicy.cjs');
+const { BINDING_VALIDATION_CODES: CODES } = require('./errorCodes.cjs');
 
 function controlId(control, index) {
   return normalizeControls([control])[0]?.id || `control-${index + 1}`;
@@ -18,6 +19,10 @@ function controlRoles(screenContract) {
 // Per-binding `approved` flags are intentionally NOT trusted here: approval is
 // a backend fact stamped by approveArtifact (see designPipeline.cjs), never a
 // client-supplied field. Semantic compatibility follows binding-policy-v1.
+// Explicitness is fail-closed: state is always required (no 'default'
+// fallback) and font_role is required whenever the bound family declares a
+// text-slot; the generic legacy 'action' role cannot be approved in strict
+// mode until it is resolved to a specific role.
 function validateBindings(bindingsArtifact, screenContract, componentContract, fontManifest = null, options = {}) {
   const strict = options.strict === true;
   const errors = [];
@@ -33,7 +38,7 @@ function validateBindings(bindingsArtifact, screenContract, componentContract, f
     byControl.set(binding.control_id, binding);
     if (!binding.slot_id) errors.push(`${binding.control_id || '<none>'} requires slot_id`);
     if (!binding.component_id) {
-      errors.push(`BINDING_COMPONENT_NOT_SELECTED: ${binding.control_id || '<none>'} has no explicitly selected component family`);
+      errors.push(`${CODES.BINDING_COMPONENT_NOT_SELECTED}: ${binding.control_id || '<none>'} has no explicitly selected component family`);
       continue;
     }
     const family = families.get(binding.component_id);
@@ -41,21 +46,25 @@ function validateBindings(bindingsArtifact, screenContract, componentContract, f
       errors.push(`${binding.control_id} references missing component ${binding.component_id}`);
       continue;
     }
-    if (family.status !== 'approved') errors.push(`BINDING_COMPONENT_NOT_APPROVED: component family ${family.id} is not approved`);
-    if (!family.states?.[binding.state || 'default']) errors.push(`BINDING_COMPONENT_STATE_MISSING: ${binding.control_id} references missing state ${binding.state || 'default'} on ${binding.component_id}`);
+    if (family.status !== 'approved') errors.push(`${CODES.BINDING_COMPONENT_NOT_APPROVED}: component family ${family.id} is not approved`);
+    if (!binding.state) errors.push(`${CODES.BINDING_STATE_REQUIRED}: ${binding.control_id} has no explicitly selected component state on ${binding.component_id}`);
+    else if (!family.states?.[binding.state]) errors.push(`${CODES.BINDING_COMPONENT_STATE_MISSING}: ${binding.control_id} references missing state ${binding.state} on ${binding.component_id}`);
+    if (family.text_policy === 'text-slot' && !binding.font_role) errors.push(`${CODES.BINDING_FONT_ROLE_REQUIRED}: ${binding.control_id} binds text-slot family ${binding.component_id} without an explicit font role`);
     const role = roles.get(binding.control_id);
     const policy = rolePolicy(role);
     if (role && policy) {
+      if (strict && role === 'action') errors.push(`${CODES.BINDING_GENERIC_ROLE_UNRESOLVED}: control ${binding.control_id} still uses the generic 'action' role; resolve it to a specific role before approving`);
+      else if (!strict && role === 'action') warnings.push(`control ${binding.control_id} uses the generic 'action' role; resolve it to a specific role for strict approval`);
       const category = family.category || 'page-specific';
-      if (!policy.allowed_categories.includes(category)) errors.push(`BINDING_COMPONENT_CATEGORY_MISMATCH: control ${binding.control_id} role '${role}' cannot bind component category '${category}' (family ${family.id})`);
+      if (!policy.allowed_categories.includes(category)) errors.push(`${CODES.BINDING_COMPONENT_CATEGORY_MISMATCH}: control ${binding.control_id} role '${role}' cannot bind component category '${category}' (family ${family.id})`);
       const missingStates = policy.required_states.filter((state) => !family.states?.[state]);
-      if (missingStates.length) errors.push(`BINDING_COMPONENT_STATE_MISSING: family ${family.id} must provide states for role '${role}': ${missingStates.join(', ')}`);
+      if (missingStates.length) errors.push(`${CODES.BINDING_COMPONENT_STATE_MISSING}: family ${family.id} must provide states for role '${role}': ${missingStates.join(', ')}`);
       if (binding.font_role) {
-        if (!policy.allowed_font_roles.includes(binding.font_role)) errors.push(`BINDING_FONT_ROLE_MISMATCH: control ${binding.control_id} role '${role}' cannot use font role '${binding.font_role}'`);
-        if (fontManifest && !fontRoles[binding.font_role]) errors.push(`BINDING_FONT_ROLE_MISSING: font role '${binding.font_role}' is not defined in the Font Manifest`);
+        if (!policy.allowed_font_roles.includes(binding.font_role)) errors.push(`${CODES.BINDING_FONT_ROLE_MISMATCH}: control ${binding.control_id} role '${role}' cannot use font role '${binding.font_role}'`);
+        if (fontManifest && !fontRoles[binding.font_role]) errors.push(`${CODES.BINDING_FONT_ROLE_MISSING}: font role '${binding.font_role}' is not defined in the Font Manifest`);
       }
     } else if (role) {
-      if (strict) errors.push(`BINDING_UNKNOWN_CONTROL_ROLE: control ${binding.control_id} has unknown role '${role}'`);
+      if (strict) errors.push(`${CODES.BINDING_UNKNOWN_CONTROL_ROLE}: control ${binding.control_id} has unknown role '${role}'`);
       else warnings.push(`control ${binding.control_id} has unknown role '${role}'; semantic compatibility was not enforced`);
     }
   }

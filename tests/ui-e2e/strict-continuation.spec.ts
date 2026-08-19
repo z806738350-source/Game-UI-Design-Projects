@@ -67,13 +67,26 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     const primarySelect = page.getByTestId('binding-component-select-primary-action').locator('select').first();
     await expect(primarySelect.locator('option[value="bottom-navigation"]')).toHaveAttribute('disabled', '');
     await expect(primarySelect.locator('option[value="primary-button"]')).not.toHaveAttribute('disabled', '');
+    // F-01: choosing a family alone never confirms state or font role.
+    await primarySelect.selectOption('primary-button');
+    await expect(page.getByTestId('binding-state-select-primary-action')).toHaveValue('');
+    await expect(page.getByTestId('binding-save')).toBeDisabled();
+    // An explicit state alone is still incomplete for text-slot families.
+    await page.getByTestId('binding-state-select-primary-action').selectOption('default');
+    await expect(page.getByTestId('binding-save')).toBeDisabled();
     await selectAndApproveBindings(page);
     const project = await getProject(page);
     expect(project.artifacts.bindings?.status).toBe('approved');
-    const bindings = (project.artifacts.bindings?.bindings as Array<{ control_id: string; component_id: string }>) || [];
+    const bindings = (project.artifacts.bindings?.bindings as Array<{ control_id: string; component_id: string; state?: string; font_role?: string }>) || [];
     for (const [controlId, family] of Object.entries(BINDING_FAMILY_BY_CONTROL)) {
       expect(bindings.find((binding) => binding.control_id === controlId)?.component_id, `binding for ${controlId}`).toBe(family);
     }
+    // Persisted bindings carry the designer's explicit state and font role.
+    const primary = bindings.find((binding) => binding.control_id === 'primary-action');
+    expect(primary?.state).toBe('default');
+    expect(primary?.font_role).toBe('button-label');
+    expect(bindings.find((binding) => binding.control_id === 'tab')?.font_role).toBe('tab-label');
+    expect(bindings.find((binding) => binding.control_id === 'row')?.font_role).toBe('body');
   });
 
   test('component-aware layout approval and underlay generation', async () => {

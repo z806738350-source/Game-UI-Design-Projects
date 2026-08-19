@@ -5,10 +5,11 @@ const { finalApprovalGate, runFidelityChecks } = require('./fidelity.cjs');
 
 function fixtures() {
   const hash = `sha256:${'a'.repeat(64)}`;
-  const screenContract = { id: 'screen', status: 'approved', required_controls: [{ id: 'save', label: '保存', required: true }] };
+  const screenContract = { id: 'screen', status: 'approved', required_controls: [{ id: 'save', label: '保存', role: 'primary-action', required: true }] };
   const project = { screen_id: 'main', continuation_mode: 'existing-strict', canvas_spec: { width: 1000, height: 500 }, artifacts: { screenContract } };
   const bindings = { id: 'bindings', status: 'approved', coverage: { required_controls: 1 }, bindings: [{ control_id: 'save', component_id: 'button.primary', state: 'default', slot_id: 'bottom', approved: true, text: '保存', font_role: 'button-label' }] };
-  const componentContract = { id: 'components', status: 'approved', families: [{ id: 'button.primary', category: 'button', status: 'approved', reuse_mode: 'nine-slice', text_policy: 'text-slot', intrinsic_size: [400, 100], slice: { margins: [20, 20, 10, 10] }, states: { default: { asset_path: 'style/components/button.png', asset_hash: hash } } }] };
+  const buttonState = { asset_path: 'style/components/button.png', asset_hash: hash };
+  const componentContract = { id: 'components', status: 'approved', families: [{ id: 'button.primary', category: 'button', status: 'approved', reuse_mode: 'nine-slice', text_policy: 'text-slot', intrinsic_size: [400, 100], slice: { margins: [20, 20, 10, 10] }, states: { default: buttonState, pressed: buttonState, disabled: buttonState } }] };
   const fontManifest = { id: 'fonts', status: 'approved', fonts: [{ id: 'ui', family_name: 'Exact UI', postscript_name: 'ExactUI-Regular', format: 'ttf', local_path: 'style/fonts/ui.ttf', file_hash: hash, license_status: 'confirmed', license_confirmation: { confirmed: true }, coverage: { zh_cn: true } }], roles: { 'button-label': { font_id: 'ui', fidelity_mode: 'exact', identity_critical: true, required_coverage: ['zh_cn'], exact_confirmation: { confirmed: true } } } };
   const layout = { id: 'layout', status: 'approved', slots: [{ id: 'bottom', rect: { x: 0.3, y: 0.8, width: 0.4, height: 0.1 }, z_index: 50, underlay_policy: { keep_clear: true } }] };
   const styleContract = { id: 'style', status: 'approved', typography: { 'button-label': { size: 30, weight: 700, fill: '#fff', stroke: { width: 2, color: '#000' } } } };

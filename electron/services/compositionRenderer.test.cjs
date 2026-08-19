@@ -156,7 +156,7 @@ test('strict pipeline persists final output and final approval fails when its PN
     await fs.mkdir(path.dirname(componentPath), { recursive: true });
     await fs.writeFile(componentPath, component);
     const base = { schema_version: '2.0', version: 1, status: 'approved', source: {} };
-    await projectStore.saveArtifact(project.id, 'screen-contract', { ...base, id: 'screen', required_controls: [{ id: 'icon', label: 'Icon', required: true }] });
+    await projectStore.saveArtifact(project.id, 'screen-contract', { ...base, id: 'screen', required_controls: [{ id: 'icon', label: 'Icon', role: 'icon-action', required: true }] });
     await projectStore.saveArtifact(project.id, 'component-bindings', { ...base, id: 'bindings', coverage: { required_controls: 1 }, bindings: [{ control_id: 'icon', component_id: 'icon.exact', state: 'default', slot_id: 'icon-slot', approved: true }] });
     await projectStore.saveArtifact(project.id, 'component-contract', { ...base, id: 'components', families: [{ id: 'icon.exact', category: 'icon', status: 'approved', reuse_mode: 'exact', text_policy: 'none', intrinsic_size: [8, 8], scale_policy: { min_scale: 1, max_scale: 1 }, states: { default: { asset_path: 'style/components/icon.png', asset_hash: hashBuffer(component) } } }] });
     await projectStore.saveArtifact(project.id, 'approved-layout', { ...base, id: 'layout', slots: [{ id: 'icon-slot', rect: { x: 0.25, y: 0.25, width: 0.25, height: 0.5 }, z_index: 1, underlay_policy: { keep_clear: true } }] });

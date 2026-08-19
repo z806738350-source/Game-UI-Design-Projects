@@ -1,11 +1,13 @@
 const { reviewGate } = require('./underlayCritique.cjs');
-const { ERROR_CODES } = require('./errorCodes.cjs');
+const { ERROR_CODES, BINDING_VALIDATION_CODES } = require('./errorCodes.cjs');
 const { validateFontManifest } = require('./typographyAssets.cjs');
 const { validateBindings } = require('./componentBindings.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
 
 function componentLayer(binding, slot, family) {
-  const state = binding.state || 'default';
+  // validateBindings rejects bindings without an explicit state before any
+  // layer is built, so there is intentionally no 'default' fallback here.
+  const state = binding.state;
   const asset = family.states[state];
   return {
     type: 'component', control_id: binding.control_id, component_id: family.id, state,
@@ -19,10 +21,16 @@ function componentLayer(binding, slot, family) {
   };
 }
 
-function textLayer(binding, slot, family, fontManifest, typography) {
+function textLayer(binding, slot, family, fontManifest, typography, strict = false) {
   const content = String(binding.text || binding.label || '').trim();
   if (!content || family.text_policy !== 'text-slot') return null;
-  const roleId = binding.font_role || family.font_role || 'button-label';
+  // Strict compositions never guess a font role: the designer's explicit
+  // choice is required. Guided previews keep the legacy fallback chain.
+  let roleId = binding.font_role;
+  if (!roleId) {
+    if (strict) throw Object.assign(new Error(`${BINDING_VALIDATION_CODES.BINDING_FONT_ROLE_REQUIRED}: ${binding.control_id} binds text-slot family ${family.id} without an explicit font role`), { code: BINDING_VALIDATION_CODES.BINDING_FONT_ROLE_REQUIRED });
+    roleId = family.font_role || 'button-label';
+  }
   const role = fontManifest.roles?.[roleId];
   const font = (fontManifest.fonts || []).find((item) => item.id === role?.font_id);
   return {
@@ -52,7 +60,7 @@ function createCompositionManifest({ project, underlay, layout, bindings, compon
   for (const binding of bindings.bindings || []) {
     const family = families.get(binding.component_id); const slot = slots.get(binding.slot_id);
     layers.push(componentLayer(binding, slot, family));
-    const text = textLayer(binding, slot, family, fontManifest, styleContract.typography);
+    const text = textLayer(binding, slot, family, fontManifest, styleContract.typography, strict);
     if (text) layers.push(text);
   }
   for (const layer of layers) if (layer.type === 'text') layer.composition_mode = mode;
@@ -66,4 +74,4 @@ function createCompositionManifest({ project, underlay, layout, bindings, compon
   };
 }
 
-module.exports = { createCompositionManifest };
+module.exports = { createCompositionManifest, textLayer };

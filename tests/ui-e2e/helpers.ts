@@ -171,7 +171,7 @@ export async function importReferencesAndGenerateStyle(launched: LaunchedApp): P
   await clickRun(page, 'style-approve');
 }
 
-const FONT_ROLES = ['display', 'body', 'numeric', 'button-label'];
+const FONT_ROLES = ['display', 'body', 'numeric', 'button-label', 'tab-label'];
 
 export async function importFonts(launched: LaunchedApp): Promise<void> {
   const { app, page } = launched;
@@ -239,9 +239,25 @@ export const BINDING_FAMILY_BY_CONTROL: Record<string, string> = {
   row: 'list-row'
 };
 
+// F-01: every binding needs an explicit state and — for text-slot families —
+// an explicit font role. Controls bound to text_policy 'none' families
+// (navigation, icons) have no entry here and skip the font role select.
+const BINDING_FONT_ROLE_BY_CONTROL: Record<string, string> = {
+  'primary-action': 'button-label',
+  'secondary-action': 'button-label',
+  tab: 'tab-label',
+  resources: 'numeric',
+  content: 'body',
+  badge: 'numeric',
+  row: 'body'
+};
+
 export async function selectAndApproveBindings(page: Page): Promise<void> {
   for (const [controlId, family] of Object.entries(BINDING_FAMILY_BY_CONTROL)) {
     await page.getByTestId(`binding-component-select-${controlId}`).locator('select').first().selectOption(family);
+    await page.getByTestId(`binding-state-select-${controlId}`).selectOption('default');
+    const fontRole = BINDING_FONT_ROLE_BY_CONTROL[controlId];
+    if (fontRole) await page.getByTestId(`binding-font-role-select-${controlId}`).selectOption(fontRole);
   }
   await clickRun(page, 'binding-save');
   await clickRun(page, 'binding-approve');

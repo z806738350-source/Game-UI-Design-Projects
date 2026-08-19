@@ -14,9 +14,11 @@ const CONTROL_ROLE_POLICIES = Object.freeze({
     required_states: Object.freeze(['default', 'disabled']),
     allowed_font_roles: Object.freeze(['button-label'])
   }),
-  // Legacy default role emitted by normalizeControls for controls without an
-  // explicit role; kept broad so existing projects are not fail-closed, but
-  // category compatibility is still enforced.
+  // Legacy default role emitted by normalizeControls for migrated controls
+  // without an explicit role. It only keeps existing projects readable; strict
+  // approval rejects it as BINDING_GENERIC_ROLE_UNRESOLVED until the designer
+  // resolves it to a specific role, and new controls can never be created
+  // with it.
   action: Object.freeze({
     allowed_categories: Object.freeze(['button', 'navigation', 'tab', 'icon']),
     required_states: Object.freeze(['default']),
@@ -55,7 +57,7 @@ const CONTROL_ROLE_POLICIES = Object.freeze({
   'content-panel': Object.freeze({
     allowed_categories: Object.freeze(['content-panel', 'page-specific']),
     required_states: Object.freeze(['default']),
-    allowed_font_roles: Object.freeze([])
+    allowed_font_roles: Object.freeze(['body'])
   })
 });
 
