@@ -9,15 +9,21 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const GOLDEN_WORKSPACE = path.resolve(here, '../../release-evidence/golden-samples/existing-continuation/evidence/workspace');
+// Binary inputs come from the tracked golden source assets (identical bytes to
+// the published evidence workspace where hashes overlap), so CI needs no
+// locally generated files. Semantic JSON still reads from the tracked
+// evidence workspace.
+const GOLDEN_INPUTS = path.resolve(here, '../../release-evidence/golden-samples/existing-continuation/inputs');
+const SHARED_FONTS = path.resolve(here, '../../release-evidence/golden-samples/_shared/fonts');
 
 export const GOLDEN_ASSETS = {
-  wireframe: path.join(GOLDEN_WORKSPACE, 'screens/main/inputs/wireframe.png'),
+  wireframe: path.join(GOLDEN_INPUTS, 'wireframe.png'),
   references: [
-    path.join(GOLDEN_WORKSPACE, 'style/references/mywpl22c.png'),
-    path.join(GOLDEN_WORKSPACE, 'style/references/mywpl22d.png'),
-    path.join(GOLDEN_WORKSPACE, 'style/references/mywpl22e.png')
+    path.join(GOLDEN_INPUTS, 'references/reference-1.png'),
+    path.join(GOLDEN_INPUTS, 'references/reference-2.png'),
+    path.join(GOLDEN_INPUTS, 'references/reference-3.png')
   ],
-  font: path.join(GOLDEN_WORKSPACE, 'style/fonts/oxanium.ttf'),
+  font: path.join(SHARED_FONTS, 'Oxanium-wght.ttf'),
   components: {
     'primary-button': ['default', 'pressed', 'disabled'],
     'bottom-navigation': ['default', 'selected', 'disabled'],
@@ -28,9 +34,9 @@ export const GOLDEN_ASSETS = {
     'status-badge': ['default'],
     'list-row': ['default']
   } as Record<string, string[]>,
-  componentAsset: (family: string, state: string) => path.join(GOLDEN_WORKSPACE, `style/components/${family}/${state}.png`),
-  contaminatedUnderlay: path.join(GOLDEN_WORKSPACE, 'screens/main/underlays/known-contaminated.png'),
-  repairedUnderlay: path.join(GOLDEN_WORKSPACE, 'screens/main/underlays/known-contaminated-repair-v1.png')
+  componentAsset: (family: string, state: string) => path.join(GOLDEN_INPUTS, `components/${family}/${state}.png`),
+  contaminatedUnderlay: path.join(GOLDEN_INPUTS, 'known-contaminated-underlay.png'),
+  repairedUnderlay: path.join(GOLDEN_INPUTS, 'clean-underlay.png')
 };
 
 // The golden screen-contract predates binding-policy-v1, so E2E derives

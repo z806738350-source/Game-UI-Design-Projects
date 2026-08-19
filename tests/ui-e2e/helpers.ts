@@ -24,6 +24,14 @@ export interface LaunchedApp {
 export async function launchApp(provider: FixtureProvider): Promise<LaunchedApp> {
   const distEntry = path.join(REPO_ROOT, 'dist', 'index.html');
   if (!fs.existsSync(distEntry)) throw new Error('dist/ is missing: run `pnpm build` before `pnpm test:ui-e2e`.');
+  const requiredAssets = [
+    GOLDEN_ASSETS.wireframe, GOLDEN_ASSETS.font, ...GOLDEN_ASSETS.references,
+    GOLDEN_ASSETS.contaminatedUnderlay, GOLDEN_ASSETS.repairedUnderlay,
+    ...Object.entries(GOLDEN_ASSETS.components).flatMap(([family, states]) => states.map((state) => GOLDEN_ASSETS.componentAsset(family, state)))
+  ];
+  for (const asset of requiredAssets) {
+    if (!fs.existsSync(asset)) throw new Error(`golden fixture missing: ${asset} (UI E2E expects tracked golden source assets).`);
+  }
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-ui-e2e-'));
   const exportDir = path.join(workspace, 'exports');
   fs.mkdirSync(exportDir, { recursive: true });
@@ -78,7 +86,7 @@ export async function queueSaveFile(app: ElectronApplication, filePath: string):
 export async function clickRun(page: Page, testId: string, options: { allowError?: boolean; settleMs?: number } = {}): Promise<void> {
   await page.getByTestId(testId).click();
   await page.waitForTimeout(250);
-  await page.locator('.busy-bar').waitFor({ state: 'detached', timeout: 900_000 });
+  await page.locator('.busy-bar').waitFor({ state: 'detached', timeout: 480_000 });
   await page.waitForTimeout(options.settleMs ?? 120);
   if (!options.allowError) await expect(page.locator('.error-banner'), `unexpected error after ${testId}`).toHaveCount(0);
 }
