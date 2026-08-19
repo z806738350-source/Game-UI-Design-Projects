@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.2 — 2026-08-19
+
+> Final compliance and governance closure for the v0.2.1 audit verdict (F-01～F-04). No artifact schema or pipeline-semantics changes beyond the frozen binding gate; `v0.2.0` / `v0.2.1` tags are preserved untouched.
+
+- F-01 Binding State/Font Role true explicitness (PR-20): the frozen `BINDING_VALIDATION_CODES` registry now backs every public binding gate code; BindingWorkbench requires explicit State and Font Role selection (no auto-defaults), the backend rejects unresolved generic `action` roles, and the strict compositor no longer falls back to `button-label` or `family.font_role`.
+- F-03 UI E2E full scenario coverage (PR-21): added UIE2E-02B (multi-screen lifecycle with independent wireframe/contract, rename, duplicate, archive), UIE2E-03B (nine-slice configuration + render_log assertions), and UIE2E-07B/07C/07D/07E (font/component asset failures with frozen error codes, component-change stale chains, contract editing/export/mode switching through UI only); removed all business-mutating `callRendererApi` shortcuts so E2E proves UI-driven state changes; trace evidence (screenshots, renderer/main logs) uploads on failure.
+- F-02 Documentation fact integrity (PR-22): `check-error-docs` validates all three frozen registries (ERROR_CODES / FIDELITY_ISSUE_CODES / BINDING_VALIDATION_CODES) bidirectionally against ERROR-CATALOG with no `BINDING_` exemption; new `check-doc-commands` verifies every documented pnpm command exists; new `check-project-tree` cross-checks the README `PROJECT_TREE` block, the golden evidence workspace, and the artifact registry against the machine fact source `docs/schemas/project-directory.required.json`; `pnpm test:docs` aggregates all four checks and CI `docs-validate` runs the same aggregation; 19 docs fact-source test cases (including 12 negative fixtures) prove wrong commands, missing/unregistered codes, and misplaced artifacts fail the gate.
+- Registry repair: `COMPOSITION_OUTPUT_MISSING` registered in FIDELITY_ISSUE_CODES, fixing an undefined issue code in fidelity reports.
+- Governance: ADR-007 records the single-maintainer exception (seven required CI checks + substantive CodeReview substitute for a second human approver); CODEOWNERS and Ruleset remain enforced on `main`.
+
 ## 0.2.1 — 2026-08-19
 
 > Remediation completion release (REM-01~06) on top of the `0.2.0` formal release. No artifact schema, backend gate, or golden evidence changes; the 0.2.0 Definition of Done remains valid.
