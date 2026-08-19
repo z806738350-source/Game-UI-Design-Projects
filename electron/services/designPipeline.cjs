@@ -1,4 +1,5 @@
 const fs = require('node:fs/promises');
+const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const path = require('node:path');
 const sharp = require('sharp');
 const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask } = require('./prompts.cjs');
@@ -27,11 +28,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
   const openProject = (projectId, screenId) => projectStore.open(projectId, { includePreviews: false, ...(screenId ? { screenId } : {}) });
   async function openScreen(projectId, screenId) {
-    if (!String(screenId || '').trim()) throw Object.assign(new Error('screenId is required for screen-scoped pipeline operations.'), { code: 'SCREEN_ID_REQUIRED' });
+    if (!String(screenId || '').trim()) throw Object.assign(new Error('screenId is required for screen-scoped pipeline operations.'), { code: ERROR_CODES.SCREEN_ID_REQUIRED });
     const registry = await projectStore.listScreens(projectId);
     const screen = registry.screens.find((item) => item.id === screenId && item.status !== 'archived');
-    if (!screen) throw Object.assign(new Error(`Screen not found or archived: ${screenId}`), { code: 'SCREEN_NOT_FOUND' });
-    if (registry.active_screen_id !== screenId) throw Object.assign(new Error(`Screen context mismatch: activate ${screenId} before running its pipeline.`), { code: 'SCREEN_CONTEXT_MISMATCH' });
+    if (!screen) throw Object.assign(new Error(`Screen not found or archived: ${screenId}`), { code: ERROR_CODES.SCREEN_NOT_FOUND });
+    if (registry.active_screen_id !== screenId) throw Object.assign(new Error(`Screen context mismatch: activate ${screenId} before running its pipeline.`), { code: ERROR_CODES.SCREEN_CONTEXT_MISMATCH });
     return openProject(projectId, screenId);
   }
 
@@ -180,10 +181,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!screen || screen.status !== 'approved') throw new Error('请先批准 Functional Screen Contract。');
       const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
       if (strict) {
-        if (project.artifacts.fontManifest?.status !== 'approved') throw Object.assign(new Error('Strict layout requires an approved Font Manifest.'), { code: 'FONT_MANIFEST_REQUIRED' });
-        if (project.artifacts.componentContract?.status !== 'approved') throw Object.assign(new Error('Strict layout requires an approved Component Contract.'), { code: 'COMPONENT_CONTRACT_REQUIRED' });
+        if (project.artifacts.fontManifest?.status !== 'approved') throw Object.assign(new Error('Strict layout requires an approved Font Manifest.'), { code: ERROR_CODES.FONT_MANIFEST_REQUIRED });
+        if (project.artifacts.componentContract?.status !== 'approved') throw Object.assign(new Error('Strict layout requires an approved Component Contract.'), { code: ERROR_CODES.COMPONENT_CONTRACT_REQUIRED });
         const bindingResult = validateBindings(project.artifacts.bindings, screen, project.artifacts.componentContract, project.artifacts.fontManifest, { strict });
-        if (project.artifacts.bindings?.status !== 'approved' || bindingResult.errors.length) throw Object.assign(new Error(`Strict layout requires complete approved bindings: ${bindingResult.errors.join('; ')}`), { code: 'BINDING_COVERAGE_INCOMPLETE' });
+        if (project.artifacts.bindings?.status !== 'approved' || bindingResult.errors.length) throw Object.assign(new Error(`Strict layout requires complete approved bindings: ${bindingResult.errors.join('; ')}`), { code: ERROR_CODES.BINDING_COVERAGE_INCOMPLETE });
       }
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
       await invalidateArtifacts(projectId, 'layout-proposals', 'layout_proposals_regenerated', { screenId: project.screen_id });
@@ -205,7 +206,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const capabilities = providerCapabilities(stageConfig.providerCapabilities);
       const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'style-resolution', omissionsConfirmed: input.confirmReferenceOmissions === true });
       await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
-      if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请在 Reference Workbench 确认省略项后重试。`), { code: 'REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED' });
+      if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请在 Reference Workbench 确认省略项后重试。`), { code: ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED });
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
         kind: 'style-contract', prompt: stylePrompt(project, approved, referencePack), imagePaths: referencePack.selected.map((asset) => asset.path),
         id: `${project.id}-style-contract`, source: { approved_layout: approved.id, references: (project.reference_assets || []).map(({ id, name, role }) => ({ id, name, role })), ...inputSource(project) }
@@ -223,7 +224,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!project.canvas_spec?.generation_size) throw new Error('UE 线框稿缺少可用的画布尺寸，请重新导入 PNG、JPG 或 WebP。');
       const strictProduction = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
       if (strictProduction && (project.artifacts.underlayContract?.status !== 'approved' || !project.artifacts.underlayContract?.layout_guide?.path)) {
-        throw Object.assign(new Error('Strict underlay generation requires an approved Underlay Contract and generated Layout Guide.'), { code: 'UNDERLAY_SPEC_REQUIRED' });
+        throw Object.assign(new Error('Strict underlay generation requires an approved Underlay Contract and generated Layout Guide.'), { code: ERROR_CODES.UNDERLAY_SPEC_REQUIRED });
       }
       cancelledVisualJobs.delete(projectId);
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
@@ -241,7 +242,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         : [];
       const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'underlay-generation', structureGuides, omissionsConfirmed: input.confirmReferenceOmissions === true });
       await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
-      if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请确认省略项后重试。`), { code: 'REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED' });
+      if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请确认省略项后重试。`), { code: ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED });
       const tasks = strategies.map((strategy) => visualTask(project, approved, style, strategy, input.feedback, { underlayContract: project.artifacts.underlayContract, referencePack }));
       await projectStore.saveArtifact(projectId, 'visual-task', {
         schema_version: '1.0', id: `${project.screen_id}-visual-tasks`, version: 1, status: 'approved',
@@ -351,7 +352,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const current = project.artifacts.referenceInventory;
       if (!current) throw new Error('Reference Inventory does not exist.');
       const approved = (current.assets || []).filter((asset) => asset.approved === true);
-      if (!approved.length) throw Object.assign(new Error('Reference Inventory requires at least one approved image.'), { code: 'REFERENCE_INVENTORY_EMPTY' });
+      if (!approved.length) throw Object.assign(new Error('Reference Inventory requires at least one approved image.'), { code: ERROR_CODES.REFERENCE_INVENTORY_EMPTY });
       await invalidateArtifacts(projectId, 'reference-inventory');
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'reference_analysis', 'approved', 'style/reference-inventory.json');
@@ -366,7 +367,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const strictBindings = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
       const covered = withCoverage(current, project.artifacts.screenContract, project.artifacts.componentContract, project.artifacts.fontManifest, { strict: strictBindings });
       const result = validateBindings(covered, project.artifacts.screenContract, project.artifacts.componentContract, project.artifacts.fontManifest, { strict: strictBindings });
-      if (result.errors.length) throw Object.assign(new Error(result.errors.join('; ')), { code: 'BINDING_COVERAGE_INCOMPLETE' });
+      if (result.errors.length) throw Object.assign(new Error(result.errors.join('; ')), { code: ERROR_CODES.BINDING_COVERAGE_INCOMPLETE });
       // Approval is a backend fact: stamp each binding and record the policy
       // version; client-supplied approved flags are never trusted.
       covered.bindings = (covered.bindings || []).map((binding) => ({ ...binding, approved: true }));
@@ -393,15 +394,15 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!outputVerification.passed || manifest.output?.hash !== output?.hash || manifest.output?.path !== output?.path) {
         const messages = outputVerification.issues.map((item) => item.message);
         if (manifest.output?.hash !== output?.hash || manifest.output?.path !== output?.path) messages.push('Composition Manifest does not reference the current output.');
-        throw Object.assign(new Error(`Composition Output Gate failed: ${messages.join('; ')}`), { code: 'COMPOSITION_OUTPUT_INVALID' });
+        throw Object.assign(new Error(`Composition Output Gate failed: ${messages.join('; ')}`), { code: ERROR_CODES.COMPOSITION_OUTPUT_INVALID });
       }
       if (report?.source?.composition_output !== output.id || report?.source?.composition_manifest_version !== manifest.version || report?.source?.composition_output_version !== output.version || report?.source?.composition_output_hash !== output.hash || report?.output?.hash !== output.hash) {
-        throw Object.assign(new Error('Final Fidelity Report does not verify the current Composition Output.'), { code: 'FIDELITY_OUTPUT_STALE' });
+        throw Object.assign(new Error('Final Fidelity Report does not verify the current Composition Output.'), { code: ERROR_CODES.FIDELITY_OUTPUT_STALE });
       }
       const currentInspection = await inspectFidelityEvidence({ projectPath: resolved.workspacePath, project, manifest, output });
-      if (!currentInspection.passed) throw Object.assign(new Error(`Current pixel evidence failed: ${currentInspection.issues.map((item) => item.message).join('; ')}`), { code: 'FIDELITY_CURRENT_EVIDENCE_FAILED' });
+      if (!currentInspection.passed) throw Object.assign(new Error(`Current pixel evidence failed: ${currentInspection.issues.map((item) => item.message).join('; ')}`), { code: ERROR_CODES.FIDELITY_CURRENT_EVIDENCE_FAILED });
       const gate = finalApprovalGate(report, { evidenceDigest: currentInspection.evidence_digest });
-      if (!gate.passed) throw Object.assign(new Error(`Final Fidelity Gate failed: ${gate.blocking.map((item) => item.message).join('; ')}`), { code: 'FIDELITY_GATE_FAILED' });
+      if (!gate.passed) throw Object.assign(new Error(`Final Fidelity Gate failed: ${gate.blocking.map((item) => item.message).join('; ')}`), { code: ERROR_CODES.FIDELITY_GATE_FAILED });
       await projectStore.saveArtifact(projectId, 'composition-manifest', { ...manifest, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'fidelity_review', 'approved', `screens/${project.screen_id}/composition-manifest.json`);
     } else if (kind === 'approved-layout') {
@@ -424,7 +425,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         input_revisions: { ...(project.input_revisions || {}) }
       };
       const layoutErrors = validateLayout(artifact, project.artifacts.bindings, project.artifacts.componentContract, project.canvas_spec, { strict: project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation' });
-      if (layoutErrors.length) throw Object.assign(new Error(layoutErrors.join('; ')), { code: 'LAYOUT_CONSTRAINT_VIOLATION' });
+      if (layoutErrors.length) throw Object.assign(new Error(layoutErrors.join('; ')), { code: ERROR_CODES.LAYOUT_CONSTRAINT_VIOLATION });
       await projectStore.saveArtifact(projectId, 'approved-layout', artifact);
       await projectStore.updateWorkflow(projectId, 'layout_design', 'approved', `screens/${project.screen_id}/approved-layout.json`);
     } else if (kind === 'style-contract') {
@@ -432,7 +433,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!current) throw new Error('Style Contract does not exist.');
       const approved = { ...current, status: 'approved', locked_at: new Date().toISOString() };
       const errors = validateArtifact(kind, approved);
-      if (errors.length) throw Object.assign(new Error(`Style Contract 尚不可执行，不能锁定：${errors.join('; ')}`), { code: 'STYLE_CONTRACT_INVALID' });
+      if (errors.length) throw Object.assign(new Error(`Style Contract 尚不可执行，不能锁定：${errors.join('; ')}`), { code: ERROR_CODES.STYLE_CONTRACT_INVALID });
       await projectStore.saveArtifact(projectId, kind, approved);
       await projectStore.updateWorkflow(projectId, 'style_resolution', 'approved', 'style/style-contract.json');
     } else if (kind === 'font-manifest' || kind === 'component-contract') {
@@ -490,9 +491,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     }
     const project = ['style-contract', 'font-manifest', 'component-contract'].includes(kind)
       ? await openProject(projectId) : await openScreen(projectId, screenId);
-    if (kind === 'composition-manifest' || kind === 'fidelity-report') throw Object.assign(new Error(`${kind} is generated evidence and cannot be edited.`), { code: 'GENERATED_EVIDENCE_READ_ONLY' });
+    if (kind === 'composition-manifest' || kind === 'fidelity-report') throw Object.assign(new Error(`${kind} is generated evidence and cannot be edited.`), { code: ERROR_CODES.GENERATED_EVIDENCE_READ_ONLY });
     if (kind === 'font-manifest' && (Object.prototype.hasOwnProperty.call(patch, 'fonts') || Object.prototype.hasOwnProperty.call(patch, 'roles'))) {
-      throw Object.assign(new Error('Font files, authorization, and exact roles must be changed through the dedicated import and confirmation actions.'), { code: 'FONT_CONFIRMATION_ACTION_REQUIRED' });
+      throw Object.assign(new Error('Font files, authorization, and exact roles must be changed through the dedicated import and confirmation actions.'), { code: ERROR_CODES.FONT_CONFIRMATION_ACTION_REQUIRED });
     }
     const definitions = {
       'screen-contract': { artifact: project.artifacts.screenContract, stage: 'wireframe_interpretation' },

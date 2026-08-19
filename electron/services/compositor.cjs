@@ -1,4 +1,5 @@
 const { reviewGate } = require('./underlayCritique.cjs');
+const { ERROR_CODES } = require('./errorCodes.cjs');
 const { validateFontManifest } = require('./typographyAssets.cjs');
 const { validateBindings } = require('./componentBindings.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
@@ -44,7 +45,7 @@ function createCompositionManifest({ project, underlay, layout, bindings, compon
   errors.push(...bindingResult.errors);
   errors.push(...validateLayout(layout, bindings, componentContract, project.canvas_spec, { strict }));
   if (mode === 'final') errors.push(...validateFontManifest(fontManifest, { strict }));
-  if (errors.length) throw Object.assign(new Error(errors.join('; ')), { code: 'COMPOSITION_GATE_FAILED', missing_requirements: errors });
+  if (errors.length) throw Object.assign(new Error(errors.join('; ')), { code: ERROR_CODES.COMPOSITION_GATE_FAILED, missing_requirements: errors });
   const families = new Map((componentContract.families || []).map((family) => [family.id, family]));
   const slots = new Map((layout.slots || []).map((slot) => [slot.id, slot]));
   const layers = [];

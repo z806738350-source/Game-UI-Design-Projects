@@ -1,4 +1,5 @@
 const fs = require('node:fs/promises');
+const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const { extractJson, normalizeArtifact, validateArtifact, withCommonFields } = require('./contracts.cjs');
 const { imageMetadataFromBuffer, readImageMetadata } = require('./imageMetadata.cjs');
 
@@ -261,7 +262,7 @@ async function transientImageSnapshot(url, id, requestedSize) {
   let bytes;
   if (location.kind === 'inline-data') {
     const match = String(url).match(/^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/i);
-    if (!match) throw Object.assign(new Error('Kunpo returned an unsupported inline image payload.'), { code: 'TRANSIENT_IMAGE_UNSUPPORTED' });
+    if (!match) throw Object.assign(new Error('Kunpo returned an unsupported inline image payload.'), { code: ERROR_CODES.TRANSIENT_IMAGE_UNSUPPORTED });
     bytes = Buffer.from(match[2], 'base64');
   } else if (isSnapshotHost(location)) {
     const controller = new AbortController();
@@ -270,26 +271,26 @@ async function transientImageSnapshot(url, id, requestedSize) {
     try {
       response = await fetch(url, { redirect: 'error', signal: controller.signal });
     } catch (error) {
-      throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (${error?.name === 'AbortError' ? 'timeout after 120s' : error?.message || 'fetch failed'}).`), { code: 'TRANSIENT_IMAGE_DOWNLOAD_FAILED' });
+      throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (${error?.name === 'AbortError' ? 'timeout after 120s' : error?.message || 'fetch failed'}).`), { code: ERROR_CODES.TRANSIENT_IMAGE_DOWNLOAD_FAILED });
     } finally { clearTimeout(timer); }
-    if (!response.ok) throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (HTTP ${response.status}).`), { code: 'TRANSIENT_IMAGE_DOWNLOAD_FAILED' });
+    if (!response.ok) throw Object.assign(new Error(`Unable to snapshot the transient Kunpo image (HTTP ${response.status}).`), { code: ERROR_CODES.TRANSIENT_IMAGE_DOWNLOAD_FAILED });
     const contentType = String(response.headers.get('content-type') || '');
-    if (!/^image\/(png|jpe?g|webp)/i.test(contentType)) throw Object.assign(new Error(`Transient Kunpo image response declared an unexpected content type (${contentType || 'none'}).`), { code: 'TRANSIENT_IMAGE_UNSUPPORTED' });
+    if (!/^image\/(png|jpe?g|webp)/i.test(contentType)) throw Object.assign(new Error(`Transient Kunpo image response declared an unexpected content type (${contentType || 'none'}).`), { code: ERROR_CODES.TRANSIENT_IMAGE_UNSUPPORTED });
     const contentLength = Number(response.headers.get('content-length'));
-    if (Number.isFinite(contentLength) && contentLength > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image exceeds the 25MB snapshot limit.'), { code: 'TRANSIENT_IMAGE_SIZE_INVALID' });
+    if (Number.isFinite(contentLength) && contentLength > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image exceeds the 25MB snapshot limit.'), { code: ERROR_CODES.TRANSIENT_IMAGE_SIZE_INVALID });
     bytes = Buffer.from(await response.arrayBuffer());
   } else {
     const error = new Error(`Kunpo returned an untrusted image location (${JSON.stringify(location)}). The result was not fetched or persisted.`);
-    error.code = 'UNTRUSTED_IMAGE_LOCATION';
+    error.code = ERROR_CODES.UNTRUSTED_IMAGE_LOCATION;
     throw error;
   }
-  if (!bytes.length || bytes.length > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image is empty or exceeds the 25MB snapshot limit.'), { code: 'TRANSIENT_IMAGE_SIZE_INVALID' });
+  if (!bytes.length || bytes.length > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image is empty or exceeds the 25MB snapshot limit.'), { code: ERROR_CODES.TRANSIENT_IMAGE_SIZE_INVALID });
   const metadata = imageMetadataFromBuffer(bytes);
-  if (!metadata) throw Object.assign(new Error('Transient Kunpo image is not a supported PNG, JPEG, or WebP bitmap.'), { code: 'TRANSIENT_IMAGE_DECODE_FAILED' });
+  if (!metadata) throw Object.assign(new Error('Transient Kunpo image is not a supported PNG, JPEG, or WebP bitmap.'), { code: ERROR_CODES.TRANSIENT_IMAGE_DECODE_FAILED });
   const [expectedWidth, expectedHeight] = String(requestedSize || '').split('x').map(Number);
   if (expectedWidth && expectedHeight) {
     const expectedRatio = expectedWidth / expectedHeight; const actualRatio = metadata.width / metadata.height;
-    if (Math.abs(expectedRatio - actualRatio) / expectedRatio > 0.03) throw Object.assign(new Error(`生成结果比例为 ${metadata.width}:${metadata.height}，目标比例为 ${expectedWidth}:${expectedHeight}`), { code: 'TRANSIENT_IMAGE_RATIO_MISMATCH' });
+    if (Math.abs(expectedRatio - actualRatio) / expectedRatio > 0.03) throw Object.assign(new Error(`生成结果比例为 ${metadata.width}:${metadata.height}，目标比例为 ${expectedWidth}:${expectedHeight}`), { code: ERROR_CODES.TRANSIENT_IMAGE_RATIO_MISMATCH });
   }
   return {
     url: `data:${metadata.mime};base64,${bytes.toString('base64')}`,
@@ -331,7 +332,7 @@ async function generateImage(config, { prompt, imagePaths = [], size = '1536x864
   const paths = imagePaths.filter(Boolean);
   if (paths.length > maxReferenceImages) {
     const error = new Error(`Reference pack contains ${paths.length} images but provider limit is ${maxReferenceImages}. Build an explicit reference pack and review omitted assets.`);
-    error.code = 'REFERENCE_CAPACITY_EXCEEDED';
+    error.code = ERROR_CODES.REFERENCE_CAPACITY_EXCEEDED;
     throw error;
   }
   const references = await Promise.all(paths.map(fileDataUrl));

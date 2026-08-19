@@ -2,9 +2,9 @@
 
 面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。
 
-> **发布状态：`0.2.0` 正式版本（2026-08-18）。** 整改 Definition of Done 已完成：五组真实 provider Golden Samples 全部 pipeline-passed（三组校准 + 两组保留，含简体中文样本），fixture E2E 在 CI 中重放已发布证据链，设计师签核（韩枫，UI设计师）五组全部 APPROVED，`release-evidence/golden-samples/index.json` 派生为 `released`。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md` 与 `docs/baseline/pr8-golden-release.md`。
+> **发布状态：`0.2.1`（2026-08-19）。** 在 `0.2.0` 正式版本基础上完成剩余整改（REM-01~06）：Binding 语义门禁、Workbench 边界、UI E2E 进入 CI、执行级文档体系与 docs-validate 门禁、受保护的 main 分支。`0.2.0` 的整改 Definition of Done 依然有效：五组真实 provider Golden Samples 全部 pipeline-passed（三组校准 + 两组保留，含简体中文样本），fixture E2E 在 CI 中重放已发布证据链，设计师签核（韩枫，UI设计师）五组全部 APPROVED，`release-evidence/golden-samples/index.json` 派生为 `released`。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md` 与 `docs/baseline/pr8-golden-release.md`。
 
-当前 Alpha 已覆盖的控制面包括：
+当前版本已覆盖的能力包括：
 
 1. 策划需求 + UE Wireframe 输入
 2. Functional Screen Contract 生成与人工批准
@@ -13,9 +13,13 @@
 5. Style Contract 批准与 Style Lock
 6. 已有项目默认 `existing-strict`，新项目保留探索模式
 7. Font Manifest、Component Contract 与必要控件 100% Binding
-8. 多 Screen、Schema 2.0 安全迁移与细粒度 stale 传播
-9. Underlay Contract、结构 Guide、真实 Review Overlay/指标、自动 Critique 与有限次数 Repair 闭环
-10. Composition Manifest + 真实 Composition Output、独立组件/字体 renderer、final PNG 落盘/导出与初步 Fidelity Gate
+8. Binding 语义门禁（`binding-policy-v1` 角色词表冻结策略，禁止隐式默认绑定）
+9. Workbench 边界（每个工作台只能调用本阶段允许的 IPC 操作）
+10. 多 Screen、Schema 2.0 安全迁移与细粒度 stale 传播
+11. Underlay Contract、结构 Guide、真实 Review Overlay/指标、自动 Critique 与有限次数 Repair 闭环
+12. Composition Manifest + 真实 Composition Output、独立组件/字体 renderer、final PNG 落盘/导出与初步 Fidelity Gate
+13. UI E2E（Playwright + Electron，本地 FixtureProvider 模拟网关）进入 CI
+14. 执行级文档体系：11 份契约文档 + 用户 SOP + 开发运维文档，由 docs-validate 门禁自动校验
 
 ## 本地运行
 
@@ -45,6 +49,15 @@ pnpm dev
 ```bash
 pnpm build
 pnpm test
+```
+
+文档与门禁校验：
+
+```bash
+pnpm test:docs          # check-docs + check-error-docs
+pnpm test:fixture-e2e   # 证据链重放
+pnpm test:ui-unit       # 前端组件单测
+pnpm test:ui-e2e        # Playwright Electron E2E（需先 pnpm build）
 ```
 
 ## 在线运行
@@ -96,16 +109,25 @@ project/
 │   ├── underlay-layout-guide.png
 │   ├── underlay-critique.json
 │   ├── composition-manifest.json
+│   ├── composition-output.json
 │   ├── fidelity-report.json
+│   ├── inputs.json
+│   ├── underlays/*.png
+│   ├── compositions/{mode}-v{version}.png
+│   ├── reviews/{id}-semantic-response.json
 │   └── explorations/results.json
 ├── style/
 │   ├── style-contract.json
 │   ├── font-manifest.json
 │   ├── component-contract.json
+│   ├── reference-inventory.json
 │   ├── references/
 │   ├── fonts/
 │   └── components/
-└── workflow/state.json
+└── workflow/
+    ├── state.json
+    ├── artifact-history.json
+    └── migration-log.json
 ```
 
 所有模型 Artifact 都包含 `schema_version`、`id`、`version`、`status` 和 `source`。上游 Artifact 重新生成时，下游结果会标记为 `stale`，避免旧批准结果被误用。
@@ -128,11 +150,35 @@ Game UI Forge 负责后半段：
 
 专项说明见 `docs/EXISTING-PROJECT-WORKFLOW.md`，执行拆分见 `docs/PR-MILESTONES.md`。
 
+## 文档索引
+
+执行级文档由 `pnpm test:docs` 与 CI `docs-validate` job 自动校验（`scripts/check-docs.cjs` + `scripts/check-error-docs.cjs`）。
+
+契约文档（`docs/contracts/`）：
+
+- `STYLE-CONTRACT-2.0.md`、`FONT-MANIFEST.md`、`COMPONENT-CONTRACT.md`、`SCREEN-CONTRACT.md`、`COMPONENT-BINDINGS.md`、`APPROVED-LAYOUT.md`、`UNDERLAY-CONTRACT.md`、`UNDERLAY-CRITIQUE.md`、`COMPOSITION-MANIFEST.md`、`COMPOSITION-OUTPUT.md`、`FIDELITY-REPORT.md`
+
+用户文档（`docs/user/`）：
+
+- `EXISTING-PROJECT-SOP.md`、`STRICT-CONTINUATION-GUIDE.md`、`WORKBENCH-GUIDE.md`、`FAILURE-RECOVERY.md`
+
+开发运维文档（`docs/dev/`）：
+
+- `PIPELINE-STATE-MACHINE.md`、`ARTIFACT-DEPENDENCY-GRAPH.md`、`API-IPC-REFERENCE.md`、`PROJECT-DIRECTORY.md`、`ERROR-CATALOG.md`、`PROVIDER-TROUBLESHOOTING.md`、`MIGRATION-ROLLBACK.md`、`RELEASE-CHECKLIST.md`
+
+错误码以 `electron/services/errorCodes.cjs` 冻结注册表为唯一事实来源，`docs/dev/ERROR-CATALOG.md` 与注册表双向校验。
+
+## 分支与发布治理
+
+- main 分支受 GitHub Ruleset 保护：禁止直推与绕过，合并必须通过全部 Required Checks（validate、fixture-e2e、ui-unit、ui-e2e、docs-validate、secret-scan、macos-validate）；
+- 全部变更走 PR：push 前运行 L3 深度安全扫描，PR 经 CodeReview 实质审查与 CI 全绿后合并；
+- 发布流程与检查清单见 `docs/dev/RELEASE-CHECKLIST.md`。
+
 ## Golden Samples 与发布门禁
 
 真实 Provider 验收采用“校准集 + 保留集”结构：三组校准样本（`functional-dense`、`visual-hero`、`existing-continuation`）与两组未参与调参的保留样本（`jade-shop-zh` 简体中文 + Noto Sans SC、`frontier-campaign`）。阈值固定为 `underlay-metrics-v1`；执行日志记录 Model、Prompt Hash、Input Hash、Provider Task ID、Repair 父子链与 Output Hash；`index.json` 由执行日志与设计师签核派生。证据分层、运行命令与发布门禁见 `docs/baseline/pr8-golden-release.md`。日常 CI 通过 `pnpm test:fixture-e2e` 重放已发布证据链，不调用 Provider。正式发布门禁（设计师真人签核）已于 2026-08-18 关闭，版本提升为 `0.2.0`。
 
-## 当前 Alpha 范围外
+## 当前版本范围外
 
 - 正式 Figma 生产
 - 自动 Sprite Sheet、Atlas 与引擎 JSON（由 Game UI Forge 侧承接）

@@ -1,4 +1,5 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { ERROR_CODES } = require('./services/errorCodes.cjs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { loadKunpoConfig, saveModelConfig } = require('./services/env.cjs');
@@ -136,7 +137,7 @@ function registerIpc() {
     const font = (project.artifacts.fontManifest?.fonts || []).find((item) => item.id === fontId);
     if (!font) throw new Error(`Font not found: ${fontId}`);
     const bytes = await fs.readFile(resolveProjectPath(project.workspacePath, font.local_path));
-    if (hashBuffer(bytes) !== font.file_hash) throw Object.assign(new Error(`Font asset hash changed: ${fontId}`), { code: 'FONT_ASSET_HASH_MISMATCH' });
+    if (hashBuffer(bytes) !== font.file_hash) throw Object.assign(new Error(`Font asset hash changed: ${fontId}`), { code: ERROR_CODES.FONT_ASSET_HASH_MISMATCH });
     return bytes;
   });
   ipcMain.handle('copilot:components:import', async (_event, projectId, input) => {
@@ -167,7 +168,7 @@ function registerIpc() {
     if (strict) {
       const output = project.artifacts.compositionOutput;
       const verification = await verifyCompositionOutput(project.workspacePath, output, { requireFinal: true });
-      if (!verification.passed) throw Object.assign(new Error(`无法导出最终成图：${verification.issues.map((item) => item.message).join('；')}`), { code: 'FINAL_EXPORT_BLOCKED' });
+      if (!verification.passed) throw Object.assign(new Error(`无法导出最终成图：${verification.issues.map((item) => item.message).join('；')}`), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
       const selection = await dialog.showSaveDialog({
         title: '导出最终合成 PNG',
         defaultPath: `${project.name}-${project.screen_id}-final.png`,

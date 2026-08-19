@@ -1,4 +1,5 @@
 const crypto = require('node:crypto');
+const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { ensureDir } = require('./jsonStore.cjs');
@@ -104,8 +105,8 @@ function confirmFontUsage(manifest, input = {}, { confirmedBy = 'ui-designer', n
   const fontId = String(input.fontId || '').trim();
   const roleId = String(input.roleId || '').trim();
   if (!fontId || !roleId) throw new Error('fontId and roleId are required.');
-  if (input.licenseConfirmed !== true) throw Object.assign(new Error('Font license must be explicitly confirmed.'), { code: 'FONT_LICENSE_CONFIRMATION_REQUIRED' });
-  if (input.exactConfirmed !== true) throw Object.assign(new Error('Exact font usage must be explicitly confirmed.'), { code: 'FONT_EXACT_CONFIRMATION_REQUIRED' });
+  if (input.licenseConfirmed !== true) throw Object.assign(new Error('Font license must be explicitly confirmed.'), { code: ERROR_CODES.FONT_LICENSE_CONFIRMATION_REQUIRED });
+  if (input.exactConfirmed !== true) throw Object.assign(new Error('Exact font usage must be explicitly confirmed.'), { code: ERROR_CODES.FONT_EXACT_CONFIRMATION_REQUIRED });
   const fonts = (manifest?.fonts || []).map((font) => font.id === fontId ? {
     ...font,
     license_status: 'confirmed',

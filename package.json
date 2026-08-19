@@ -1,6 +1,6 @@
 {
   "name": "game-ui-design-copilot",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "packageManager": "pnpm@11.19.0",
   "description": "Artifact-driven AI workflow for game UI designers.",
@@ -19,6 +19,7 @@
     "test:ui-unit": "vitest run",
     "test:fixture-e2e": "node --test electron/services/goldenFixtures.test.cjs",
     "test:ui-e2e": "playwright test",
+    "test:docs": "node scripts/check-docs.cjs && node scripts/check-error-docs.cjs",
     "start:web": "node server/webServer.cjs",
     "test:kunpo": "node scripts/smoke-kunpo.cjs",
     "test:kunpo-image": "node scripts/smoke-kunpo-image.cjs",
