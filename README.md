@@ -2,7 +2,7 @@
 
 面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。
 
-> **发布状态：`0.2.1`（2026-08-19）。** 在 `0.2.0` 正式版本基础上完成剩余整改（REM-01~06）：Binding 语义门禁、Workbench 边界、UI E2E 进入 CI、执行级文档体系与 docs-validate 门禁、受保护的 main 分支。`0.2.0` 的整改 Definition of Done 依然有效：五组真实 provider Golden Samples 全部 pipeline-passed（三组校准 + 两组保留，含简体中文样本），fixture E2E 在 CI 中重放已发布证据链，设计师签核（韩枫，UI设计师）五组全部 APPROVED，`release-evidence/golden-samples/index.json` 派生为 `released`。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md` 与 `docs/baseline/pr8-golden-release.md`。
+> **发布状态：`0.2.2`（2026-08-19）。** v0.2.1 审核尾项的最终合规与治理收口版本：F-01 Binding State/Font Role 真正显式化（冻结 BINDING_VALIDATION_CODES 门禁、无自动默认、compositor 无回退）、F-03 UI E2E 原场景逐项覆盖（多 Screen 生命周期、nine-slice、字体/组件文件故障与 stale 链，全部经 UI 驱动）、F-02 文档事实完整性（三注册表 ↔ ERROR-CATALOG 双向校验、文档命令校验、项目树三方校验与负向 Fixture）。`0.2.1` 的 REM-01~06 结论与 `0.2.0` 的整改 Definition of Done 依然有效：五组真实 provider Golden Samples 全部 pipeline-passed（三组校准 + 两组保留，含简体中文样本），fixture E2E 在 CI 中重放已发布证据链，设计师签核（韩枫，UI设计师）五组全部 APPROVED，`release-evidence/golden-samples/index.json` 派生为 `released`。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md` 与 `docs/baseline/pr8-golden-release.md`；本轮尾项要求与执行见 `docs/Game-UI-Design-Copilot-v0.2.1-剩余未闭环要求与最终整改执行指导.md`。
 
 当前版本已覆盖的能力包括：
 
