@@ -40,6 +40,13 @@ const projectWithControls = (extra = {}) => makeProject({
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
+// 自绘下拉框交互：展开后点击目标选项（data-value）。
+const pick = async (user: ReturnType<typeof userEvent.setup>, testId: string, value: string) => {
+  const root = screen.getByTestId(testId);
+  await user.click(root.querySelector('.dropdown-button') as HTMLElement);
+  await user.click(root.querySelector(`.dropdown-option[data-value="${value}"]`) as HTMLElement);
+};
+
 describe('BindingWorkbench（REM-01 / F-01 显式选择）', () => {
   it('正常路径：组件/状态/字体角色逐项显式确认后才允许保存，且不发送 approved 字段', async () => {
     const project = projectWithControls();
@@ -50,17 +57,17 @@ describe('BindingWorkbench（REM-01 / F-01 显式选择）', () => {
     const save = screen.getByTestId('binding-save');
     expect(save.hasAttribute('disabled')).toBe(true);
 
-    await user.selectOptions(screen.getByTestId('binding-component-select-save').querySelector('select')!, 'button.primary');
-    await user.selectOptions(screen.getByTestId('binding-component-select-back').querySelector('select')!, 'nav.item');
+    await pick(user, 'binding-component-select-save', 'button.primary');
+    await pick(user, 'binding-component-select-back', 'nav.item');
     // Choosing families alone never confirms state or font role.
     expect(save.hasAttribute('disabled')).toBe(true);
 
-    await user.selectOptions(screen.getByTestId('binding-state-select-save'), 'default');
+    await pick(user, 'binding-state-select-save', 'default');
     // text-slot family still requires an explicit font role.
     expect(save.hasAttribute('disabled')).toBe(true);
-    await user.selectOptions(screen.getByTestId('binding-font-role-select-save'), 'button-label');
+    await pick(user, 'binding-font-role-select-save', 'button-label');
 
-    await user.selectOptions(screen.getByTestId('binding-state-select-back'), 'default');
+    await pick(user, 'binding-state-select-back', 'default');
     // nav.item has text_policy none: no font role required.
     expect(save.hasAttribute('disabled')).toBe(false);
 
@@ -79,20 +86,18 @@ describe('BindingWorkbench（REM-01 / F-01 显式选择）', () => {
   it('选择组件后状态与字体角色保持空值，仅显示推荐提示', async () => {
     const user = userEvent.setup();
     render(<BindingWorkbench project={projectWithControls()} busy={false} />);
-    await user.selectOptions(screen.getByTestId('binding-component-select-save').querySelector('select')!, 'button.primary');
-    const stateSelect = screen.getByTestId('binding-state-select-save') as HTMLSelectElement;
-    expect(stateSelect.value).toBe('');
-    const fontRoleSelect = screen.getByTestId('binding-font-role-select-save') as HTMLSelectElement;
-    expect(fontRoleSelect.value).toBe('');
-    expect(stateSelect.querySelector('option[value=""]')?.textContent).toContain('必选');
-    expect(fontRoleSelect.querySelector('option[value=""]')?.textContent).toContain('必选');
+    await pick(user, 'binding-component-select-save', 'button.primary');
+    // 选择组件后状态与字体角色仍为占位文案（未确认）。
+    expect(screen.getByTestId('binding-state-select-save').querySelector('.dropdown-button > span')?.textContent).toContain('必选');
+    expect(screen.getByTestId('binding-font-role-select-save').querySelector('.dropdown-button > span')?.textContent).toContain('必选');
   });
 
-  it('语义不兼容的组件被禁用并显示原因', () => {
+  it('语义不兼容的组件被禁用并显示原因', async () => {
+    const user = userEvent.setup();
     render(<BindingWorkbench project={projectWithControls()} busy={false} />);
-    const navigationSelect = screen.getByTestId('binding-component-select-back').querySelector('select')!;
-    const incompatible = Array.from(navigationSelect.options).find((option) => option.value === 'button.primary')!;
-    expect(incompatible.disabled).toBe(true);
+    await user.click(screen.getByTestId('binding-component-select-back').querySelector('.dropdown-button') as HTMLElement);
+    const incompatible = screen.getByTestId('binding-component-select-back').querySelector('.dropdown-option[data-value="button.primary"]') as HTMLElement;
+    expect(incompatible.className).toContain('is-disabled');
     expect(incompatible.textContent).toContain('语义不兼容');
   });
 

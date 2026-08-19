@@ -9,7 +9,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { FixtureProvider, GOLDEN_ASSETS } from './fixtureProvider';
 import {
-  approveContract, approveStrictLayout, clickRun, closeErrorBanner, createStrictProject,
+  approveContract, approveStrictLayout, chooseDropdown, clickRun, closeErrorBanner, createStrictProject,
   editContractPurposeViaUi, expectErrorBanner, findProjectDir, generateUnderlays, getProject,
   importComponents, importFonts, importReferencesAndGenerateStyle, importWireframeAndIntent,
   launchApp, queueOpenFiles, selectAndApproveBindings, switchContinuationModeViaUi
@@ -63,7 +63,7 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     // The edit went through the run() boundary, so the shell already holds
     // fresh state; the layout gate must reflect the staleness immediately.
     await page.getByTestId('stage-style_resolution').click();
-    await expect(page.locator('.strict-gates i', { hasText: 'Bindings' })).not.toHaveClass(/is-ready/);
+    await expect(page.locator('.strict-gates i', { hasText: '控件绑定' })).not.toHaveClass(/is-ready/);
     await expect(page.getByTestId('strict-layout-generate')).toBeDisabled();
   });
 
@@ -109,7 +109,7 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     await page.locator('.project-switcher button', { hasText: '新项目' }).click();
     await page.locator('.create-dialog input[placeholder*="云境计划"]').fill('E2E Guided Switch');
     await page.locator('.project-type-grid button', { hasText: '已有项目' }).click();
-    await page.locator('.create-dialog select').selectOption('existing-guided');
+    await chooseDropdown(page.getByTestId('create-continuation-select'), 'existing-guided');
     await clickRun(page, 'create-project');
     await importWireframeAndIntent(launched);
     await approveContract(page);

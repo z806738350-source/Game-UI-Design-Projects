@@ -8,8 +8,8 @@ import { TypographyWorkbench } from '../workbenches/TypographyWorkbench';
 
 export function StrictContinuationPanel({ project, busy, run }: { project: DesignProject; busy: boolean; run: RunTask }) {
   const gates = [
-    ['Style', project.artifacts.styleContract?.status], ['Font Manifest', project.artifacts.fontManifest?.status],
-    ['Component Contract', project.artifacts.componentContract?.status], ['Bindings', project.artifacts.bindings?.status]
+    ['风格规范', project.artifacts.styleContract?.status], ['字体清单', project.artifacts.fontManifest?.status],
+    ['组件契约', project.artifacts.componentContract?.status], ['控件绑定', project.artifacts.bindings?.status]
   ];
   return <section className="strict-panel">
     <header><div><span>STRICT CONTINUATION</span><h3>严格继承资产与绑定</h3><p>这些门禁全部由后端复核；未满足时不能进入组件感知布局。绑定必须逐个显式选择，批准由后端生成。</p></div><div className="strict-gates">{gates.map(([label, status]) => <i className={status === 'approved' ? 'is-ready' : ''} key={label}>{status === 'approved' && <Check size={12} />}{label}</i>)}</div></header>

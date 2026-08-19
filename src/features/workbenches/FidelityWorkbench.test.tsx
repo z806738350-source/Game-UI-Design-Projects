@@ -15,7 +15,7 @@ describe('FidelityWorkbench（Fidelity 错误展示）', () => {
     });
     render(<FidelityWorkbench project={project} />);
     const badge = screen.getByTestId('fidelity-status');
-    expect(badge.textContent).toBe('passed');
+    expect(badge.textContent).toBe('已通过');
     expect(badge.className).toContain('is-ready');
     expect(screen.queryByTestId('fidelity-issues')).toBeNull();
     expect(screen.getByText(/final-v2\.png/)).toBeTruthy();

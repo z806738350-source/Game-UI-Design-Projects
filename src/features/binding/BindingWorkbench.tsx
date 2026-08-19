@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Layers3, LockKeyhole } from 'lucide-react';
 import { copilotApi } from '../../api';
 import type { DesignProject } from '../../types';
-import { friendlyError } from '../shared/ui';
+import { Dropdown, friendlyError } from '../shared/ui';
 import type { RunTask } from '../shared/ui';
 
 // UX-only mirror of electron/services/controlRolePolicy.cjs (binding-policy-v1).
@@ -88,29 +88,20 @@ export function BindingWorkbench({ project, busy, run }: { project: DesignProjec
     const policy = ROLE_POLICIES[role];
     const allowedFontRoles = (policy?.allowed_font_roles || []).filter((fontRole) => fontRoles.includes(fontRole));
     const fontRoleRequired = needsFontRole(control);
-    return <label key={control.id} data-testid={`binding-component-select-${control.id}`}>
+    return <label key={control.id}>
       <span>{control.label}（角色：{role}）{role === 'action' && <em className="binding-unresolved-role" data-testid={`binding-unresolved-role-${control.id}`}>待语义解析：strict 批准前请在功能契约中改为具体角色</em>}</span>
-      <select value={choice.component_id} onChange={(event) => {
+      <Dropdown testId={`binding-component-select-${control.id}`} value={choice.component_id} onChange={(next) => {
         // Selecting a family never confirms state or font role: both stay
         // empty until the designer picks them explicitly.
-        setChoice(control.id, { component_id: event.target.value, state: '', font_role: '' });
-      }}>
-        <option value="">请选择组件（必选）</option>
-        {families.map((family) => {
-          const reason = incompatibility(control, family);
-          return <option key={String(family.id)} value={String(family.id)} disabled={Boolean(reason)}>{String(family.name || family.id)}{reason ? `（不可选：${reason}）` : ''}</option>;
-        })}
-      </select>
-      {choice.component_id && <select value={choice.state} data-testid={`binding-state-select-${control.id}`} onChange={(event) => setChoice(control.id, { state: event.target.value })}>
-        <option value="">选择状态（必选）</option>
-        {states.map((state) => <option key={state} value={state}>{state}</option>)}
-      </select>}
+        setChoice(control.id, { component_id: next, state: '', font_role: '' });
+      }} placeholder="请选择组件（必选）" options={families.map((family) => {
+        const reason = incompatibility(control, family);
+        return { value: String(family.id), label: `${String(family.name || family.id)}${reason ? `（不可选：${reason}）` : ''}`, disabled: Boolean(reason) };
+      })} />
+      {choice.component_id && <Dropdown testId={`binding-state-select-${control.id}`} value={choice.state} onChange={(next) => setChoice(control.id, { state: next })} placeholder="选择状态（必选）" options={states.map((state) => ({ value: state, label: state }))} />}
       {choice.component_id && !choice.state && states.length > 0 && <em className="binding-hint">推荐状态：{states.includes('default') ? 'default' : states[0]}（需手动确认）</em>}
       {choice.component_id && (allowedFontRoles.length
-        ? <select value={choice.font_role} data-testid={`binding-font-role-select-${control.id}`} onChange={(event) => setChoice(control.id, { font_role: event.target.value })}>
-          <option value="">选择字体角色{fontRoleRequired ? '（必选）' : '（可选）'}</option>
-          {allowedFontRoles.map((fontRole) => <option key={fontRole} value={fontRole}>{fontRole}</option>)}
-        </select>
+        ? <Dropdown testId={`binding-font-role-select-${control.id}`} value={choice.font_role} onChange={(next) => setChoice(control.id, { font_role: next })} placeholder={`选择字体角色${fontRoleRequired ? '（必选）' : '（可选）'}`} options={allowedFontRoles.map((fontRole) => ({ value: fontRole, label: fontRole }))} />
         : fontRoleRequired
           ? <em className="binding-hint binding-hint--conflict">该组件需要文字层，但角色 {role} 没有可用的字体角色，请调整控件角色或组件</em>
           : <em>该角色不使用文字层</em>)}

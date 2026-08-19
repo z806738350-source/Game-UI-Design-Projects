@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { FixtureProvider } from './fixtureProvider';
 import {
-  approveContract, approveStrictLayout, createStrictProject, generateUnderlays, getProject,
+  approveContract, approveStrictLayout, chooseDropdown, createStrictProject, generateUnderlays, getProject,
   importComponents, importFonts, importReferencesAndGenerateStyle, importWireframeAndIntent,
   launchApp, queueSaveFile, selectAndApproveBindings, clickRun,
   BINDING_FAMILY_BY_CONTROL
@@ -64,15 +64,16 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     // required control has an explicit component choice.
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     // Semantic incompatibility is surfaced in the dropdown itself.
-    const primarySelect = page.getByTestId('binding-component-select-primary-action').locator('select').first();
-    await expect(primarySelect.locator('option[value="bottom-navigation"]')).toHaveAttribute('disabled', '');
-    await expect(primarySelect.locator('option[value="primary-button"]')).not.toHaveAttribute('disabled', '');
+    const primarySelect = page.getByTestId('binding-component-select-primary-action');
+    await primarySelect.locator('.dropdown-button').click();
+    await expect(primarySelect.locator('.dropdown-option[data-value="bottom-navigation"]')).toHaveClass(/is-disabled/);
+    await expect(primarySelect.locator('.dropdown-option[data-value="primary-button"]')).not.toHaveClass(/is-disabled/);
     // F-01: choosing a family alone never confirms state or font role.
-    await primarySelect.selectOption('primary-button');
-    await expect(page.getByTestId('binding-state-select-primary-action')).toHaveValue('');
+    await primarySelect.locator('.dropdown-option[data-value="primary-button"]').click();
+    await expect(page.getByTestId('binding-state-select-primary-action').locator('.dropdown-button > span')).toContainText('必选');
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     // An explicit state alone is still incomplete for text-slot families.
-    await page.getByTestId('binding-state-select-primary-action').selectOption('default');
+    await chooseDropdown(page.getByTestId('binding-state-select-primary-action'), 'default');
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     await selectAndApproveBindings(page);
     const project = await getProject(page);

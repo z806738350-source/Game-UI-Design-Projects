@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Check, ImagePlus, Trash2 } from 'lucide-react';
 import { copilotApi } from '../../api';
 import type { DesignProject, ReferenceAsset } from '../../types';
+import { Dropdown } from '../shared/ui';
 
 type Run = (task: () => Promise<DesignProject>, options: { label: string }) => Promise<DesignProject | undefined>;
 
@@ -18,7 +19,7 @@ export function ReferenceWorkbench({ project, busy, run }: { project: DesignProj
     <div className="reference-workbench-grid">{references.map((asset, index) => <article key={asset.id} className={asset.approved ? 'is-approved' : ''}>
       <img src={asset.preview} alt={asset.name} />
       <div className="reference-fields"><b title={asset.name}>{asset.name}</b><small>{asset.metadata ? `${asset.metadata.width}×${asset.metadata.height}` : '图片参考'} · {asset.approved ? '已批准' : '待批准'}</small>
-        <label><span>角色</span><select value={asset.role} disabled={busy} onChange={(event) => manage({ id: asset.id, action: 'role', role: event.target.value })}><option value="primary">主参考</option><option value="component">组件</option><option value="material">材质</option><option value="composition">构图</option><option value="supporting">辅助</option></select></label>
+        <label><span>角色</span><Dropdown disabled={busy} value={asset.role} onChange={(next) => manage({ id: asset.id, action: 'role', role: next })} options={[{ value: 'primary', label: '主参考' }, { value: 'component', label: '组件' }, { value: 'material', label: '材质' }, { value: 'composition', label: '构图' }, { value: 'supporting', label: '辅助' }]} /></label>
         <label><span>页面类型</span><input defaultValue={asset.screen_type || ''} onBlur={(event) => saveDetails(asset, 'screenType', event.target.value)} /></label>
         <label><span>包含内容</span><input defaultValue={(asset.contains || []).join('、')} placeholder="按钮、页签、材质" onBlur={(event) => saveDetails(asset, 'contains', event.target.value)} /></label>
         <label><span>基线说明</span><input defaultValue={asset.baseline || ''} onBlur={(event) => saveDetails(asset, 'baseline', event.target.value)} /></label>

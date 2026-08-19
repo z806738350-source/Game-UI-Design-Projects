@@ -1,6 +1,7 @@
 import {
-  Check, Clock3, FileJson, Layers3, LockKeyhole, Maximize2, ScanSearch, Upload, WandSparkles, X
+  Check, ChevronDown, Clock3, FileJson, Layers3, LockKeyhole, Maximize2, ScanSearch, Upload, WandSparkles, X
 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { Artifact, DesignProject, ScreenControl } from '../../types';
 
 export const stages = [
@@ -103,6 +104,52 @@ export function preserveProjectPreviews(next: DesignProject, current: DesignProj
 }
 
 export const strictContinuation = (project: DesignProject) => project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
+
+export type DropdownOption = { value: string; label: string; disabled?: boolean };
+
+// 自绘下拉框：macOS 下原生 <select> 的展开列表是系统菜单，无法套用设计令牌，
+// 故统一用 DOM 列表框替代，展开态完全遵循 Darkroom Precision 风格。
+export function Dropdown({ value, options, onChange, disabled = false, testId, ariaLabel, placeholder }: {
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  testId?: string;
+  ariaLabel?: string;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false); };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('mousedown', onPointerDown); document.removeEventListener('keydown', onKeyDown); };
+  }, [open]);
+  const current = options.find((option) => option.value === value);
+  return (
+    <div className="dropdown" ref={rootRef} data-testid={testId}>
+      <button type="button" className="dropdown-button" aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} disabled={disabled} onClick={() => setOpen((wasOpen) => !wasOpen)}>
+        <span className={current ? undefined : 'is-placeholder'}>{current ? current.label : placeholder}</span>
+        <ChevronDown size={13} />
+      </button>
+      {open && <ul className="dropdown-menu" role="listbox" aria-label={ariaLabel}>
+        {options.map((option) => (
+          <li key={option.value} role="option" aria-selected={option.value === value} data-value={option.value}
+            className={`dropdown-option${option.value === value ? ' is-selected' : ''}${option.disabled ? ' is-disabled' : ''}`}
+            // Dropdown 常被包在 <label> 里：不取消默认行为时，label 的激活行为会把
+            // 这次点击转发给触发按钮，菜单刚关上又被重新打开（挡住下一个字段）。
+            onClick={(event) => { event.preventDefault(); if (option.disabled) return; onChange(option.value); setOpen(false); }}>
+            <Check size={12} className="dropdown-check" />
+            <span>{option.label}</span>
+          </li>
+        ))}
+      </ul>}
+    </div>
+  );
+}
 
 // Legacy check icon re-export keeps strict gate lists readable in workbenches.
 export { Check };
