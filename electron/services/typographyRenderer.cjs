@@ -111,7 +111,7 @@ async function renderTextLayer({ projectPath, layer, target, resolveProjectPath,
     if (!layer.font_path) throw new Error('font_path is missing');
     fontfile = resolveProjectPath(projectPath, layer.font_path);
     inspected = await inspectFont(fontfile);
-    if (inspected.file_hash !== layer.font_hash) throw Object.assign(new Error('Font asset hash changed.'), { code: ERROR_CODES.FONT_ASSET_HASH_MISMATCH });
+    if (inspected.file_hash !== layer.font_hash) throw Object.assign(new Error(`${ERROR_CODES.FONT_ASSET_HASH_MISMATCH}: Font asset hash changed.`), { code: ERROR_CODES.FONT_ASSET_HASH_MISMATCH });
     if (!inspected.family_name || !inspected.postscript_name) throw new Error('Font identity could not be parsed.');
     if (layer.font_family && layer.font_family !== inspected.family_name) throw new Error(`Font family changed from ${layer.font_family} to ${inspected.family_name}.`);
     if (layer.postscript_name && layer.postscript_name !== inspected.postscript_name) throw new Error(`Font PostScript identity changed from ${layer.postscript_name} to ${inspected.postscript_name}.`);
@@ -129,7 +129,7 @@ async function renderTextLayer({ projectPath, layer, target, resolveProjectPath,
   } catch (caught) {
     error = caught;
   }
-  if (final) throw Object.assign(new Error(`Exact font failed to load for ${layer.font_role}: ${error.message}`), { code: ERROR_CODES.FONT_ACTUAL_LOAD_FAILED, cause_code: error.code, cause: error });
+  if (final) throw Object.assign(new Error(`${ERROR_CODES.FONT_ACTUAL_LOAD_FAILED}: Exact font failed to load for ${layer.font_role}: ${error.message}`), { code: ERROR_CODES.FONT_ACTUAL_LOAD_FAILED, cause_code: error.code, cause: error });
   const rendered = await renderGlyphs(layer, target, undefined, 'sans-serif');
   return {
     input: rendered.input,

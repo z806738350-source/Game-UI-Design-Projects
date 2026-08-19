@@ -14,7 +14,18 @@ export function StrictProductionPanel({ project, underlayId, busy, run }: { proj
   const fidelity = project.artifacts.fidelityReport;
   const critiquePassed = critique?.result === 'passed' || critique?.result === 'passed-with-waiver';
   const composeFinal = () => run(async () => {
-    await loadProjectExactFonts(project);
+    const fontLoad = await loadProjectExactFonts(project).catch((error) => error);
+    if (fontLoad instanceof Error) {
+      // The exact-font pre-check failed (missing or unreadable font asset).
+      // Still attempt the backend composition: it invalidates the previous
+      // evidence chain first and re-validates the font server-side, so Final
+      // Approval stays unavailable while the font is broken (UIE2E-07B). If
+      // the backend somehow succeeds anyway, surface its honest result instead
+      // of the pre-check error; approval still requires fresh passing fidelity.
+      const backend = await copilotApi.composeVisual(project.id, { variationId: underlayId, mode: 'final' }).then((next) => next, () => undefined);
+      if (backend) return backend;
+      throw fontLoad;
+    }
     return copilotApi.composeVisual(project.id, { variationId: underlayId, mode: 'final' });
   }, { label: '实际加载字体并渲染 Final PNG', stage: 'visual_exploration' });
   return <section className="strict-production">
@@ -28,7 +39,7 @@ export function StrictProductionPanel({ project, underlayId, busy, run }: { proj
       <button className="button button--secondary" data-testid="composition-preview" disabled={busy || !critiquePassed || !underlayId} onClick={() => run(() => copilotApi.composeVisual(project.id, { variationId: underlayId, mode: 'preview' }), { label: '生成确定性合成预览', stage: 'visual_exploration' })}><WandSparkles size={15} />合成预览</button>
       <button className="button button--secondary" data-testid="composition-final" disabled={busy || !critiquePassed || !underlayId} onClick={composeFinal}><ShieldCheck size={15} />加载字体并生成 Final PNG</button>
       <button className="button button--secondary" data-testid="fidelity-run" disabled={busy || composition?.mode !== 'final' || output?.mode !== 'final'} onClick={() => run(() => copilotApi.runFidelity(project.id), { label: '运行 Final Fidelity Gate', stage: 'visual_exploration' })}><ShieldCheck size={15} />Fidelity 检查</button>
-      <button className="button button--ghost" data-testid="final-export" disabled={busy || output?.mode !== 'final'} onClick={() => { void copilotApi.exportVisual(project.id, underlayId || 'final'); }}><Download size={15} />导出 Final PNG</button>
+      <button className="button button--ghost" data-testid="final-export" disabled={busy || output?.mode !== 'final'} onClick={() => run(async () => { await copilotApi.exportVisual(project.id, underlayId || 'final'); return project; }, { label: '导出 Final PNG', stage: 'visual_exploration' })}><Download size={15} />导出 Final PNG</button>
       <button className="button button--primary" data-testid="final-approve" disabled={busy || fidelity?.status !== 'passed' || composition?.mode !== 'final' || output?.mode !== 'final'} onClick={() => run(() => copilotApi.approveArtifact(project.id, 'composition-manifest'), { label: '批准最终严格继承结果', stage: 'visual_exploration' })}><Check size={15} />最终批准</button>
     </nav>
   </section>;

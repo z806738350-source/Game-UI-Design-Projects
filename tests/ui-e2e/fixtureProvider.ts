@@ -65,10 +65,14 @@ function stripArtifactMetadata(value: Record<string, unknown>): Record<string, u
   return copy;
 }
 
-function derivedScreenContract(): Record<string, unknown> {
+function derivedScreenContract(screenId = 'main'): Record<string, unknown> {
   const contract = stripArtifactMetadata(readJson('screens/main/screen-contract.json'));
   const controls = Array.isArray(contract.required_controls) ? contract.required_controls as Array<Record<string, unknown>> : [];
   contract.required_controls = controls.map((control) => ({ ...control, role: CONTROL_ROLE_BY_ID[String(control.id)] || String(control.role || 'action') }));
+  // Multi-screen isolation (UIE2E-02B): each screen receives a contract that
+  // is stamped with its own screen id, mirroring what a real provider would
+  // return for that screen's envelope id.
+  contract.screen_id = screenId;
   return contract;
 }
 
@@ -179,7 +183,10 @@ export class FixtureProvider {
     // artifact ids (e.g. the approved screen contract) in their bodies.
     if (prompt.includes('-style-contract')) return stripArtifactMetadata(readJson('style/style-contract.json'));
     if (prompt.includes('-layout-proposals')) return stripArtifactMetadata(readJson('screens/main/layout-proposals.json'));
-    if (prompt.includes('-screen-contract')) return derivedScreenContract();
+    if (prompt.includes('-screen-contract')) {
+      const envelope = prompt.match(/"id":"([a-z0-9-]+)-screen-contract"/);
+      return derivedScreenContract(envelope?.[1]);
+    }
     throw new Error(`fixture provider: unrouted semantic prompt (${prompt.slice(0, 120)}…)`);
   }
 }

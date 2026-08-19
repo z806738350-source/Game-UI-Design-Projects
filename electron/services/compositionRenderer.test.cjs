@@ -189,3 +189,49 @@ test('strict pipeline persists final output and final approval fails when its PN
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test('a failed composition regeneration leaves the evidence chain stale (UIE2E-07B/07C backend)', async () => {
+  const root = await temporaryProject('composition-stale-');
+  try {
+    const projectStore = createProjectStore({ workspaceRoot: root });
+    let project = await projectStore.create({ name: 'Stale Composition', projectType: 'existing', requirement: 'Render a strict UI.' });
+    const underlay = await sharp({ create: { width: 32, height: 16, channels: 4, background: '#202844ff' } }).png().toBuffer();
+    const wireframePath = path.join(root, 'wireframe.png');
+    await fs.writeFile(wireframePath, underlay);
+    project = await projectStore.importFile(project.id, wireframePath, 'wireframe');
+    const relativeUnderlay = 'underlay.png';
+    await fs.writeFile(path.join(project.workspacePath, relativeUnderlay), underlay);
+    const component = await sharp({ create: { width: 8, height: 8, channels: 4, background: '#ff8844ff' } }).png().toBuffer();
+    const componentPath = path.join(project.workspacePath, 'style', 'components', 'icon.png');
+    await fs.mkdir(path.dirname(componentPath), { recursive: true });
+    await fs.writeFile(componentPath, component);
+    const base = { schema_version: '2.0', version: 1, status: 'approved', source: {} };
+    await projectStore.saveArtifact(project.id, 'screen-contract', { ...base, id: 'screen', required_controls: [{ id: 'icon', label: 'Icon', role: 'icon-action', required: true }] });
+    await projectStore.saveArtifact(project.id, 'component-bindings', { ...base, id: 'bindings', coverage: { required_controls: 1 }, bindings: [{ control_id: 'icon', component_id: 'icon.exact', state: 'default', slot_id: 'icon-slot', approved: true }] });
+    await projectStore.saveArtifact(project.id, 'component-contract', { ...base, id: 'components', families: [{ id: 'icon.exact', category: 'icon', status: 'approved', reuse_mode: 'exact', text_policy: 'none', intrinsic_size: [8, 8], scale_policy: { min_scale: 1, max_scale: 1 }, states: { default: { asset_path: 'style/components/icon.png', asset_hash: hashBuffer(component) } } }] });
+    await projectStore.saveArtifact(project.id, 'approved-layout', { ...base, id: 'layout', slots: [{ id: 'icon-slot', rect: { x: 0.25, y: 0.25, width: 0.25, height: 0.5 }, z_index: 1, underlay_policy: { keep_clear: true } }] });
+    await projectStore.saveArtifact(project.id, 'style-contract', { ...base, id: 'style', typography: {} });
+    const systemFont = ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf', '/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf'].find((candidate) => fsSync.existsSync(candidate));
+    assert.ok(systemFont, 'a real system TTF is required');
+    const fontPath = path.join(project.workspacePath, 'style', 'fonts', 'ui.ttf'); await fs.mkdir(path.dirname(fontPath), { recursive: true }); await fs.copyFile(systemFont, fontPath); const font = await inspectFont(fontPath);
+    await projectStore.saveArtifact(project.id, 'font-manifest', { ...base, id: 'fonts', fonts: [{ id: 'ui', family_name: font.family_name, postscript_name: font.postscript_name, format: 'ttf', local_path: 'style/fonts/ui.ttf', file_hash: font.file_hash, license_status: 'confirmed', license_confirmation: { confirmed: true }, coverage: font.coverage }], roles: {} });
+    await projectStore.saveArtifact(project.id, 'underlay-contract', { ...base, id: 'underlay-contract' });
+    await projectStore.saveArtifact(project.id, 'underlay-critique', { ...base, id: 'critique', result: 'passed', issues: [], manual_waivers: [] });
+    await projectStore.saveArtifact(project.id, 'visual-results', { ...base, id: 'visuals', variations: [{ id: 'underlay-v1', image_path: relativeUnderlay }] });
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    project = await pipeline.composeVisual(project.id, { screenId: 'main', variationId: 'underlay-v1', mode: 'final' });
+    project = await pipeline.runFidelity(project.id, { screenId: 'main' });
+    assert.equal(project.artifacts.fidelityReport.status, 'passed');
+    // Fault injection: the component asset disappears; the regeneration
+    // attempt must fail AND demote the previous evidence chain, so no gate
+    // can keep trusting the old composition.
+    await fs.unlink(componentPath);
+    await assert.rejects(pipeline.composeVisual(project.id, { screenId: 'main', variationId: 'underlay-v1', mode: 'final' }));
+    const refreshed = await projectStore.open(project.id, { screenId: 'main' });
+    assert.equal(refreshed.artifacts.compositionManifest.status, 'stale');
+    assert.equal(refreshed.artifacts.compositionOutput.status, 'stale');
+    assert.equal(refreshed.artifacts.fidelityReport.status, 'stale');
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
