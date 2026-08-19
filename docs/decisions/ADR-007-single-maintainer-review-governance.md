@@ -8,27 +8,29 @@
 
 原《剩余整改任务与执行指导》REM-05 要求 main 分支合并前至少获得一名真实技术协作者的 GitHub APPROVE，CODEOWNERS 由真实协作者承担 Code Owner Review，并通过 stale approval / 对话解决门禁形成可验证闭环。
 
-截至 v0.2.1，仓库 `z806738350-source/Game-UI-Design-Projects` 仅有所有者一名协作者，不存在可邀请的真实技术协作者账号；PR #16～#19 的审批均由 owner 自批满足。项目方（2026-08-19 裁定）明确决定：本仓库维持单人维护，不引入外部协作者。
+截至 v0.2.1，仓库 `z806738350-source/Game-UI-Design-Projects` 仅有所有者一名协作者，不存在可邀请的真实技术协作者账号；PR #16～#19 均无 GitHub Review Submission，由 owner 在七项 Required Checks 全绿后合并。GitHub 机制下 PR 作者无法 APPROVE 自己的 PR，因此 Ruleset 的 `required_approving_review_count` 自 G-01 起保持为 0：在单人仓库中将其设为 1 会造成无人可满足的死锁。项目方（2026-08-19 裁定）明确决定：本仓库维持单人维护，不引入外部协作者。
 
 ## 决策
 
-接受"无真实独立技术 Reviewer"为**批准的例外**，并以本 ADR 定义替代门禁。本决定不宣称 REM-05 逐字完成；REM-05 的真实协作者要求以本例外关闭。
+接受“无真实独立技术 Reviewer”为**批准的例外**，并以本 ADR 定义替代门禁。本决定不宣称 REM-05 逐字完成；REM-05 的真实协作者与 Approving Review 要求以本例外关闭。
 
-替代门禁（全部已在 main Ruleset id=20995492 生效，不得弱化）：
+替代门禁：
 
-1. main 受 Ruleset 保护：Require PR + 1 approving review + dismiss stale approvals + require conversation resolution + require branch up to date；禁止直推、force push、分支删除；不配置 bypass actors。
-2. Required Checks 七项强制：`validate`、`fixture-e2e`、`ui-unit`、`ui-e2e`、`docs-validate`、`secret-scan`、`macos-validate`。
+1. main 受 Ruleset id=20995492 保护（导出证据：`release-evidence/ruleset-20995492-export-2026-08-19.json`）：Require PR、dismiss stale approvals on push、require conversation resolution、require branch up to date（strict 策略）；禁止直推、force push、分支删除；不配置 bypass actors。
+2. `required_approving_review_count` 保持 0：这是本例外的直接后果而非缺陷——单人仓库中作者不能审批自己的 PR，设为 1 会永久阻断合并；独立审查由第 3 条替代。
 3. 每个 PR 合并前由独立 CodeReview 子代理执行实质代码审查，发现必须修复并回归后才合并；子代理审查记录写入 PR 描述。
 4. 每次 push 前自动运行 L3 深度安全扫描，零发现才推送。
-5. CODEOWNERS 保留审核域映射（当前全部指向 owner），协作者加入后立即成为 Code Owner Review 的事实来源。
+5. Required Checks 七项强制：`validate`、`fixture-e2e`、`ui-unit`、`ui-e2e`、`docs-validate`、`secret-scan`、`macos-validate`。
+6. CODEOWNERS 保留审核域映射（当前全部指向 owner），协作者加入后立即成为 Code Owner Review 的事实来源（当前 `require_code_owner_review=false`，随退出条件一并启用）。
 
 ## 明确不满足的部分（例外的边界）
 
-- 无真实非 owner 账号的 GitHub APPROVE 记录；
-- Code Owner Review 由 owner 本人满足，不构成独立审查；
-- "stale approval 撤销"与"未解决线程阻断"在单人流程中无法产生真实的跨人证据，仅能由 Ruleset 配置保证机制存在。
+- 无真实非 owner 账号的 GitHub APPROVE 记录（PR #16～#19 无任何 Review Submission）；
+- Ruleset 的 Approving Review 数量为 0，合并的实质审查由 CodeReview 子代理承担；
+- Code Owner Review 未启用（`require_code_owner_review=false`），CODEOWNERS 仅作审核域映射；
+- “stale approval 撤销”与“未解决线程阻断”机制在 Ruleset 中已启用，但在单人流程中无法产生真实的跨人证据。
 
-以上三点在本例外存续期间不再重复整改；出现真实协作者后按"退出条件"恢复字面要求。
+以上四点在本例外存续期间不再重复整改；出现真实协作者后按“退出条件”恢复字面要求。
 
 ## 退出条件
 
@@ -37,7 +39,7 @@
 1. 有真实技术协作者接受仓库邀请；
 2. 项目方另行裁定引入外部审查。
 
-恢复动作：更新 CODEOWNERS 将核心目录分配给协作者、Ruleset 启用 Code Owner Review、按审核文档 6.2 节执行治理验证 PR 并留存证据。
+恢复动作：Ruleset 将 `required_approving_review_count` 提升为 ≥1 并启用 `require_code_owner_review`；更新 CODEOWNERS 将核心目录分配给协作者；按审核文档 6.2 节执行治理验证 PR（无 Review 时 Merge 不可用、Approve 后可合并、新提交撤销旧 Approval、未解决线程阻断合并）并留存证据。
 
 ## 后果
 
