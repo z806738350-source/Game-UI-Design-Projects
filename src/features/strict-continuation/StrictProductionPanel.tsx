@@ -19,8 +19,11 @@ export function StrictProductionPanel({ project, underlayId, busy, run }: { proj
       // The exact-font pre-check failed (missing or unreadable font asset).
       // Still attempt the backend composition: it invalidates the previous
       // evidence chain first and re-validates the font server-side, so Final
-      // Approval stays unavailable while the font is broken (UIE2E-07B).
-      await copilotApi.composeVisual(project.id, { variationId: underlayId, mode: 'final' }).catch(() => undefined);
+      // Approval stays unavailable while the font is broken (UIE2E-07B). If
+      // the backend somehow succeeds anyway, surface its honest result instead
+      // of the pre-check error; approval still requires fresh passing fidelity.
+      const backend = await copilotApi.composeVisual(project.id, { variationId: underlayId, mode: 'final' }).then((next) => next, () => undefined);
+      if (backend) return backend;
       throw fontLoad;
     }
     return copilotApi.composeVisual(project.id, { variationId: underlayId, mode: 'final' });

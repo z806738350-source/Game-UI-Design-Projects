@@ -114,8 +114,9 @@ export function App() {
       setError(friendlyError(cause)); setRetryTask({ task, options });
       // A failed attempt may still have changed backend state (e.g. a
       // regeneration attempt invalidates stale evidence before it fails).
-      // Reload the project so gates reflect the current truth.
-      if (project) copilotApi.openProject(project.id, { includePreviews: false }).then((next) => setProject((current) => preserveProjectPreviews(next, current))).catch(() => undefined);
+      // Reload the project so gates reflect the current truth; guard against
+      // a late response overwriting a project the user switched to meanwhile.
+      if (project) copilotApi.openProject(project.id, { includePreviews: false }).then((next) => setProject((current) => (current && current.id !== next.id ? current : preserveProjectPreviews(next, current)))).catch(() => undefined);
     }
     finally { setBusy(false); setBusyJob(null); }
   };
