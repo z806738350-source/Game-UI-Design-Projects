@@ -62,6 +62,24 @@ const ERROR_CODES = Object.freeze({
   MIGRATION_FAULT_INJECTED: 'MIGRATION_FAULT_INJECTED'
 });
 
+// Binding semantic validation codes (componentBindings / compositor). They
+// are reported inside validateBindings error strings and thrown by the strict
+// compositor; kept as their own frozen registry and documented in
+// ERROR-CATALOG.md. check-error-docs does not validate this group yet: the
+// BINDING_* exemption is removed in the documentation fact-integrity follow-up.
+const BINDING_VALIDATION_CODES = Object.freeze({
+  BINDING_COMPONENT_NOT_SELECTED: 'BINDING_COMPONENT_NOT_SELECTED',
+  BINDING_COMPONENT_NOT_APPROVED: 'BINDING_COMPONENT_NOT_APPROVED',
+  BINDING_COMPONENT_STATE_MISSING: 'BINDING_COMPONENT_STATE_MISSING',
+  BINDING_COMPONENT_CATEGORY_MISMATCH: 'BINDING_COMPONENT_CATEGORY_MISMATCH',
+  BINDING_FONT_ROLE_MISMATCH: 'BINDING_FONT_ROLE_MISMATCH',
+  BINDING_FONT_ROLE_MISSING: 'BINDING_FONT_ROLE_MISSING',
+  BINDING_UNKNOWN_CONTROL_ROLE: 'BINDING_UNKNOWN_CONTROL_ROLE',
+  BINDING_STATE_REQUIRED: 'BINDING_STATE_REQUIRED',
+  BINDING_FONT_ROLE_REQUIRED: 'BINDING_FONT_ROLE_REQUIRED',
+  BINDING_GENERIC_ROLE_UNRESOLVED: 'BINDING_GENERIC_ROLE_UNRESOLVED'
+});
+
 // Codes embedded in Fidelity Report issue entries (reported, not thrown).
 const FIDELITY_ISSUE_CODES = Object.freeze({
   MISSING_RENDERED_CONTROL: 'MISSING_RENDERED_CONTROL',
@@ -93,4 +111,4 @@ const FIDELITY_ISSUE_CODES = Object.freeze({
   TEXT_OVERFLOW: 'TEXT_OVERFLOW'
 });
 
-module.exports = { ERROR_CODES, FIDELITY_ISSUE_CODES };
+module.exports = { ERROR_CODES, FIDELITY_ISSUE_CODES, BINDING_VALIDATION_CODES };

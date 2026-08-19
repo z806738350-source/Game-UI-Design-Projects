@@ -29,8 +29,8 @@ const projectWithControls = (extra = {}) => makeProject({
     componentContract: makeArtifact({
       id: 'component-contract-1', status: 'approved',
       families: [
-        { id: 'button.primary', name: '主按钮', category: 'button', status: 'approved', states: { default: {}, disabled: {}, pressed: {} } },
-        { id: 'nav.item', name: '导航项', category: 'navigation', status: 'approved', states: { default: {}, selected: {} } }
+        { id: 'button.primary', name: '主按钮', category: 'button', status: 'approved', text_policy: 'text-slot', states: { default: {}, disabled: {}, pressed: {} } },
+        { id: 'nav.item', name: '导航项', category: 'navigation', status: 'approved', text_policy: 'none', states: { default: {}, selected: {} } }
       ]
     }),
     fontManifest: makeArtifact({ id: 'font-manifest-1', status: 'approved', roles: { 'button-label': {}, 'navigation-label': {} } }),
@@ -40,8 +40,8 @@ const projectWithControls = (extra = {}) => makeProject({
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-describe('BindingWorkbench（REM-01 显式选择）', () => {
-  it('正常路径：逐个显式选择后才允许保存，且不发送 approved 字段', async () => {
+describe('BindingWorkbench（REM-01 / F-01 显式选择）', () => {
+  it('正常路径：组件/状态/字体角色逐项显式确认后才允许保存，且不发送 approved 字段', async () => {
     const project = projectWithControls();
     const user = userEvent.setup();
     api.updateArtifact.mockResolvedValue(project);
@@ -51,8 +51,17 @@ describe('BindingWorkbench（REM-01 显式选择）', () => {
     expect(save.hasAttribute('disabled')).toBe(true);
 
     await user.selectOptions(screen.getByTestId('binding-component-select-save').querySelector('select')!, 'button.primary');
-    expect(save.hasAttribute('disabled')).toBe(true);
     await user.selectOptions(screen.getByTestId('binding-component-select-back').querySelector('select')!, 'nav.item');
+    // Choosing families alone never confirms state or font role.
+    expect(save.hasAttribute('disabled')).toBe(true);
+
+    await user.selectOptions(screen.getByTestId('binding-state-select-save'), 'default');
+    // text-slot family still requires an explicit font role.
+    expect(save.hasAttribute('disabled')).toBe(true);
+    await user.selectOptions(screen.getByTestId('binding-font-role-select-save'), 'button-label');
+
+    await user.selectOptions(screen.getByTestId('binding-state-select-back'), 'default');
+    // nav.item has text_policy none: no font role required.
     expect(save.hasAttribute('disabled')).toBe(false);
 
     await user.click(save);
@@ -61,10 +70,22 @@ describe('BindingWorkbench（REM-01 显式选择）', () => {
     expect(projectId).toBe('project-1');
     expect(kind).toBe('component-bindings');
     expect(patch).not.toHaveProperty('approved');
-    expect((patch as { bindings: Array<Record<string, unknown>> }).bindings).toEqual([
-      expect.objectContaining({ control_id: 'save', component_id: 'button.primary', state: 'default', font_role: 'button-label' }),
-      expect.objectContaining({ control_id: 'back', component_id: 'nav.item', state: 'default', font_role: 'navigation-label' })
-    ]);
+    const bindings = (patch as { bindings: Array<Record<string, unknown>> }).bindings;
+    expect(bindings[0]).toEqual(expect.objectContaining({ control_id: 'save', component_id: 'button.primary', state: 'default', font_role: 'button-label' }));
+    expect(bindings[1]).toEqual(expect.objectContaining({ control_id: 'back', component_id: 'nav.item', state: 'default' }));
+    expect(bindings[1].font_role).toBeUndefined();
+  });
+
+  it('选择组件后状态与字体角色保持空值，仅显示推荐提示', async () => {
+    const user = userEvent.setup();
+    render(<BindingWorkbench project={projectWithControls()} busy={false} />);
+    await user.selectOptions(screen.getByTestId('binding-component-select-save').querySelector('select')!, 'button.primary');
+    const stateSelect = screen.getByTestId('binding-state-select-save') as HTMLSelectElement;
+    expect(stateSelect.value).toBe('');
+    const fontRoleSelect = screen.getByTestId('binding-font-role-select-save') as HTMLSelectElement;
+    expect(fontRoleSelect.value).toBe('');
+    expect(stateSelect.querySelector('option[value=""]')?.textContent).toContain('必选');
+    expect(fontRoleSelect.querySelector('option[value=""]')?.textContent).toContain('必选');
   });
 
   it('语义不兼容的组件被禁用并显示原因', () => {
@@ -73,6 +94,24 @@ describe('BindingWorkbench（REM-01 显式选择）', () => {
     const incompatible = Array.from(navigationSelect.options).find((option) => option.value === 'button.primary')!;
     expect(incompatible.disabled).toBe(true);
     expect(incompatible.textContent).toContain('语义不兼容');
+  });
+
+  it('存量 action 控件显示待语义解析标记', () => {
+    const project = makeProject({
+      artifacts: {
+        screenContract: makeArtifact({
+          id: 'screen-contract-2', status: 'approved',
+          required_controls: [{ id: 'legacy', label: '旧控件', role: 'action', required: true }]
+        }),
+        componentContract: makeArtifact({
+          id: 'component-contract-2', status: 'approved',
+          families: [{ id: 'button.primary', name: '主按钮', category: 'button', status: 'approved', text_policy: 'none', states: { default: {} } }]
+        }),
+        fontManifest: makeArtifact({ id: 'font-manifest-2', status: 'approved', roles: {} })
+      }
+    });
+    render(<BindingWorkbench project={project} busy={false} />);
+    expect(screen.getByTestId('binding-unresolved-role-legacy').textContent).toContain('待语义解析');
   });
 
   it('失败路径：后端拒绝批准时在工作台自身错误槽展示原因', async () => {

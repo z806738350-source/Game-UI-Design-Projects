@@ -4,12 +4,14 @@
 由 `scripts/check-error-docs.cjs` 双向校验：代码中新增/删除错误码必须同步更新本文档，
 反之亦然。
 
-错误码分两类：
+错误码分三组：
 
 - **管线错误码（`ERROR_CODES`）**：由后端以 `Error.code` 抛出，或被 IPC/导出门禁引用，
   共 47 个。
 - **Fidelity 检查码（`FIDELITY_ISSUE_CODES`）**：写入 Fidelity Report `issues[].code`
   或 Underlay Critique 门禁的结构化检查码，共 26 个。
+- **Binding 校验码（`BINDING_VALIDATION_CODES`）**：`validateBindings` 返回的
+  结构化错误/警告前缀码，作为 `BINDING_COVERAGE_INCOMPLETE` 的明细出现，共 10 个。
 
 三个重叠码 `COMPONENT_ASSET_HASH_MISMATCH`、`FONT_ASSET_HASH_MISMATCH`、
 `COMPOSITION_OUTPUT_UNREADABLE` 既是管线错误码，也被像素检查器作为 issue code 使用；
@@ -175,20 +177,38 @@
 | `SAFE_AREA_VIOLATION` | `electron/services/fidelityInspector.cjs` | blocker | 图层侵入安全区约束 |
 | `TEXT_OVERFLOW` | `electron/services/fidelityInspector.cjs` | blocker | 文字渲染触及 slot 边界外 |
 
-## 三、绑定语义错误（BINDING_*）
+## 三、绑定语义校验码（BINDING_VALIDATION_CODES，10 个）
 
-`componentBindings.cjs` 的 `validateBindings` 返回结构化错误字符串，以
-`BINDING_*` 前缀码开头（如 `BINDING_COMPONENT_NOT_SELECTED`），作为
-`BINDING_COVERAGE_INCOMPLETE` 的明细出现在错误消息中。完整语义见
+`electron/services/errorCodes.cjs` 冻结导出 `BINDING_VALIDATION_CODES` 注册表，
+`componentBindings.cjs` 与 `compositor.cjs` 一律从该注册表引用，不允许字面量。
+这些码以结构化错误/警告字符串前缀出现（如
+`BINDING_COMPONENT_NOT_SELECTED: control …`），作为
+`BINDING_COVERAGE_INCOMPLETE` 的明细出现在批准错误消息中；strict 合成器缺
+font_role 时也以 `Error.code` 直接抛出 `BINDING_FONT_ROLE_REQUIRED`。完整语义见
 [COMPONENT-BINDINGS 契约](../contracts/COMPONENT-BINDINGS.md)。
+
+| 校验码 | 抛出/产生模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `BINDING_COMPONENT_NOT_SELECTED` | `electron/services/componentBindings.cjs` | binding 未选择 component_id | 在 Binding 工作台选择组件 |
+| `BINDING_COMPONENT_NOT_APPROVED` | `electron/services/componentBindings.cjs` | 所选 family 未批准 | 先批准 Component Contract |
+| `BINDING_STATE_REQUIRED` | `electron/services/componentBindings.cjs` | binding 未显式选择 state（无隐式 `default` 回退） | 在 Binding 工作台选择状态 |
+| `BINDING_COMPONENT_STATE_MISSING` | `electron/services/componentBindings.cjs` | state 不在 family `states` 中，或 family 缺少角色 required_states | 选择存在的状态或补齐组件状态资产 |
+| `BINDING_FONT_ROLE_REQUIRED` | `electron/services/componentBindings.cjs`、`electron/services/compositor.cjs` | text-slot family 的 binding 未选择 font_role（strict 合成器直接抛错） | 在 Binding 工作台选择字体角色 |
+| `BINDING_COMPONENT_CATEGORY_MISMATCH` | `electron/services/componentBindings.cjs` | family.category 与控件角色不兼容 | 更换兼容组件或修正控件角色 |
+| `BINDING_FONT_ROLE_MISMATCH` | `electron/services/componentBindings.cjs` | font_role 不在角色策略允许列表 | 选择策略允许的字体角色 |
+| `BINDING_FONT_ROLE_MISSING` | `electron/services/componentBindings.cjs` | font_role 不在 Font Manifest `roles` 中 | 先在字体工作台确认该角色 |
+| `BINDING_UNKNOWN_CONTROL_ROLE` | `electron/services/componentBindings.cjs` | 控件角色不在冻结策略词表（strict 报错 / guided warning） | 在功能契约中改为具体角色 |
+| `BINDING_GENERIC_ROLE_UNRESOLVED` | `electron/services/componentBindings.cjs` | 控件仍为 legacy `action` 角色（strict 报错 / guided warning） | 在功能契约中解析为具体角色后重新批准 |
 
 ## 四、校验机制
 
-- `electron/services/errorCodes.cjs` 冻结导出 `ERROR_CODES` 与 `FIDELITY_ISSUE_CODES`；
-  各服务一律从该模块引用，不允许字面量。
+- `electron/services/errorCodes.cjs` 冻结导出 `ERROR_CODES`、
+  `FIDELITY_ISSUE_CODES` 与 `BINDING_VALIDATION_CODES`；各服务一律从该模块
+  引用，不允许字面量。
 - `scripts/check-error-docs.cjs` 双向校验：
-  1. `errorCodes.cjs` 中的每个键必须在本文档对应表格中出现；
-  2. 本文档表格中的每个码必须存在于 `errorCodes.cjs`。
+  1. `errorCodes.cjs` 中的每个 `ERROR_CODES` / `FIDELITY_ISSUE_CODES` 键必须在本文档对应表格中出现；
+  2. 本文档表格中的每个码必须存在于 `errorCodes.cjs`；`BINDING_*` 码当前
+     在两个方向均豁免比对（豁免移除后纳入全量双向校验）。
 - CI `docs-validate` job 运行 `pnpm test:docs`（包含本校验）。
 
 ## 版本与变更记录
@@ -196,3 +216,4 @@
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
 | 1.0 | 2026-08-19 | PR-18 首次建立错误码事实目录（0.2.1） |
+| 1.1 | 2026-08-19 | F-01：新增 `BINDING_VALIDATION_CODES`（10 个）完整表格；`BINDING_FONT_ROLE_REQUIRED` 标注 strict 合成器抛错路径 |

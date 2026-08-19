@@ -1,7 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { validateBindings } = require('./componentBindings.cjs');
+const { textLayer } = require('./compositor.cjs');
 const { CONTROL_ROLE_POLICIES, BINDING_POLICY_VERSION } = require('./controlRolePolicy.cjs');
+const { BINDING_VALIDATION_CODES } = require('./errorCodes.cjs');
 const { downstreamArtifacts } = require('./artifactDependencies.cjs');
 
 const screen = {
@@ -116,4 +118,84 @@ test('client-supplied approved flags are not part of the validation gate', () =>
 test('font manifest changes invalidate bindings downstream', () => {
   assert.ok(downstreamArtifacts('font-manifest').includes('component-bindings'));
   assert.ok(downstreamArtifacts('screen-contract').includes('component-bindings'));
+});
+
+test('binding validation codes are frozen in the shared registry', () => {
+  assert.ok(Object.isFrozen(BINDING_VALIDATION_CODES));
+  for (const code of ['BINDING_COMPONENT_NOT_SELECTED', 'BINDING_COMPONENT_NOT_APPROVED', 'BINDING_COMPONENT_STATE_MISSING', 'BINDING_COMPONENT_CATEGORY_MISMATCH', 'BINDING_FONT_ROLE_MISMATCH', 'BINDING_FONT_ROLE_MISSING', 'BINDING_UNKNOWN_CONTROL_ROLE', 'BINDING_STATE_REQUIRED', 'BINDING_FONT_ROLE_REQUIRED', 'BINDING_GENERIC_ROLE_UNRESOLVED']) {
+    assert.equal(BINDING_VALIDATION_CODES[code], code);
+  }
+});
+
+test('an explicit state is always required; there is no default fallback', () => {
+  const noState = compatibleBindings();
+  delete noState.bindings[0].state;
+  for (const strict of [true, false]) {
+    const result = validateBindings(noState, screen, componentContract, fontManifest, { strict });
+    assert.ok(result.errors.some((error) => error.startsWith('BINDING_STATE_REQUIRED')), `strict=${strict} must reject a missing state`);
+  }
+  const bogusState = compatibleBindings();
+  bogusState.bindings[0].state = 'hover';
+  assert.ok(validateBindings(bogusState, screen, componentContract, fontManifest, { strict: true }).errors.some((error) => error.startsWith('BINDING_COMPONENT_STATE_MISSING')));
+});
+
+test('text-slot families require an explicit font role; none/baked families do not', () => {
+  const textScreen = { required_controls: [{ id: 'panel', label: '内容面板', role: 'content-panel', required: true }, { id: 'icon', label: '图标', role: 'icon-action', required: true }] };
+  const textFamilies = {
+    families: [
+      { id: 'panel.body', category: 'content-panel', status: 'approved', text_policy: 'text-slot', states: { default: { asset_path: 'p.png' } } },
+      { id: 'icon.flat', category: 'icon', status: 'approved', text_policy: 'none', states: { default: { asset_path: 'i.png' } } }
+    ]
+  };
+  const missingRole = { bindings: [{ control_id: 'panel', component_id: 'panel.body', state: 'default', slot_id: 'panel-slot' }, { control_id: 'icon', component_id: 'icon.flat', state: 'default', slot_id: 'icon-slot' }] };
+  const rejected = validateBindings(missingRole, textScreen, textFamilies, fontManifest, { strict: true });
+  assert.ok(rejected.errors.some((error) => error.startsWith('BINDING_FONT_ROLE_REQUIRED')));
+  assert.ok(!rejected.errors.some((error) => error.includes('icon')));
+  const resolved = { bindings: [{ control_id: 'panel', component_id: 'panel.body', state: 'default', slot_id: 'panel-slot', font_role: 'body' }, { control_id: 'icon', component_id: 'icon.flat', state: 'default', slot_id: 'icon-slot' }] };
+  assert.deepEqual(validateBindings(resolved, textScreen, textFamilies, fontManifest, { strict: true }).errors, []);
+});
+
+test('the generic action role fails closed in strict mode but stays a warning otherwise', () => {
+  const migrated = { required_controls: [{ id: 'legacy', label: '旧控件', role: 'action', required: true }] };
+  const legacyComponents = { families: [{ id: 'button.primary', category: 'button', status: 'approved', states: { default: { asset_path: 'a.png' } } }] };
+  const artifact = { bindings: [{ control_id: 'legacy', component_id: 'button.primary', state: 'default', slot_id: 'legacy-slot' }] };
+  const strict = validateBindings(artifact, migrated, legacyComponents, fontManifest, { strict: true });
+  assert.ok(strict.errors.some((error) => error.startsWith('BINDING_GENERIC_ROLE_UNRESOLVED')));
+  const guided = validateBindings(artifact, migrated, legacyComponents, fontManifest, { strict: false });
+  assert.deepEqual(guided.errors, []);
+  assert.ok(guided.warnings.some((warning) => warning.includes("generic 'action' role")));
+});
+
+test('direct API submissions with empty state or font role cannot be approved', () => {
+  // Simulates a hostile updateArtifact payload: approval runs validateBindings
+  // with the project mode, so both strict and guided must reject it.
+  const textScreen = { required_controls: [{ id: 'panel', label: '内容面板', role: 'content-panel', required: true }] };
+  const textFamilies = { families: [{ id: 'panel.body', category: 'content-panel', status: 'approved', text_policy: 'text-slot', states: { default: { asset_path: 'p.png' } } }] };
+  const hostile = { bindings: [{ control_id: 'panel', component_id: 'panel.body', state: '', font_role: '', slot_id: 'panel-slot' }] };
+  for (const strict of [true, false]) {
+    const result = validateBindings(hostile, textScreen, textFamilies, fontManifest, { strict });
+    assert.ok(result.errors.some((error) => error.startsWith('BINDING_STATE_REQUIRED')));
+    assert.ok(result.errors.some((error) => error.startsWith('BINDING_FONT_ROLE_REQUIRED')));
+  }
+});
+
+test('the strict compositor throws instead of silently falling back to button-label', () => {
+  const family = { id: 'panel.body', text_policy: 'text-slot', font_role: 'body' };
+  const slot = { rect: { x: 0, y: 0, width: 10, height: 10 }, z_index: 1 };
+  const binding = { control_id: 'panel', text: '内容', slot_id: 'panel-slot' };
+  assert.throws(
+    () => textLayer(binding, slot, family, fontManifest, {}, true),
+    (error) => error.code === 'BINDING_FONT_ROLE_REQUIRED'
+  );
+  // Guided previews keep the documented fallback chain for legacy drafts.
+  const guided = textLayer(binding, slot, family, fontManifest, {}, false);
+  assert.equal(guided.font_role, 'body');
+  const explicit = textLayer({ ...binding, font_role: 'numeric' }, slot, family, fontManifest, {}, true);
+  assert.equal(explicit.font_role, 'numeric');
+});
+
+test('binding edits invalidate composition and fidelity downstream', () => {
+  const downstream = downstreamArtifacts('component-bindings');
+  assert.ok(downstream.includes('composition-manifest'));
+  assert.ok(downstream.includes('fidelity-report'));
 });
