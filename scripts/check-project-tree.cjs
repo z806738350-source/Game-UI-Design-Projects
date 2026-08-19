@@ -54,11 +54,13 @@ function documentedTreePaths(treeText) {
 
 // Screen-scoped entries live under screens/{screen_id}/ in the tree, so they
 // match any documented path that ends with the required suffix beneath a
-// screens/ directory; all other groups require an exact path.
+// screens/ path SEGMENT (a directory merely named `*screens` must not anchor);
+// all other groups require an exact path.
 function isDocumented(paths, relativePath, screenScoped) {
   if (screenScoped) {
     for (const documented of paths) {
-      if (documented.endsWith(`/${relativePath}`) && documented.includes('screens/')) return true;
+      if (!documented.endsWith(`/${relativePath}`)) continue;
+      if (documented.startsWith('screens/') || documented.includes('/screens/')) return true;
     }
     return false;
   }

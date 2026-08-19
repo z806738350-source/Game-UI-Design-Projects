@@ -269,6 +269,36 @@ test('check-project-tree: nested leaf under the correct screen parent passes', (
   assert.deepEqual(checkProjectTree(root), []);
 });
 
+test('check-project-tree: a directory merely named *screens does not anchor screen paths', (t) => {
+  const fact = {
+    schema_version: '1.0',
+    root_files: [],
+    workflow_files: [],
+    global_artifact_paths: [],
+    screen_artifact_files: ['composition-output.json'],
+    screen_support_paths: ['inputs/requirement.md'],
+    golden_workspace: 'golden',
+    golden_required_files: ['project.json']
+  };
+  const registry = `module.exports = {
+  GLOBAL_ARTIFACTS: Object.freeze({}),
+  SCREEN_ARTIFACTS: Object.freeze({ 'composition-output': 'composition-output.json' })
+};
+`;
+  const lookalikeTree = [
+    'project/',
+    '└── myscreens/',
+    '    └── main/',
+    '        ├── composition-output.json',
+    '        └── inputs/',
+    '            └── requirement.md'
+  ];
+  const root = buildTreeFixture(t, { fact, registry, treeLines: lookalikeTree });
+  const problems = checkProjectTree(root);
+  assert.ok(problems.some((p) => p.includes('missing required path composition-output.json')), problems.join('\n'));
+  assert.ok(problems.some((p) => p.includes('missing required path inputs/requirement.md')), problems.join('\n'));
+});
+
 test('check-project-tree: golden workspace missing core evidence fails', (t) => {
   const root = buildTreeFixture(t, { goldenFiles: [] });
   fs.mkdirSync(path.join(root, 'golden'), { recursive: true });
