@@ -60,8 +60,7 @@
     "screens/main/composition-output.json",
     "screens/main/fidelity-report.json",
     "screens/main/inputs.json",
-    "screens/main/inputs/wireframe.png",
     "screens/main/explorations/results.json"
   ],
-  "golden_notes": "The frozen golden sample stores the requirement inline in screens/main/inputs.json (migration-era layout), so inputs/requirement.md is only required in live workspaces, not in the release evidence."
+  "golden_notes": "The frozen golden sample stores the requirement inline in screens/main/inputs.json (migration-era layout), so inputs/requirement.md is only required in live workspaces, not in the release evidence. golden_required_files intentionally mirrors the Git-tracked core evidence set: the .gitignore tiering policy keeps bulky intermediate workspace bitmaps (e.g. screens/main/inputs/wireframe.png), fonts, and history snapshots local-only, so they are not part of the reproducible CI gate."
 }
