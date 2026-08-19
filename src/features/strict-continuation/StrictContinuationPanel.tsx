@@ -18,6 +18,6 @@ export function StrictContinuationPanel({ project, busy, run }: { project: Desig
       <ComponentKitWorkbench project={project} busy={busy} run={run} />
       <BindingWorkbench project={project} busy={busy} run={run} />
     </div>
-    <footer><button className="button button--primary" disabled={busy || gates.some(([, status]) => status !== 'approved')} onClick={() => run(() => copilotApi.runStage(project.id, 'layout_design'), { label: '生成组件感知布局', stage: 'layout_design' })}><Layers3 size={15} />生成组件感知布局</button></footer>
+    <footer><button className="button button--primary" data-testid="strict-layout-generate" disabled={busy || gates.some(([, status]) => status !== 'approved')} onClick={() => run(() => copilotApi.runStage(project.id, 'layout_design'), { label: '生成组件感知布局', stage: 'layout_design' })}><Layers3 size={15} />生成组件感知布局</button></footer>
   </section>;
 }

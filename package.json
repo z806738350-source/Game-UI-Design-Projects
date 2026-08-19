@@ -18,6 +18,7 @@
     "test": "node --test electron/services/*.test.cjs server/*.test.cjs",
     "test:ui-unit": "vitest run",
     "test:fixture-e2e": "node --test electron/services/goldenFixtures.test.cjs",
+    "test:ui-e2e": "playwright test",
     "start:web": "node server/webServer.cjs",
     "test:kunpo": "node scripts/smoke-kunpo.cjs",
     "test:kunpo-image": "node scripts/smoke-kunpo-image.cjs",
@@ -31,6 +32,7 @@
     "sharp": "0.35.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.4",
     "@types/node": "25.5.0",

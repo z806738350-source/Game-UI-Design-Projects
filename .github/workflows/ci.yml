@@ -101,6 +101,49 @@ jobs:
       - name: Frontend workbench unit tests
         run: pnpm test:ui-unit
 
+  ui-e2e:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: pnpm
+
+      - name: Install Electron system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+            libgtk-3-0 libgbm1 libasound2 libxss1 libxkbcommon0 libpango-1.0-0 libcairo2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Production build
+        run: pnpm build
+
+      - name: UI end-to-end tests against the packaged renderer
+        run: xvfb-run -a pnpm test:ui-e2e
+
+      - name: Upload UI E2E failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-e2e-results
+          path: test-results
+          if-no-files-found: ignore
+
   secret-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 10

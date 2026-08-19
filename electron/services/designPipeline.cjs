@@ -259,7 +259,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         if (cancelledVisualJobs.has(projectId)) break;
         const result = await kunpoClient.generateImage(stageConfig, {
           prompt: task.prompt, imagePaths: references, size: project.canvas_spec.generation_size, model: input.model,
-          maxReferenceImages: capabilities.max_reference_images
+          maxReferenceImages: capabilities.max_reference_images,
+          // E2E fixture providers cannot mint trusted permanent CDN assets;
+          // this opt-in flag materializes provider results inline immediately.
+          // Production keeps the default remote-only trusted-CDN behavior.
+          snapshotTransient: process.env.DESIGN_COPILOT_SNAPSHOT_PROVIDER_IMAGES === 'true'
         });
         variations.push({
           id: task.task_id, strategy: task.variation_strategy, image_url: result.url,

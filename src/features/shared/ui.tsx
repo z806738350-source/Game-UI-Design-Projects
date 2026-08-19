@@ -75,7 +75,7 @@ export function WireframeLightbox({ project, onClose }: { project: DesignProject
 
 export function WireframeReference({ project, onOpen, editable = false, busy = false, onReplace }: { project: DesignProject; onOpen: () => void; editable?: boolean; busy?: boolean; onReplace?: () => void }) {
   return <section className="wireframe-reference">
-    <header><div><span>UE WIREFRAME</span><b>{project.wireframe_name || '尚未导入线框稿'}</b></div>{editable && <button className="button button--secondary" disabled={busy} onClick={onReplace}>{project.wireframe_path ? '替换' : '选择图片'}</button>}</header>
+    <header><div><span>UE WIREFRAME</span><b>{project.wireframe_name || '尚未导入线框稿'}</b></div>{editable && <button className="button button--secondary" data-testid="wireframe-import" disabled={busy} onClick={onReplace}>{project.wireframe_path ? '替换' : '选择图片'}</button>}</header>
     {project.wireframe_preview ? <button className="wireframe-canvas-button" onClick={onOpen} aria-label="放大查看 UE 线框稿"><img src={project.wireframe_preview} alt="UE Wireframe 预览" /><span><Maximize2 size={16} />放大对照</span></button> : <div className="wireframe-empty"><Upload size={24} /><span>导入线框稿后，AI 将直接读取画面结构和信息。</span></div>}
     {project.canvas_spec && <div className="wireframe-meta"><span>{project.canvas_spec.width} × {project.canvas_spec.height}</span><span>{project.canvas_spec.orientation === 'portrait' ? '竖屏' : project.canvas_spec.orientation === 'landscape' ? '横屏' : '方形'}</span><span>{project.canvas_spec.aspect_ratio}</span></div>}
   </section>;
