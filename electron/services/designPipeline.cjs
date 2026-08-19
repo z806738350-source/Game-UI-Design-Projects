@@ -737,6 +737,15 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === input.variationId) || (project.artifacts.visualResults?.variations || [])[0];
     if (!variation?.image_url && !variation?.image_path) throw new Error('Select a generated underlay before composition.');
     const mode = input.mode === 'final' ? 'final' : 'preview';
+    // A regeneration attempt supersedes the previous evidence even when the
+    // render itself fails: downstream fidelity/approval gates must not keep
+    // trusting a composition that is being rebuilt (UIE2E-07B/07C).
+    const reason = `${mode}_composition_regenerated`;
+    await invalidateArtifacts(projectId, 'composition-manifest', reason, { screenId: project.screen_id });
+    const previousManifest = project.artifacts.compositionManifest;
+    if (previousManifest && previousManifest.status !== 'stale') {
+      await projectStore.saveArtifact(projectId, 'composition-manifest', { ...previousManifest, status: 'stale', stale_at: new Date().toISOString(), stale_reason: reason }, { screenId: project.screen_id });
+    }
     const version = Math.max(Number(project.artifacts.compositionManifest?.version || 0), Number(project.artifacts.compositionOutput?.version || 0)) + 1;
     const manifest = createCompositionManifest({
       project, underlay: { source: 'provider-result', variation_id: variation.id, ...(variation.image_path ? { path: variation.image_path } : { image_url: variation.image_url }), provider_task_id: variation.provider_task_id, critique_id: project.artifacts.underlayCritique?.id },

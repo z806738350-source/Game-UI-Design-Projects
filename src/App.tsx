@@ -110,7 +110,13 @@ export function App() {
     if (options.stage) setActiveStage(options.stage);
     setBusy(true); setBusyJob({ ...options, startedAt: Date.now() }); setElapsed(0); setError('');
     try { const next = await task(); setProject((current) => preserveProjectPreviews(next, current)); setRetryTask(null); await refreshProjects(); return next; }
-    catch (cause) { setError(friendlyError(cause)); setRetryTask({ task, options }); }
+    catch (cause) {
+      setError(friendlyError(cause)); setRetryTask({ task, options });
+      // A failed attempt may still have changed backend state (e.g. a
+      // regeneration attempt invalidates stale evidence before it fails).
+      // Reload the project so gates reflect the current truth.
+      if (project) copilotApi.openProject(project.id, { includePreviews: false }).then((next) => setProject((current) => preserveProjectPreviews(next, current))).catch(() => undefined);
+    }
     finally { setBusy(false); setBusyJob(null); }
   };
   const cancelVisual = async () => {

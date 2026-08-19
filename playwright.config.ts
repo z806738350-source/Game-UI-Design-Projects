@@ -8,5 +8,8 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   outputDir: 'test-results',
+  // F-03 evidence: failed runs must leave reproducible traces, screenshots
+  // and (via helpers.launchApp) Electron main-process logs in test-results/.
+  use: { trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   reporter: [['list'], ...(process.env.CI ? [['github'] as const] : [])]
 });

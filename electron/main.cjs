@@ -136,8 +136,13 @@ function registerIpc() {
     const project = await projectStore.open(projectId, { includePreviews: false });
     const font = (project.artifacts.fontManifest?.fonts || []).find((item) => item.id === fontId);
     if (!font) throw new Error(`Font not found: ${fontId}`);
-    const bytes = await fs.readFile(resolveProjectPath(project.workspacePath, font.local_path));
-    if (hashBuffer(bytes) !== font.file_hash) throw Object.assign(new Error(`Font asset hash changed: ${fontId}`), { code: ERROR_CODES.FONT_ASSET_HASH_MISMATCH });
+    let bytes;
+    try {
+      bytes = await fs.readFile(resolveProjectPath(project.workspacePath, font.local_path));
+    } catch (cause) {
+      throw Object.assign(new Error(`${ERROR_CODES.FONT_ACTUAL_LOAD_FAILED}: Font asset cannot be read for ${fontId}: ${cause.message}`), { code: ERROR_CODES.FONT_ACTUAL_LOAD_FAILED, cause });
+    }
+    if (hashBuffer(bytes) !== font.file_hash) throw Object.assign(new Error(`${ERROR_CODES.FONT_ASSET_HASH_MISMATCH}: Font asset hash changed: ${fontId}`), { code: ERROR_CODES.FONT_ASSET_HASH_MISMATCH });
     return bytes;
   });
   ipcMain.handle('copilot:components:import', async (_event, projectId, input) => {
@@ -167,6 +172,14 @@ function registerIpc() {
     const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
     if (strict) {
       const output = project.artifacts.compositionOutput;
+      // Exporting the final PNG requires a passing fidelity report that was
+      // computed against exactly this manifest/output pair; a failed or stale
+      // fidelity gate blocks the export (UIE2E-07C).
+      const fidelity = project.artifacts.fidelityReport;
+      const fidelityFresh = Boolean(fidelity && fidelity.status === 'passed'
+        && fidelity.source?.composition_manifest_version === project.artifacts.compositionManifest?.version
+        && fidelity.source?.composition_output_hash === output?.hash);
+      if (!fidelityFresh) throw Object.assign(new Error('无法导出最终成图：需要先通过针对当前合成结果的 Final Fidelity 检查。'), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
       const verification = await verifyCompositionOutput(project.workspacePath, output, { requireFinal: true });
       if (!verification.passed) throw Object.assign(new Error(`无法导出最终成图：${verification.issues.map((item) => item.message).join('；')}`), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
       const selection = await dialog.showSaveDialog({

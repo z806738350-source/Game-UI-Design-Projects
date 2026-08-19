@@ -52,7 +52,25 @@ export async function launchApp(provider: FixtureProvider): Promise<LaunchedApp>
   const page = await app.firstWindow();
   await page.waitForSelector('.app-shell', { timeout: 60_000 });
   await stubDialogs(app);
-  return { app, page, workspace, exportDir };
+  const launched = { app, page, workspace, exportDir };
+  attachFailureEvidence(launched);
+  return launched;
+}
+
+// F-03 evidence requirement: every run leaves the Electron main-process output
+// and renderer console in test-results/, next to Playwright's traces and
+// failure screenshots, so CI failures stay reproducible.
+function attachFailureEvidence(launched: LaunchedApp): void {
+  const evidenceDir = path.join(REPO_ROOT, 'test-results');
+  fs.mkdirSync(evidenceDir, { recursive: true });
+  const logPath = path.join(evidenceDir, `electron-${path.basename(launched.workspace)}.log`);
+  const append = (channel: string, chunk: Buffer | string) => {
+    try { fs.appendFileSync(logPath, `[${new Date().toISOString()}] [${channel}] ${String(chunk)}`); } catch { /* evidence collection must never fail the test */ }
+  };
+  launched.app.process().stdout?.on('data', (chunk) => append('main:stdout', chunk));
+  launched.app.process().stderr?.on('data', (chunk) => append('main:stderr', chunk));
+  launched.page.on('console', (message) => append(`renderer:${message.type()}`, `${message.text()}\n`));
+  launched.page.on('pageerror', (error) => append('renderer:pageerror', `${error.stack || error.message}\n`));
 }
 
 // Monkey-patch the main-process dialog module so file pickers resolve from a
@@ -123,8 +141,32 @@ export function getProject(page: Page, name?: string): Promise<ProjectSnapshot> 
   }, name);
 }
 
-export function callRendererApi<T = unknown>(page: Page, expression: string): Promise<T> {
-  return page.evaluate(`(async () => { const api = window.designCopilot; return ${expression}; })()`);
+// Switch the active screen through the Screen Manager UI and wait until the
+// backend confirms the switch; the select change is asynchronous, so reading
+// the project immediately afterwards would race the setActiveScreen IPC.
+export async function switchScreen(page: Page, screenId: string): Promise<void> {
+  await page.getByTestId('screen-manager').locator('select').first().selectOption(screenId);
+  await expect.poll(async () => (await getProject(page)).screen_id, { timeout: 15_000 }).toBe(screenId);
+}
+
+// F-03 boundary rule: UI E2E may only read state through the snapshot API.
+// There is deliberately no callRendererApi helper here anymore — every
+// mutation must go through a UI locator so it is attributable in traces.
+
+// Derive a changed copy of a golden asset (different bytes, same format) for
+// fault injection and multi-screen inputs; test processes may create or
+// tamper with local files per the UIE2E boundary rules.
+export async function deriveAsset(sourcePath: string, targetPath: string): Promise<string> {
+  const sharp = nodeRequire('sharp');
+  await sharp(sourcePath).negate().png().toFile(targetPath);
+  return targetPath;
+}
+
+export function findProjectDir(launched: LaunchedApp, markerRelativePath: string): string {
+  const projectDir = fs.readdirSync(launched.workspace)
+    .find((entry) => fs.existsSync(path.join(launched.workspace, entry, markerRelativePath)));
+  if (!projectDir) throw new Error(`no project directory contains ${markerRelativePath}`);
+  return path.join(launched.workspace, projectDir);
 }
 
 // ---------------------------------------------------------------------------
@@ -209,18 +251,35 @@ const COMPONENT_TEXT_POLICY: Record<string, string> = {
   'action-icon': 'none'
 };
 
-export async function importComponents(launched: LaunchedApp): Promise<void> {
+export type ComponentImportOptions = {
+  reuse?: 'exact' | 'nine-slice' | 'vector-token' | 'reference-locked';
+  margins?: string;
+  filePath?: string;
+};
+
+// One component-state import through the Component Kit Workbench UI.
+export async function importComponentState(launched: LaunchedApp, family: string, state: string, options: ComponentImportOptions = {}): Promise<void> {
   const { app, page } = launched;
   const workbench = page.getByTestId('component-kit-workbench');
+  await workbench.locator('label', { hasText: '组件 ID' }).locator('input').fill(family);
+  await workbench.locator('label', { hasText: '类别' }).locator('select').selectOption(COMPONENT_CATEGORY[family]);
+  await workbench.locator('label', { hasText: /^状态/ }).locator('select').selectOption(state);
+  await workbench.locator('label', { hasText: '复用策略' }).locator('select').selectOption(options.reuse || 'exact');
+  if (options.reuse === 'nine-slice') {
+    // UIE2E-03B: nine-slice margins are configured through the workbench UI.
+    await workbench.locator('label', { hasText: '9-Slice 边距' }).locator('input').fill(options.margins || '12,12,12,12');
+  }
+  await workbench.locator('label', { hasText: '文字策略' }).locator('select').selectOption(COMPONENT_TEXT_POLICY[family] || 'text-slot');
+  await workbench.locator('label', { hasText: '最大缩放' }).locator('input').fill('1');
+  await queueOpenFiles(app, [options.filePath || GOLDEN_ASSETS.componentAsset(family, state)]);
+  await clickRun(page, 'component-import');
+}
+
+export async function importComponents(launched: LaunchedApp, overrides: Record<string, ComponentImportOptions> = {}): Promise<void> {
+  const { page } = launched;
   for (const [family, states] of Object.entries(GOLDEN_ASSETS.components)) {
     for (const state of states) {
-      await workbench.locator('label', { hasText: '组件 ID' }).locator('input').fill(family);
-      await workbench.locator('label', { hasText: '类别' }).locator('select').selectOption(COMPONENT_CATEGORY[family]);
-      await workbench.locator('label', { hasText: /^状态/ }).locator('select').selectOption(state);
-      await workbench.locator('label', { hasText: '文字策略' }).locator('select').selectOption(COMPONENT_TEXT_POLICY[family] || 'text-slot');
-      await workbench.locator('label', { hasText: '最大缩放' }).locator('input').fill('1');
-      await queueOpenFiles(app, [GOLDEN_ASSETS.componentAsset(family, state)]);
-      await clickRun(page, 'component-import');
+      await importComponentState(launched, family, state, overrides[family]);
     }
   }
   await clickRun(page, 'component-approve');
@@ -275,4 +334,26 @@ export async function generateUnderlays(launched: LaunchedApp, provider: Fixture
   provider.armUnderlayGeneration();
   await clickRun(page, 'underlay-generate');
   await expect(page.locator('.visual-grid .visual-card')).toHaveCount(3, { timeout: 300_000 });
+}
+
+// UIE2E-07E: continuation-mode switches happen through the input-stage UI,
+// never through a direct saveProject renderer call.
+export async function switchContinuationModeViaUi(page: Page, mode: 'existing-strict' | 'existing-guided'): Promise<void> {
+  await page.getByTestId('stage-input').click();
+  const select = page.getByTestId('continuation-mode-select');
+  await expect(select).toBeVisible();
+  await select.selectOption(mode);
+  await page.waitForTimeout(250);
+  await page.locator('.busy-bar').waitFor({ state: 'detached', timeout: 120_000 });
+  await expect(page.locator('.error-banner')).toHaveCount(0);
+}
+
+// Semantic contract edits go through the contract focus workbench UI
+// (summary editor -> save this round), not through updateArtifact calls.
+export async function editContractPurposeViaUi(page: Page, purpose: string): Promise<void> {
+  await page.getByTestId('stage-wireframe_interpretation').click();
+  await page.getByTestId('contract-open-required_controls').click();
+  await page.getByTestId('contract-edit-summary').click();
+  await page.getByTestId('contract-purpose-input').fill(purpose);
+  await clickRun(page, 'contract-save-workbench');
 }

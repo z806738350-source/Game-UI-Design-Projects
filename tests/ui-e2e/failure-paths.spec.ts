@@ -1,15 +1,18 @@
-// UIE2E-07: failure paths. Provider outages surface in the global error
-// banner; semantic contract edits mark downstream bindings stale; a missing
-// final PNG blocks export; switching guided→strict invalidates approvals.
+// UIE2E-07 failure paths: every mutation is performed through the real UI.
+// A provider outage surfaces as an error banner with recovery; a semantic
+// contract edit marks downstream bindings stale; a missing final PNG blocks
+// export; switching guided↔strict through the input-stage UI invalidates
+// mode-dependent approvals. No renderer API mutation calls remain (F-03).
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { FixtureProvider, GOLDEN_ASSETS } from './fixtureProvider';
 import {
-  approveContract, approveStrictLayout, callRendererApi, clickRun, closeErrorBanner, createStrictProject,
-  expectErrorBanner, generateUnderlays, getProject, importComponents, importFonts,
-  importReferencesAndGenerateStyle, importWireframeAndIntent, launchApp, queueOpenFiles, selectAndApproveBindings
+  approveContract, approveStrictLayout, clickRun, closeErrorBanner, createStrictProject,
+  editContractPurposeViaUi, expectErrorBanner, findProjectDir, generateUnderlays, getProject,
+  importComponents, importFonts, importReferencesAndGenerateStyle, importWireframeAndIntent,
+  launchApp, queueOpenFiles, selectAndApproveBindings, switchContinuationModeViaUi
 } from './helpers';
 import type { LaunchedApp } from './helpers';
 
@@ -53,15 +56,12 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     expect(project.artifacts.bindings?.status).toBe('approved');
   });
 
-  test('semantic contract edit marks bindings stale and blocks layout gate', async () => {
-    const projectId = (await getProject(page)).id;
-    await callRendererApi(page, `api.updateArtifact(${JSON.stringify(projectId)}, 'screen-contract', { purpose: 'E2E failure-path semantic edit of the page purpose.', screenId: 'main' })`);
+  test('semantic contract edit through the workbench UI marks bindings stale', async () => {
+    await editContractPurposeViaUi(page, 'E2E failure-path semantic edit of the page purpose.');
     const project = await getProject(page);
     expect(project.artifacts.bindings?.status).toBe('stale');
-    // The renderer-only call bypasses the run() boundary, so reload to let
-    // the shell re-read project state; the gate must reflect the staleness.
-    await page.reload();
-    await page.waitForSelector('.app-shell');
+    // The edit went through the run() boundary, so the shell already holds
+    // fresh state; the layout gate must reflect the staleness immediately.
     await page.getByTestId('stage-style_resolution').click();
     await expect(page.locator('.strict-gates i', { hasText: 'Bindings' })).not.toHaveClass(/is-ready/);
     await expect(page.getByTestId('strict-layout-generate')).toBeDisabled();
@@ -91,23 +91,18 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
 
     const project = await getProject(page);
     const relativeOutput = String((project.artifacts.compositionOutput as { path?: string })?.path || '');
-    const projectDir = fs.readdirSync(launched.workspace)
-      .find((entry) => fs.existsSync(path.join(launched.workspace, entry, relativeOutput)));
-    expect(projectDir).toBeTruthy();
-    const finalPng = path.join(launched.workspace, String(projectDir), relativeOutput);
+    const finalPng = path.join(findProjectDir(launched, relativeOutput), relativeOutput);
     expect(fs.existsSync(finalPng)).toBe(true);
     fs.rmSync(finalPng);
 
-    const variationId = String((project.artifacts.visualResults?.variations as Array<{ id: string }>)[0]?.id || '');
-    const result = await callRendererApi<{ ok: boolean; message?: string }>(
-      page,
-      `api.exportVisual(${JSON.stringify(project.id)}, ${JSON.stringify(variationId)}).then(() => ({ ok: true }), (cause) => ({ ok: false, message: String(cause?.message || cause) }))`
-    );
-    expect(result.ok).toBe(false);
-    expect(result.message).toMatch(/FINAL_EXPORT_BLOCKED|无法导出最终成图/);
+    // Export is clicked through the UI; the blocked export must surface as a
+    // visible error, not as a silent rejection.
+    await clickRun(page, 'final-export', { allowError: true });
+    await expectErrorBanner(page, /FINAL_EXPORT_BLOCKED|无法导出最终成图/);
+    await closeErrorBanner(page);
   });
 
-  test('guided→strict switch invalidates approvals and recovers under strict', async () => {
+  test('guided→strict switch through the input-stage UI invalidates approvals and recovers', async () => {
     // New guided project through contract approval. Guided mode deliberately
     // offers no asset/binding workbenches, so deeper stages are only reachable
     // after an explicit switch to strict continuation.
@@ -122,15 +117,13 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     expect(project.continuation_mode).toBe('existing-guided');
     expect(project.artifacts.screenContract?.status).toBe('approved');
 
-    // Switching continuation mode is a global input change. The functional
-    // contract stays valid, but every style-driven approval downstream of the
-    // mode becomes stale once it exists.
-    await callRendererApi(page, `api.saveProject(${JSON.stringify(project.id)}, { continuationMode: 'existing-strict', screenId: 'main' })`);
+    // Switching continuation mode is a global input change, performed via the
+    // input-stage select. The functional contract stays valid, but every
+    // style-driven approval downstream of the mode becomes stale once it exists.
+    await switchContinuationModeViaUi(page, 'existing-strict');
     project = await getProject(page, 'E2E Guided Switch');
     expect(project.continuation_mode).toBe('existing-strict');
     expect(project.artifacts.screenContract?.status).toBe('approved');
-    await page.reload();
-    await page.waitForSelector('.app-shell');
 
     // Recovery: the strict workbenches become available and the full pipeline
     // can rebuild every approval on top of the same inputs.
@@ -144,13 +137,11 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     expect(project.artifacts.approvedLayout?.status).toBe('approved');
 
     // Switching back to guided invalidates the mode-dependent approvals.
-    await callRendererApi(page, `api.saveProject(${JSON.stringify(project.id)}, { continuationMode: 'existing-guided', screenId: 'main' })`);
+    await switchContinuationModeViaUi(page, 'existing-guided');
     project = await getProject(page, 'E2E Guided Switch');
     expect(project.continuation_mode).toBe('existing-guided');
     expect(project.artifacts.styleContract?.status).toBe('stale');
     expect(project.artifacts.approvedLayout?.status).toBe('stale');
-    await page.reload();
-    await page.waitForSelector('.app-shell');
     await page.getByTestId('stage-layout_design').click();
     await expect(page.locator('.stale-guidance').first()).toBeVisible();
   });

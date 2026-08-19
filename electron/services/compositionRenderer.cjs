@@ -42,7 +42,7 @@ async function verifiedAsset(projectPath, layer) {
   const bytes = await fs.readFile(assetPath);
   const actualHash = hashBuffer(bytes);
   if (layer.asset_hash && actualHash !== layer.asset_hash) {
-    throw Object.assign(new Error(`Component asset hash changed: ${layer.component_id}`), {
+    throw Object.assign(new Error(`${ERROR_CODES.COMPONENT_ASSET_HASH_MISMATCH}: Component asset hash changed: ${layer.component_id}`), {
       code: ERROR_CODES.COMPONENT_ASSET_HASH_MISMATCH,
       expected_hash: layer.asset_hash,
       actual_hash: actualHash
