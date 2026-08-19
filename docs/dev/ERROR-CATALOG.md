@@ -208,7 +208,7 @@ font_role 时也以 `Error.code` 直接抛出 `BINDING_FONT_ROLE_REQUIRED`。完
 - `scripts/check-error-docs.cjs` 双向校验：
   1. `errorCodes.cjs` 中的每个 `ERROR_CODES` / `FIDELITY_ISSUE_CODES` 键必须在本文档对应表格中出现；
   2. 本文档表格中的每个码必须存在于 `errorCodes.cjs`；`BINDING_*` 码当前
-     豁免反向比对，豁免移除后纳入全量双向校验。
+     在两个方向均豁免比对（豁免移除后纳入全量双向校验）。
 - CI `docs-validate` job 运行 `pnpm test:docs`（包含本校验）。
 
 ## 版本与变更记录

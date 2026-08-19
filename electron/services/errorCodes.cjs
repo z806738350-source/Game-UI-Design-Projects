@@ -64,8 +64,9 @@ const ERROR_CODES = Object.freeze({
 
 // Binding semantic validation codes (componentBindings / compositor). They
 // are reported inside validateBindings error strings and thrown by the strict
-// compositor; kept as their own frozen registry so check-error-docs can
-// validate all three groups against ERROR-CATALOG.md.
+// compositor; kept as their own frozen registry and documented in
+// ERROR-CATALOG.md. check-error-docs does not validate this group yet: the
+// BINDING_* exemption is removed in the documentation fact-integrity follow-up.
 const BINDING_VALIDATION_CODES = Object.freeze({
   BINDING_COMPONENT_NOT_SELECTED: 'BINDING_COMPONENT_NOT_SELECTED',
   BINDING_COMPONENT_NOT_APPROVED: 'BINDING_COMPONENT_NOT_APPROVED',

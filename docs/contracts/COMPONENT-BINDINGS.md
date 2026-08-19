@@ -242,11 +242,9 @@ draft/generated ──updateArtifact──▶ reviewed ──approveArtifact(校
 ## 17. 测试指针
 
 - `electron/services/componentBindings.test.cjs` — 审核者场景集（隐式默认
-  拒绝、state/font_role 显式化、strict action fail-closed、语义错配、approved
-  忽略、font role 缺失/错配、未知 role strict vs warning、font-manifest 下游
-  失效等）
-- `electron/services/compositionRenderer.test.cjs` — strict 合成器 text 层
-  font_role 缺失直接失败
+  拒绝、state/font_role 显式化、strict action fail-closed、strict 合成器缺
+  font_role 直接抛错、语义错配、approved 忽略、font role 缺失/错配、未知
+  role strict vs warning、font-manifest 下游失效等）
 - `electron/services/designPipeline.test.cjs` — 管线级 approved 不信任、批准
   stamp、语义错配阻断批准、label-only 不 stale / role 变化 stale
 - `electron/services/bindingsLayout.test.cjs` — 覆盖率与 label-only 失效行为
