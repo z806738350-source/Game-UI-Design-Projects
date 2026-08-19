@@ -1,4 +1,5 @@
 const crypto = require('node:crypto');
+const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { ensureDir, readJson, writeJson } = require('./jsonStore.cjs');
@@ -46,7 +47,7 @@ async function migrateProjectV2(projectPath, options = {}) {
   let stagePromoted = false;
   const checkpoint = async (point) => {
     if (typeof options.faultInjector === 'function') await options.faultInjector(point);
-    if (options.faultAt === point) throw Object.assign(new Error(`Injected migration failure at ${point}.`), { code: 'MIGRATION_FAULT_INJECTED', fault_point: point });
+    if (options.faultAt === point) throw Object.assign(new Error(`Injected migration failure at ${point}.`), { code: ERROR_CODES.MIGRATION_FAULT_INJECTED, fault_point: point });
   };
   try {
     await fs.cp(sourcePath, backupPath, { recursive: true, errorOnExist: true, force: false });

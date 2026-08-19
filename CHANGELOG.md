@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.1 — 2026-08-19
+
+> Remediation completion release (REM-01~06) on top of the `0.2.0` formal release. No artifact schema, backend gate, or golden evidence changes; the 0.2.0 Definition of Done remains valid.
+
+- Binding semantic compatibility: froze the `binding-policy-v1` control-role policy (`electron/services/controlRolePolicy.cjs`) and made binding approval enforce it; no implicit first-family binding — every binding must be an explicit, role-compatible choice (BINDING_* gate codes).
+- Workbench boundaries: each UI workbench may only invoke the IPC operations allowed for its pipeline stage; cross-boundary calls are rejected by the backend.
+- UI E2E in CI: Playwright + Electron end-to-end suite (`tests/ui-e2e/`) driven by a local FixtureProvider (no real provider calls), plus frontend workbench unit tests; both run as required CI checks.
+- Execution-grade documentation: 11 contract documents (`docs/contracts/`), 4 user guides (`docs/user/`), and 8 development/operations documents (`docs/dev/`) with field tables, state machines, approval/stale semantics, error codes, valid/invalid JSON examples, and source/test pointers.
+- Error-code factualization: frozen registry `electron/services/errorCodes.cjs` (ERROR_CODES + FIDELITY_ISSUE_CODES) referenced by services; `docs/dev/ERROR-CATALOG.md` kept consistent by bidirectional validation.
+- Automated documentation gate: `scripts/check-docs.cjs` + `scripts/check-error-docs.cjs` behind `pnpm test:docs` and the new CI `docs-validate` job (required docs, template headings, JSON fence parseability, referenced-path existence, README index consistency).
+- Protected main: GitHub Ruleset on `main` (no direct pushes or bypasses) with all required checks; releases follow `docs/dev/RELEASE-CHECKLIST.md`.
+
 ## 0.2.0 — 2026-08-18
 
 > Formal release. The remediation Definition of Done is complete: five real-provider golden samples pipeline-passed (three calibrated + two reserved, including a Simplified Chinese font sample), fixture E2E replays the published evidence chain in CI, and designer signoff is APPROVED for every sample (`release-evidence/golden-samples/index.json` derives `released`). This reissues the `0.2.0` line whose first acceptance was withdrawn on 2026-08-17.

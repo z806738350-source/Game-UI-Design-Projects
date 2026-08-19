@@ -1,4 +1,5 @@
 const crypto = require('node:crypto');
+const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const sharp = require('sharp');
@@ -42,7 +43,7 @@ async function verifiedAsset(projectPath, layer) {
   const actualHash = hashBuffer(bytes);
   if (layer.asset_hash && actualHash !== layer.asset_hash) {
     throw Object.assign(new Error(`Component asset hash changed: ${layer.component_id}`), {
-      code: 'COMPONENT_ASSET_HASH_MISMATCH',
+      code: ERROR_CODES.COMPONENT_ASSET_HASH_MISMATCH,
       expected_hash: layer.asset_hash,
       actual_hash: actualHash
     });
@@ -60,14 +61,14 @@ async function exactRenderer({ projectPath, layer, target }) {
   const scaleY = target.height / sourceHeight;
   if (Math.abs(scaleX - scaleY) > 0.02) {
     throw Object.assign(new Error(`Exact component ${layer.component_id} would be stretched non-uniformly.`), {
-      code: 'EXACT_NON_UNIFORM_SCALE', scale_x: scaleX, scale_y: scaleY
+      code: ERROR_CODES.EXACT_NON_UNIFORM_SCALE, scale_x: scaleX, scale_y: scaleY
     });
   }
   const minimum = Number(layer.scale_policy?.min_scale ?? 1);
   const maximum = Number(layer.scale_policy?.max_scale ?? 1);
   if (scaleX < minimum - 0.001 || scaleX > maximum + 0.001) {
     throw Object.assign(new Error(`Exact component ${layer.component_id} scale ${scaleX.toFixed(4)} is outside ${minimum}-${maximum}.`), {
-      code: 'EXACT_SCALE_OUT_OF_POLICY', scale: scaleX, min_scale: minimum, max_scale: maximum
+      code: ERROR_CODES.EXACT_SCALE_OUT_OF_POLICY, scale: scaleX, min_scale: minimum, max_scale: maximum
     });
   }
   const input = await sharp(asset.bytes).resize(target.width, target.height, { fit: 'fill' }).png().toBuffer();
@@ -151,7 +152,7 @@ async function vectorTokenRenderer({ projectPath, layer, target }) {
   const asset = await verifiedAsset(projectPath, layer);
   if (path.extname(asset.assetPath).toLowerCase() !== '.svg') {
     throw Object.assign(new Error(`Vector-token component ${layer.component_id} must use an SVG source.`), {
-      code: 'VECTOR_TOKEN_SOURCE_REQUIRED'
+      code: ERROR_CODES.VECTOR_TOKEN_SOURCE_REQUIRED
     });
   }
   const source = asset.bytes.toString('utf8');
@@ -214,7 +215,7 @@ async function renderComposition({ manifest, projectPath, outputPath, fetchImpl 
     if (layer.type === 'component') {
       const target = outputRect(layer, { width, height });
       const renderer = rendererRegistry[layer.renderer || layer.resize_mode];
-      if (!renderer) throw Object.assign(new Error(`No renderer registered for ${layer.renderer || layer.resize_mode}.`), { code: 'COMPONENT_RENDERER_MISSING' });
+      if (!renderer) throw Object.assign(new Error(`No renderer registered for ${layer.renderer || layer.resize_mode}.`), { code: ERROR_CODES.COMPONENT_RENDERER_MISSING });
       const rendered = await renderer({ projectPath, layer, target });
       overlays.push({ input: rendered.input, left: target.left, top: target.top });
       diagnostics.push(rendered.diagnostic);
@@ -256,19 +257,19 @@ async function renderComposition({ manifest, projectPath, outputPath, fetchImpl 
 
 async function verifyCompositionOutput(projectPath, output, { requireFinal = false } = {}) {
   const issues = [];
-  if (!output) return { passed: false, issues: [{ code: 'COMPOSITION_OUTPUT_MISSING', message: 'Composition Output is missing.' }] };
-  if (requireFinal && output.mode !== 'final') issues.push({ code: 'FINAL_OUTPUT_REQUIRED', message: 'A final Composition Output is required.' });
+  if (!output) return { passed: false, issues: [{ code: ERROR_CODES.COMPOSITION_OUTPUT_MISSING, message: 'Composition Output is missing.' }] };
+  if (requireFinal && output.mode !== 'final') issues.push({ code: ERROR_CODES.FINAL_OUTPUT_REQUIRED, message: 'A final Composition Output is required.' });
   let bytes;
   let metadata;
   try {
     bytes = await fs.readFile(resolveProjectPath(projectPath, output.path));
     metadata = await sharp(bytes).metadata();
   } catch (error) {
-    issues.push({ code: 'COMPOSITION_OUTPUT_UNREADABLE', message: error.message });
+    issues.push({ code: ERROR_CODES.COMPOSITION_OUTPUT_UNREADABLE, message: error.message });
   }
-  if (bytes && hashBuffer(bytes) !== output.hash) issues.push({ code: 'COMPOSITION_OUTPUT_HASH_MISMATCH', message: 'Composition Output hash does not match the file.' });
+  if (bytes && hashBuffer(bytes) !== output.hash) issues.push({ code: ERROR_CODES.COMPOSITION_OUTPUT_HASH_MISMATCH, message: 'Composition Output hash does not match the file.' });
   if (metadata && (metadata.format !== 'png' || metadata.width !== output.width || metadata.height !== output.height)) {
-    issues.push({ code: 'COMPOSITION_OUTPUT_DIMENSION_MISMATCH', message: 'Composition Output PNG dimensions do not match its artifact.' });
+    issues.push({ code: ERROR_CODES.COMPOSITION_OUTPUT_DIMENSION_MISMATCH, message: 'Composition Output PNG dimensions do not match its artifact.' });
   }
   return { passed: issues.length === 0, issues, actual_hash: bytes ? hashBuffer(bytes) : undefined, metadata };
 }
@@ -276,11 +277,11 @@ async function verifyCompositionOutput(projectPath, output, { requireFinal = fal
 async function exportCompositionOutput(projectPath, output, destinationPath) {
   const verification = await verifyCompositionOutput(projectPath, output, { requireFinal: true });
   if (!verification.passed) {
-    throw Object.assign(new Error(`Composition Output cannot be exported: ${verification.issues.map((item) => item.message).join('; ')}`), { code: 'FINAL_EXPORT_BLOCKED' });
+    throw Object.assign(new Error(`Composition Output cannot be exported: ${verification.issues.map((item) => item.message).join('; ')}`), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
   }
   await fs.copyFile(resolveProjectPath(projectPath, output.path), destinationPath);
   const exportedHash = hashBuffer(await fs.readFile(destinationPath));
-  if (exportedHash !== output.hash) throw Object.assign(new Error('Exported PNG hash does not match Composition Output.'), { code: 'FINAL_EXPORT_HASH_MISMATCH' });
+  if (exportedHash !== output.hash) throw Object.assign(new Error('Exported PNG hash does not match Composition Output.'), { code: ERROR_CODES.FINAL_EXPORT_HASH_MISMATCH });
   return { ok: true, filePath: destinationPath, hash: exportedHash };
 }
 

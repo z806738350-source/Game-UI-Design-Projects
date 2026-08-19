@@ -1,0 +1,193 @@
+# ERROR-CATALOG（错误码目录）
+
+本目录是全部公开错误码的唯一事实文档。它与 `electron/services/errorCodes.cjs`
+由 `scripts/check-error-docs.cjs` 双向校验：代码中新增/删除错误码必须同步更新本文档，
+反之亦然。
+
+错误码分两类：
+
+- **管线错误码（`ERROR_CODES`）**：由后端以 `Error.code` 抛出，或被 IPC/导出门禁引用，
+  共 45 个。
+- **Fidelity 检查码（`FIDELITY_ISSUE_CODES`）**：写入 Fidelity Report `issues[].code`
+  或 Underlay Critique 门禁的结构化检查码，共 26 个。
+
+三个重叠码 `COMPONENT_ASSET_HASH_MISMATCH`、`FONT_ASSET_HASH_MISMATCH`、
+`COMPOSITION_OUTPUT_UNREADABLE` 既是管线错误码，也被像素检查器作为 issue code 使用；
+它们只定义在 `ERROR_CODES` 中，检查器直接引用 `ERROR_CODES.*`。
+
+## 一、管线错误码（ERROR_CODES，45 个）
+
+### Screen 上下文
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `SCREEN_ID_REQUIRED` | `electron/services/designPipeline.cjs` | Screen 作用域操作未传 `screenId` | 前端先激活 Screen 再调用 |
+| `SCREEN_NOT_FOUND` | `electron/services/designPipeline.cjs` | Screen 不存在或已归档 | 检查 Screen 列表，切换到有效 Screen |
+| `SCREEN_CONTEXT_MISMATCH` | `electron/services/designPipeline.cjs` | 活跃 Screen 与请求 Screen 不一致 | 先 `setActiveScreen` 再执行管线 |
+
+### 布局与绑定门禁
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `FONT_MANIFEST_REQUIRED` | `electron/services/designPipeline.cjs` | strict 布局要求 Font Manifest 已批准 | 先完成字体导入与确认并批准 |
+| `COMPONENT_CONTRACT_REQUIRED` | `electron/services/designPipeline.cjs` | strict 布局要求 Component Contract 已批准 | 先导入组件资产并批准 |
+| `BINDING_COVERAGE_INCOMPLETE` | `electron/services/designPipeline.cjs` | 绑定未覆盖全部必要控件或语义校验失败 | 按 `BINDING_*` 错误提示补全显式选择 |
+| `LAYOUT_CONSTRAINT_VIOLATION` | `electron/services/designPipeline.cjs` | `validateLayout` 报出 slot/缩放/9-slice 违规 | 修正布局 slot 或组件缩放策略 |
+| `STYLE_CONTRACT_INVALID` | `electron/services/designPipeline.cjs` | 批准时 Style Contract 校验未通过 | 重新生成或编辑 Style Contract |
+| `UNDERLAY_SPEC_REQUIRED` | `electron/services/designPipeline.cjs` | strict 视觉生成缺少已批准 Underlay Contract 或 Layout Guide | 先生成并批准 Underlay Contract、生成 Layout Guide |
+
+### 参考与输入
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED` | `electron/services/designPipeline.cjs` | 参考图超过服务容量，存在被省略项 | 在 Reference Workbench 确认省略项后重试 |
+| `REFERENCE_INVENTORY_EMPTY` | `electron/services/designPipeline.cjs` | 批准 Reference Inventory 时无任何已批准图片 | 至少批准一张参考图 |
+
+### 字体门禁
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `FONT_LICENSE_CONFIRMATION_REQUIRED` | `electron/services/typographyAssets.cjs` | 确认字体用途时未勾选授权确认 | 勾选"确认有权使用"后重试 |
+| `FONT_EXACT_CONFIRMATION_REQUIRED` | `electron/services/typographyAssets.cjs` | 确认字体用途时未勾选精确使用确认 | 勾选"必须精确使用此字体"后重试 |
+| `FONT_CONFIRMATION_ACTION_REQUIRED` | `electron/services/designPipeline.cjs` | 通过 `updateArtifact` 直接改 `fonts`/`roles` | 使用专用导入与确认动作 |
+| `FONT_ASSET_HASH_MISMATCH` | `electron/services/typographyRenderer.cjs`、`electron/main.cjs`、`electron/services/fidelityInspector.cjs` | 字体文件哈希与 Manifest 记录不一致 | 重新导入字体文件 |
+| `FONT_ACTUAL_LOAD_FAILED` | `electron/services/typographyRenderer.cjs` | 渲染时实际加载字体文件失败 | 检查 `style/fonts/` 下字体文件是否完整 |
+
+### 组件与合成门禁
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `COMPONENT_ASSET_HASH_MISMATCH` | `electron/services/compositionRenderer.cjs`、`electron/services/fidelityInspector.cjs` | 组件资产哈希与契约/Manifest 记录不一致 | 重新导入组件资产 |
+| `COMPONENT_RENDERER_MISSING` | `electron/services/compositionRenderer.cjs` | 图层 `renderer` 不在渲染注册表 | 检查 Component Contract `reuse_mode` |
+| `VECTOR_TOKEN_SOURCE_REQUIRED` | `electron/services/compositionRenderer.cjs` | vector-token 组件缺少来源声明 | 为组件补充 vector token 来源 |
+| `EXACT_NON_UNIFORM_SCALE` | `electron/services/compositionRenderer.cjs` | exact 组件被非等比缩放 | 调整 slot 尺寸保持等比 |
+| `EXACT_SCALE_OUT_OF_POLICY` | `electron/services/compositionRenderer.cjs` | exact 组件缩放超出 `scale_policy` 范围 | 调整 slot 或组件缩放策略 |
+| `COMPOSITION_GATE_FAILED` | `electron/services/compositor.cjs` | 合成前置门禁（critique/binding/layout/font）未通过 | 按 `missing_requirements` 列表逐项修复 |
+
+### Composition Output 与导出
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `COMPOSITION_OUTPUT_MISSING` | `electron/services/compositionRenderer.cjs` | 需要 Composition Output 但尚未生成 | 先运行合成 |
+| `COMPOSITION_OUTPUT_UNREADABLE` | `electron/services/compositionRenderer.cjs`、`electron/services/fidelityInspector.cjs` | PNG 无法解码或读取失败 | 重新合成 |
+| `COMPOSITION_OUTPUT_INVALID` | `electron/services/designPipeline.cjs` | 批准 final Manifest 时输出校验或引用不一致 | 重新合成并运行 Fidelity |
+| `COMPOSITION_OUTPUT_HASH_MISMATCH` | `electron/services/compositionRenderer.cjs` | PNG 文件哈希与 artifact 记录不一致 | 重新合成（文件被外部改动） |
+| `COMPOSITION_OUTPUT_DIMENSION_MISMATCH` | `electron/services/compositionRenderer.cjs` | PNG 实际尺寸与 artifact 记录不一致 | 重新合成 |
+| `FINAL_OUTPUT_REQUIRED` | `electron/services/compositionRenderer.cjs` | final 校验时只有 preview 输出 | 先以 final 模式合成 |
+| `FINAL_EXPORT_BLOCKED` | `electron/services/compositionRenderer.cjs`、`electron/main.cjs` | strict 导出时 final 输出校验未通过 | 按校验 issues 修复后重新合成 |
+| `FINAL_EXPORT_HASH_MISMATCH` | `electron/services/compositionRenderer.cjs` | 导出文件哈希与记录不一致 | 重新合成并导出 |
+| `GENERATED_EVIDENCE_READ_ONLY` | `electron/services/designPipeline.cjs` | 尝试编辑 `composition-manifest`/`fidelity-report` | 生成类证据只能由管线重写 |
+
+### Fidelity 门禁
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `FIDELITY_GATE_FAILED` | `electron/services/designPipeline.cjs` | final 批准门禁存在 blocker/critical 未豁免 | 修复 Fidelity issues 后重跑 |
+| `FIDELITY_OUTPUT_STALE` | `electron/services/designPipeline.cjs` | Fidelity Report 引用的不是当前 Composition Output | 重跑 Fidelity |
+| `FIDELITY_EVIDENCE_STALE` | `electron/services/fidelity.cjs` | 批准时像素证据摘要与报告不一致 | 重跑 Fidelity（文件已变化） |
+| `FIDELITY_CURRENT_EVIDENCE_FAILED` | `electron/services/designPipeline.cjs` | 批准时实时像素检查失败 | 按 issues 修复资产/输出 |
+
+### Underlay 修复
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `UNDERLAY_REPAIR_LIMIT` | `electron/services/underlayRepair.cjs` | 自动修复次数达到上限 | 转入人工评审（写入 blocked repair task） |
+| `INPAINT_NOT_AVAILABLE` | `electron/services/underlayRepair.cjs` | 服务不支持 inpaint 修复模式 | 改用重生成模式或升级服务能力 |
+| `REPAIR_OUTPUT_MISSING` | `electron/services/underlayRepair.cjs` | 修复任务没有返回图片结果 | 重试修复或检查 provider |
+| `REPAIR_EVIDENCE_INCOMPLETE` | `electron/services/underlayRepair.cjs` | 修复所需证据（overlay/mask 等）缺失 | 重跑 critique 后再修复 |
+
+### Provider 临时图像
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `TRANSIENT_IMAGE_UNSUPPORTED` | `electron/services/kunpoClient.cjs` | provider 返回不支持的图像格式 | 更换模型或开启快照模式 |
+| `TRANSIENT_IMAGE_SIZE_INVALID` | `electron/services/kunpoClient.cjs` | 返回图像尺寸非法 | 重试生成 |
+| `TRANSIENT_IMAGE_RATIO_MISMATCH` | `electron/services/kunpoClient.cjs` | 返回图像宽高比与画布规格不符 | 检查 canvas_spec 与模型能力 |
+| `TRANSIENT_IMAGE_DECODE_FAILED` | `electron/services/kunpoClient.cjs` | 返回图像无法解码 | 重试生成 |
+| `TRANSIENT_IMAGE_DOWNLOAD_FAILED` | `electron/services/kunpoClient.cjs` | 下载 provider 图像失败 | 检查网络与 gateway |
+
+### 迁移
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `MIGRATION_FAULT_INJECTED` | `electron/services/migrations.cjs` | 测试用故障注入点触发 | 仅测试使用；检查 fault 配置 |
+
+## 二、Fidelity 检查码（FIDELITY_ISSUE_CODES，26 个）
+
+这些码出现在 `fidelity-report.json` 的 `issues[].code`（由 `fidelity.cjs` 与
+`fidelityInspector.cjs` 写入）。severity 为 `blocker`/`critical`/`major` 的 issue
+会阻断 final 批准与导出。
+
+### 控件覆盖与 Underlay 门禁
+
+| 检查码 | 写入模块 | severity | 含义 |
+| --- | --- | --- | --- |
+| `MISSING_RENDERED_CONTROL` | `electron/services/fidelity.cjs` | blocker | 绑定中的控件未出现在合成图层 |
+| `UNDERLAY_REVIEW_FAILED` | `electron/services/fidelity.cjs` | blocker/critical | Underlay Critique 门禁存在未豁免阻断项 |
+| `TYPOGRAPHY_GATE_FAILED` | `electron/services/fidelity.cjs` | critical | Font Manifest 校验失败（授权/exact/覆盖） |
+
+### 字体渲染证据
+
+| 检查码 | 写入模块 | severity | 含义 |
+| --- | --- | --- | --- |
+| `UNRESOLVED_IDENTITY_FONT` | `electron/services/fidelity.cjs` | critical | 文字图层 `fidelity_mode` 为 unresolved |
+| `FONT_RENDER_NOT_VERIFIED` | `electron/services/fidelity.cjs` | critical | exact 文字未经过已验证字体文件渲染 |
+| `FONT_RENDER_HASH_MISMATCH` | `electron/services/fidelity.cjs` | critical | 渲染日志字体哈希与图层声明不一致 |
+| `FONT_RENDER_FAMILY_MISMATCH` | `electron/services/fidelity.cjs` | critical | 实际加载字族与声明不一致 |
+| `FONT_IDENTITY_MISMATCH` | `electron/services/fidelityInspector.cjs` | critical | 字体文件当前 family/postscript 与 Manifest 不一致 |
+| `FONT_ASSET_UNREADABLE` | `electron/services/fidelityInspector.cjs` | critical | 字体文件无法解析 |
+
+### 资产一致性
+
+| 检查码 | 写入模块 | severity | 含义 |
+| --- | --- | --- | --- |
+| `COMPONENT_ASSET_UNIDENTIFIED` | `electron/services/fidelity.cjs` | critical | 组件图层缺少合法 sha256 哈希 |
+| `COMPONENT_ASSET_UNREADABLE` | `electron/services/fidelityInspector.cjs` | critical | 组件资产文件缺失或不可读 |
+
+### 输出与依赖一致性
+
+| 检查码 | 写入模块 | severity | 含义 |
+| --- | --- | --- | --- |
+| `COMPOSITION_OUTPUT_MISSING` | `electron/services/fidelity.cjs` | blocker | Composition Output 缺失 |
+| `COMPOSITION_OUTPUT_REFERENCE_MISMATCH` | `electron/services/fidelity.cjs` | blocker | Manifest 未引用当前 Output |
+| `COMPOSITION_OUTPUT_MODE_MISMATCH` | `electron/services/fidelity.cjs` | blocker | Manifest 与 Output 的 mode 不一致 |
+| `STALE_DEPENDENCY` | `electron/services/fidelity.cjs` | blocker | 上游依赖 artifact stale 或缺失 |
+| `OUTPUT_SOURCE_MISMATCH` | `electron/services/fidelityInspector.cjs` | blocker | 输出 source 引用与当前 Manifest 不一致 |
+| `OUTPUT_VERSION_MISMATCH` | `electron/services/fidelityInspector.cjs` | blocker | 输出版本与 Manifest 引用版本不一致 |
+
+### 像素级检查
+
+| 检查码 | 写入模块 | severity | 含义 |
+| --- | --- | --- | --- |
+| `COMPONENT_OVERLAP` | `electron/services/fidelityInspector.cjs` | major | 组件图层互相重叠 |
+| `FINAL_ALPHA_MISSING` | `electron/services/fidelityInspector.cjs` | critical | final 输出缺少 alpha 通道 |
+| `FINAL_CANVAS_MISMATCH` | `electron/services/fidelityInspector.cjs` | blocker | 输出尺寸与画布规格不一致 |
+| `FINAL_PIXELS_EMPTY` | `electron/services/fidelityInspector.cjs` | blocker | 输出像素为空/纯色 |
+| `LAYER_OUT_OF_BOUNDS` | `electron/services/fidelityInspector.cjs` | critical | 渲染 bbox 超出 slot 或画布 |
+| `RENDERED_BBOX_MISMATCH` | `electron/services/fidelityInspector.cjs` | major | 渲染 bbox 与声明 rect 偏差超阈值 |
+| `NINE_SLICE_FIXED_REGIONS_MISSING` | `electron/services/fidelityInspector.cjs` | critical | 9-slice 固定区域检查缺少输入 |
+| `NINE_SLICE_FIXED_REGION_DEFORMED` | `electron/services/fidelityInspector.cjs` | critical | 9-slice 固定角区被变形渲染 |
+| `SAFE_AREA_VIOLATION` | `electron/services/fidelityInspector.cjs` | major | 图层侵入安全区约束 |
+| `TEXT_OVERFLOW` | `electron/services/fidelityInspector.cjs` | major | 文字渲染触及 slot 边界外 |
+
+## 三、绑定语义错误（BINDING_*）
+
+`componentBindings.cjs` 的 `validateBindings` 返回结构化错误字符串，以
+`BINDING_*` 前缀码开头（如 `BINDING_COMPONENT_NOT_SELECTED`），作为
+`BINDING_COVERAGE_INCOMPLETE` 的明细出现在错误消息中。完整语义见
+[COMPONENT-BINDINGS 契约](../contracts/COMPONENT-BINDINGS.md)。
+
+## 四、校验机制
+
+- `electron/services/errorCodes.cjs` 冻结导出 `ERROR_CODES` 与 `FIDELITY_ISSUE_CODES`；
+  各服务一律从该模块引用，不允许字面量。
+- `scripts/check-error-docs.cjs` 双向校验：
+  1. `errorCodes.cjs` 中的每个键必须在本文档对应表格中出现；
+  2. 本文档表格中的每个码必须存在于 `errorCodes.cjs`。
+- CI `docs-validate` job 运行 `pnpm test:docs`（包含本校验）。
+
+## 版本与变更记录
+
+| 版本 | 日期 | 说明 |
+| --- | --- | --- |
+| 1.0 | 2026-08-19 | PR-18 首次建立错误码事实目录（0.2.1） |

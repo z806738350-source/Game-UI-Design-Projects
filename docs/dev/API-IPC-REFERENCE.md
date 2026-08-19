@@ -1,0 +1,82 @@
+# IPC API 参考（API-IPC-REFERENCE）
+
+主进程（`electron/main.cjs`）通过 `ipcMain.handle('copilot:<domain>:<action>')`
+注册全部 IPC 通道；preload（`electron/preload.cjs`）以
+`window.designCopilot.<method>` 桥接给渲染进程；前端统一经
+`src/api.ts` 调用。命名三段式：`copilot:<domain>:<action>`。
+
+## 1. 配置（config）
+
+| 通道 | 参数 | 说明 |
+| --- | --- | --- |
+| `copilot:config` | 无 | 返回 kunpo 安全配置、workspaceRoot、platform |
+| `copilot:config:models` | `input`（visionModel 等） | 保存 models.json 模型配置并热更新 |
+
+## 2. 项目与屏幕（projects / screens）
+
+| 通道 | 参数 | 说明 |
+| --- | --- | --- |
+| `copilot:projects:list` | 无 | 项目列表 |
+| `copilot:projects:create` | `input`（name、continuation_mode 等） | 建项目 |
+| `copilot:projects:duplicate` | `projectId` | 复制项目 |
+| `copilot:projects:open` | `projectId, options` | 打开项目（可带 screenId） |
+| `copilot:projects:save` | `projectId, patch` | 保存项目修改（触发 stale 传播） |
+| `copilot:projects:reveal` | `projectId` | 在文件管理器中显示 project.json |
+| `copilot:projects:import` | `projectId, kind, screenId` | 文件选择导入 wireframe/参考图 |
+| `copilot:projects:reference` | `projectId, input` | 管理参考图 + `invalidateFromInputChange` |
+| `copilot:screens:list` | `projectId` | 屏幕列表 |
+| `copilot:screens:create` | `projectId, input` | 建屏幕 |
+| `copilot:screens:duplicate` | `projectId, screenId, input` | 复制屏幕 |
+| `copilot:screens:active` | `projectId, screenId` | 切换活跃屏幕 |
+| `copilot:screens:update` | `projectId, screenId, patch` | 更新屏幕元数据 |
+
+## 3. 资产（fonts / components）
+
+| 通道 | 参数 | 说明 |
+| --- | --- | --- |
+| `copilot:fonts:import` | `projectId, input` | 对话框选 OTF/TTF 导入（哈希入库） |
+| `copilot:fonts:confirm` | `projectId, input` | license/exact 确认（confirmFontUsage） |
+| `copilot:fonts:bytes` | `projectId, fontId` | 读取字体字节（先比对哈希，不一致抛 `FONT_ASSET_HASH_MISMATCH`） |
+| `copilot:components:import` | `projectId, input` | 对话框选图片导入组件切图 |
+| `copilot:components:forge-import` | `projectId` | 导入 Game UI Forge manifest |
+
+## 4. 管线（pipeline / input）
+
+| 通道 | 参数 | 说明 |
+| --- | --- | --- |
+| `copilot:pipeline:run` | `projectId, stage, input` | 运行阶段（runStage） |
+| `copilot:pipeline:cancel` | `projectId, stage, input` | 取消阶段 |
+| `copilot:pipeline:approve` | `projectId, kind, input` | 批准 artifact（approveArtifact，含各门禁） |
+| `copilot:pipeline:update` | `projectId, kind, patch` | 编辑 artifact（受只读/确认规则约束） |
+| `copilot:input:draft-requirement` | `projectId, input` | 草拟需求（draftRequirement） |
+
+## 5. Underlay 链（underlay）
+
+| 通道 | 参数 | 说明 |
+| --- | --- | --- |
+| `copilot:underlay:contract` | `projectId, input` | 生成 Underlay Contract |
+| `copilot:underlay:guide` | `projectId, input` | 生成 Layout Guide PNG |
+| `copilot:underlay:critique` | `projectId, input` | 运行 Critique（证据落盘） |
+| `copilot:underlay:repair` | `projectId, input` | 修复 underlay（有次数上限） |
+| `copilot:underlay:waiver` | `projectId, input` | 豁免 issue（理由 ≥10 字符） |
+
+## 6. 合成与交付（composition / fidelity / visual）
+
+| 通道 | 参数 | 说明 |
+| --- | --- | --- |
+| `copilot:composition:create` | `projectId, input` | 合成（mode: preview/final，四道门禁） |
+| `copilot:fidelity:run` | `projectId, input` | 运行 13 项 Fidelity 检查 |
+| `copilot:visual:export` | `projectId, variationId` | 导出：strict → final output 校验后导出（`FINAL_EXPORT_BLOCKED`）；guided → 下载 variation 图 |
+
+## 7. 前端调用层
+
+- `src/api.ts`：每个通道对应一个类型化方法，错误统一转成带
+  `code` 的 Error；
+- 工作台边界（PR-16）：后端按阶段校验调用合法性，跨边界调用被拒绝；
+- 错误码语义见 `docs/dev/ERROR-CATALOG.md`。
+
+## 版本与变更记录
+
+| 版本 | 日期 | 说明 |
+| --- | --- | --- |
+| 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
