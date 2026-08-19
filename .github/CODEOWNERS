@@ -1,6 +1,8 @@
 # Review-domain mapping (G-01 / REM-05).
-# The repository currently has a single maintainer; this file documents the
-# intended review domains and becomes authoritative once collaborators join.
+# The repository is single-maintainer per ADR-007 (approved exception):
+# owner self-approval + CodeReview subagent review substitute for an
+# independent technical reviewer until a real collaborator joins. This file
+# becomes the Code Owner Review source of truth once collaborators join.
 
 /electron/services/        @z806738350-source
 /src/                      @z806738350-source

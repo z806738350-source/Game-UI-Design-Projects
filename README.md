@@ -172,6 +172,7 @@ Game UI Forge 负责后半段：
 
 - main 分支受 GitHub Ruleset 保护：禁止直推与绕过，合并必须通过全部 Required Checks（validate、fixture-e2e、ui-unit、ui-e2e、docs-validate、secret-scan、macos-validate）；
 - 全部变更走 PR：push 前运行 L3 深度安全扫描，PR 经 CodeReview 实质审查与 CI 全绿后合并；
+- 仓库为单人维护，REM-05 的真实技术协作者 Review 要求按 `docs/decisions/ADR-007-single-maintainer-review-governance.md` 以批准的例外关闭（owner 自批 + CodeReview 子代理实质审查 + L3 扫描），协作者加入后自动恢复字面要求；
 - 发布流程与检查清单见 `docs/dev/RELEASE-CHECKLIST.md`。
 
 ## Golden Samples 与发布门禁

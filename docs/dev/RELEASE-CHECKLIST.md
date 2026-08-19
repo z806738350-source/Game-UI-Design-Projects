@@ -18,7 +18,7 @@
 
 - [ ] push 前运行 L3 深度安全扫描（`qodersec review --layer=l3`），
       无发现或发现已处置；每个新提交重跑
-- [ ] CodeReview 子代理实质审查通过（发现已修复或说明）
+- [ ] CodeReview 子代理实质审查通过（发现已修复或说明）；单人维护仓库按 ADR-007 批准的例外以 owner 自批 + 子代理审查替代真实技术 Reviewer APPROVE
 - [ ] PR 描述包含变更动机、影响面与验证证据
 
 ## 3. CI Required Checks（Ruleset 强制）
