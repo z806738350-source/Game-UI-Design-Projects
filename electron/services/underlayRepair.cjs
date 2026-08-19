@@ -1,5 +1,6 @@
+const { ERROR_CODES } = require('./errorCodes.cjs');
+
 function planRepairTask(critique, capabilities, input = {}) {
-const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
   const gate = require('./underlayCritique.cjs').reviewGate(critique);
   const attempt = Number(input.attempt || 1);
   const maximum = Number(input.maxAutomaticAttempts || 2);

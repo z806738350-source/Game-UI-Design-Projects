@@ -52,14 +52,24 @@ for (const rel of REQUIRED_FILES) {
   if (!fs.existsSync(path.join(root, rel))) fail(`missing required doc: ${rel}`);
 }
 
-// 2. Contract template headings present.
+// 2. Contract template headings present (exact match after stripping
+// numbering and trailing parenthetical qualifiers).
+function normalizeHeading(line) {
+  return line
+    .replace(/^## /, '')
+    .replace(/^\d+\.\s*/, '')
+    .replace(/（[^）]*）/g, '')
+    .trim();
+}
 for (const name of CONTRACT_DOCS) {
   const file = path.join(root, `docs/contracts/${name}.md`);
   if (!fs.existsSync(file)) continue;
   const text = fs.readFileSync(file, 'utf8');
-  const headings = text.split('\n').filter((line) => /^## /.test(line)).join('\n');
+  const headingTitles = text.split('\n')
+    .filter((line) => /^## /.test(line))
+    .map(normalizeHeading);
   for (const heading of CONTRACT_HEADINGS) {
-    if (!headings.includes(heading)) fail(`docs/contracts/${name}.md: missing heading "${heading}"`);
+    if (!headingTitles.includes(heading)) fail(`docs/contracts/${name}.md: missing heading "${heading}"`);
   }
 }
 
@@ -108,12 +118,13 @@ try {
   fail(`check-error-docs failed:\n${detail.trim()}`);
 }
 
-// 6. README index consistency: every required doc dir and doc name listed.
+// 6. README index consistency: every required doc listed on its own line.
 const readmePath = path.join(root, 'README.md');
 if (fs.existsSync(readmePath)) {
-  const readme = fs.readFileSync(readmePath, 'utf8');
+  const readmeLines = fs.readFileSync(readmePath, 'utf8').split('\n');
   for (const name of [...CONTRACT_DOCS, ...USER_DOCS, ...DEV_DOCS]) {
-    if (!readme.includes(`${name}.md`)) fail(`README.md: missing doc index entry for ${name}.md`);
+    const entry = `${name}.md`;
+    if (!readmeLines.some((line) => line.includes(entry))) fail(`README.md: missing doc index entry for ${entry}`);
   }
 }
 

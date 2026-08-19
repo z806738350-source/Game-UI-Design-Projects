@@ -34,6 +34,10 @@ strict 校验；任一失败抛 `COMPOSITION_GATE_FAILED`（`missing_requirement
 | `output` | 渲染后写入 | 是 | `{ artifact_id, path, hash, width, height }` |
 | `source` | object | 是 | 全部上游 artifact id 引用 |
 
+注：manifest 中记录的 `registry` 是三个正式渲染器；运行时注册表
+（`compositionRenderer.cjs`）另有 `reference-locked` 与 `local-generated`
+两个别名，均映射到 exact 渲染器，不触发 `COMPONENT_RENDERER_MISSING`。
+
 `layers[]` 类型：
 
 - `component`：`control_id`、`component_id`、`state`、`asset_path`、

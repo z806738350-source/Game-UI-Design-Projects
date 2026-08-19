@@ -1,5 +1,5 @@
 const { reviewGate } = require('./underlayCritique.cjs');
-const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
+const { ERROR_CODES } = require('./errorCodes.cjs');
 const { validateFontManifest } = require('./typographyAssets.cjs');
 const { validateBindings } = require('./componentBindings.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');

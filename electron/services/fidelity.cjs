@@ -9,7 +9,7 @@ function runFidelityChecks({ project, manifest, output, outputVerification, insp
   const renderedTypography = new Map((output?.render_log?.layers || []).filter((layer) => layer.font_role).map((layer) => [`${layer.control_id}:${layer.font_role}`, layer]));
   for (const binding of bindings?.bindings || []) if (!componentControls.has(binding.control_id)) add('blocker', FIDELITY_ISSUE_CODES.MISSING_RENDERED_CONTROL, `Control ${binding.control_id} is not rendered.`);
   const gate = reviewGate(critique);
-  for (const issue of gate.blocking) add(issue.severity === 'blocker' ? 'blocker' : 'critical', 'UNDERLAY_REVIEW_FAILED', issue.reason || issue.type);
+  for (const issue of gate.blocking) add(issue.severity === 'blocker' ? 'blocker' : 'critical', FIDELITY_ISSUE_CODES.UNDERLAY_REVIEW_FAILED, issue.reason || issue.type);
   for (const error of validateFontManifest(fontManifest, { strict: project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation' })) add('critical', FIDELITY_ISSUE_CODES.TYPOGRAPHY_GATE_FAILED, error);
   for (const layer of manifest?.layers || []) {
     if (layer.type === 'component' && !/^sha256:[a-f0-9]{64}$/i.test(layer.asset_hash || '')) add('critical', FIDELITY_ISSUE_CODES.COMPONENT_ASSET_UNIDENTIFIED, `${layer.component_id} has no valid asset hash.`);

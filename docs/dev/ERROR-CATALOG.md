@@ -7,7 +7,7 @@
 错误码分两类：
 
 - **管线错误码（`ERROR_CODES`）**：由后端以 `Error.code` 抛出，或被 IPC/导出门禁引用，
-  共 45 个。
+  共 47 个。
 - **Fidelity 检查码（`FIDELITY_ISSUE_CODES`）**：写入 Fidelity Report `issues[].code`
   或 Underlay Critique 门禁的结构化检查码，共 26 个。
 
@@ -15,7 +15,7 @@
 `COMPOSITION_OUTPUT_UNREADABLE` 既是管线错误码，也被像素检查器作为 issue code 使用；
 它们只定义在 `ERROR_CODES` 中，检查器直接引用 `ERROR_CODES.*`。
 
-## 一、管线错误码（ERROR_CODES，45 个）
+## 一、管线错误码（ERROR_CODES，47 个）
 
 ### Screen 上下文
 
@@ -42,6 +42,7 @@
 | --- | --- | --- | --- |
 | `REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED` | `electron/services/designPipeline.cjs` | 参考图超过服务容量，存在被省略项 | 在 Reference Workbench 确认省略项后重试 |
 | `REFERENCE_INVENTORY_EMPTY` | `electron/services/designPipeline.cjs` | 批准 Reference Inventory 时无任何已批准图片 | 至少批准一张参考图 |
+| `REFERENCE_CAPACITY_EXCEEDED` | `electron/services/kunpoClient.cjs` | 参考图数量超过 provider 上限 | 精简参考图或构建显式 reference pack |
 
 ### 字体门禁
 
@@ -105,6 +106,7 @@
 | `TRANSIENT_IMAGE_RATIO_MISMATCH` | `electron/services/kunpoClient.cjs` | 返回图像宽高比与画布规格不符 | 检查 canvas_spec 与模型能力 |
 | `TRANSIENT_IMAGE_DECODE_FAILED` | `electron/services/kunpoClient.cjs` | 返回图像无法解码 | 重试生成 |
 | `TRANSIENT_IMAGE_DOWNLOAD_FAILED` | `electron/services/kunpoClient.cjs` | 下载 provider 图像失败 | 检查网络与 gateway |
+| `UNTRUSTED_IMAGE_LOCATION` | `electron/services/kunpoClient.cjs` | provider 返回不可信图像地址（未拉取未落盘） | 重试生成；持续出现则检查 provider 返回格式 |
 
 ### 迁移
 
@@ -134,15 +136,15 @@
 | `FONT_RENDER_NOT_VERIFIED` | `electron/services/fidelity.cjs` | critical | exact 文字未经过已验证字体文件渲染 |
 | `FONT_RENDER_HASH_MISMATCH` | `electron/services/fidelity.cjs` | critical | 渲染日志字体哈希与图层声明不一致 |
 | `FONT_RENDER_FAMILY_MISMATCH` | `electron/services/fidelity.cjs` | critical | 实际加载字族与声明不一致 |
-| `FONT_IDENTITY_MISMATCH` | `electron/services/fidelityInspector.cjs` | critical | 字体文件当前 family/postscript 与 Manifest 不一致 |
-| `FONT_ASSET_UNREADABLE` | `electron/services/fidelityInspector.cjs` | critical | 字体文件无法解析 |
+| `FONT_IDENTITY_MISMATCH` | `electron/services/fidelityInspector.cjs` | blocker | 字体文件当前 family/postscript 与 Manifest 不一致 |
+| `FONT_ASSET_UNREADABLE` | `electron/services/fidelityInspector.cjs` | blocker | 字体文件无法解析 |
 
 ### 资产一致性
 
 | 检查码 | 写入模块 | severity | 含义 |
 | --- | --- | --- | --- |
 | `COMPONENT_ASSET_UNIDENTIFIED` | `electron/services/fidelity.cjs` | critical | 组件图层缺少合法 sha256 哈希 |
-| `COMPONENT_ASSET_UNREADABLE` | `electron/services/fidelityInspector.cjs` | critical | 组件资产文件缺失或不可读 |
+| `COMPONENT_ASSET_UNREADABLE` | `electron/services/fidelityInspector.cjs` | blocker | 组件资产文件缺失或不可读 |
 
 ### 输出与依赖一致性
 
@@ -157,18 +159,21 @@
 
 ### 像素级检查
 
+`fidelityInspector.cjs` 的检查器对所有 inspector issue 固定写入
+`severity: 'blocker'`，因此下表 severity 全部为 blocker。
+
 | 检查码 | 写入模块 | severity | 含义 |
 | --- | --- | --- | --- |
-| `COMPONENT_OVERLAP` | `electron/services/fidelityInspector.cjs` | major | 组件图层互相重叠 |
-| `FINAL_ALPHA_MISSING` | `electron/services/fidelityInspector.cjs` | critical | final 输出缺少 alpha 通道 |
+| `COMPONENT_OVERLAP` | `electron/services/fidelityInspector.cjs` | blocker | 组件图层互相重叠 |
+| `FINAL_ALPHA_MISSING` | `electron/services/fidelityInspector.cjs` | blocker | final 输出缺少 alpha 通道 |
 | `FINAL_CANVAS_MISMATCH` | `electron/services/fidelityInspector.cjs` | blocker | 输出尺寸与画布规格不一致 |
 | `FINAL_PIXELS_EMPTY` | `electron/services/fidelityInspector.cjs` | blocker | 输出像素为空/纯色 |
-| `LAYER_OUT_OF_BOUNDS` | `electron/services/fidelityInspector.cjs` | critical | 渲染 bbox 超出 slot 或画布 |
-| `RENDERED_BBOX_MISMATCH` | `electron/services/fidelityInspector.cjs` | major | 渲染 bbox 与声明 rect 偏差超阈值 |
-| `NINE_SLICE_FIXED_REGIONS_MISSING` | `electron/services/fidelityInspector.cjs` | critical | 9-slice 固定区域检查缺少输入 |
-| `NINE_SLICE_FIXED_REGION_DEFORMED` | `electron/services/fidelityInspector.cjs` | critical | 9-slice 固定角区被变形渲染 |
-| `SAFE_AREA_VIOLATION` | `electron/services/fidelityInspector.cjs` | major | 图层侵入安全区约束 |
-| `TEXT_OVERFLOW` | `electron/services/fidelityInspector.cjs` | major | 文字渲染触及 slot 边界外 |
+| `LAYER_OUT_OF_BOUNDS` | `electron/services/fidelityInspector.cjs` | blocker | 渲染 bbox 超出 slot 或画布 |
+| `RENDERED_BBOX_MISMATCH` | `electron/services/fidelityInspector.cjs` | blocker | 渲染 bbox 与声明 rect 偏差超阈值 |
+| `NINE_SLICE_FIXED_REGIONS_MISSING` | `electron/services/fidelityInspector.cjs` | blocker | 9-slice 固定区域检查缺少输入 |
+| `NINE_SLICE_FIXED_REGION_DEFORMED` | `electron/services/fidelityInspector.cjs` | blocker | 9-slice 固定角区被变形渲染 |
+| `SAFE_AREA_VIOLATION` | `electron/services/fidelityInspector.cjs` | blocker | 图层侵入安全区约束 |
+| `TEXT_OVERFLOW` | `electron/services/fidelityInspector.cjs` | blocker | 文字渲染触及 slot 边界外 |
 
 ## 三、绑定语义错误（BINDING_*）
 

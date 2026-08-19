@@ -281,7 +281,7 @@ async function transientImageSnapshot(url, id, requestedSize) {
     bytes = Buffer.from(await response.arrayBuffer());
   } else {
     const error = new Error(`Kunpo returned an untrusted image location (${JSON.stringify(location)}). The result was not fetched or persisted.`);
-    error.code = 'UNTRUSTED_IMAGE_LOCATION';
+    error.code = ERROR_CODES.UNTRUSTED_IMAGE_LOCATION;
     throw error;
   }
   if (!bytes.length || bytes.length > 25 * 1024 * 1024) throw Object.assign(new Error('Transient Kunpo image is empty or exceeds the 25MB snapshot limit.'), { code: ERROR_CODES.TRANSIENT_IMAGE_SIZE_INVALID });
@@ -332,7 +332,7 @@ async function generateImage(config, { prompt, imagePaths = [], size = '1536x864
   const paths = imagePaths.filter(Boolean);
   if (paths.length > maxReferenceImages) {
     const error = new Error(`Reference pack contains ${paths.length} images but provider limit is ${maxReferenceImages}. Build an explicit reference pack and review omitted assets.`);
-    error.code = 'REFERENCE_CAPACITY_EXCEEDED';
+    error.code = ERROR_CODES.REFERENCE_CAPACITY_EXCEEDED;
     throw error;
   }
   const references = await Promise.all(paths.map(fileDataUrl));
