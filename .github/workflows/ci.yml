@@ -152,16 +152,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.13.0
 
-      - name: Validate execution-grade docs
-        run: node scripts/check-docs.cjs
-
-      - name: Validate error-code catalog
-        run: node scripts/check-error-docs.cjs
+      - name: Validate execution-grade docs (check-docs + check-error-docs + check-doc-commands + check-project-tree)
+        run: pnpm test:docs
 
   secret-scan:
     runs-on: ubuntu-latest

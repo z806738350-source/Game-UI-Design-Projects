@@ -116,7 +116,7 @@
 | --- | --- | --- | --- |
 | `MIGRATION_FAULT_INJECTED` | `electron/services/migrations.cjs` | 测试用故障注入点触发 | 仅测试使用；检查 fault 配置 |
 
-## 二、Fidelity 检查码（FIDELITY_ISSUE_CODES，26 个）
+## 二、Fidelity 检查码（FIDELITY_ISSUE_CODES，27 个）
 
 这些码出现在 `fidelity-report.json` 的 `issues[].code`（由 `fidelity.cjs` 与
 `fidelityInspector.cjs` 写入）。severity 为 `blocker`/`critical`/`major` 的 issue

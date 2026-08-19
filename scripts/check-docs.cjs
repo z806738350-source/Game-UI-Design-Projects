@@ -2,12 +2,12 @@
 /**
  * docs-validate gate: structural validation for execution-grade docs.
  * Checks: required files, template headings, JSON fence parseability,
- * referenced repo paths, and error-code doc consistency (delegates to
- * check-error-docs.cjs). Read-only: never mutates files.
+ * and referenced repo paths. Read-only: never mutates files. The full
+ * docs gate is `pnpm test:docs`, which additionally runs check-error-docs,
+ * check-doc-commands, and check-project-tree.
  */
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const errors = [];
@@ -110,15 +110,7 @@ function checkRepoPaths(rel) {
 }
 for (const rel of REQUIRED_FILES) if (rel.endsWith('.md')) checkRepoPaths(rel);
 
-// 5. Error-code registry ↔ ERROR-CATALOG consistency.
-try {
-  execFileSync(process.execPath, [path.join(root, 'scripts/check-error-docs.cjs')], { stdio: 'pipe' });
-} catch (error) {
-  const detail = String(error.stdout || '') + String(error.stderr || '');
-  fail(`check-error-docs failed:\n${detail.trim()}`);
-}
-
-// 6. README index consistency: every required doc listed on its own line.
+// 5. README index consistency: every required doc listed on its own line.
 const readmePath = path.join(root, 'README.md');
 if (fs.existsSync(readmePath)) {
   const readmeLines = fs.readFileSync(readmePath, 'utf8').split('\n');

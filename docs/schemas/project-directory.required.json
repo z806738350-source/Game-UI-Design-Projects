@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "description": "Machine truth for the on-disk layout of a Game UI Design Copilot project workspace. Consumed by scripts/check-project-tree.cjs, which verifies (1) the README PROJECT_TREE block documents every required path, (2) the golden fixture workspace contains the core evidence set, and (3) electron/services/artifactRegistry.cjs has no undocumented official artifact. Keep all three in sync.",
+  "root_files": [
+    "project.json",
+    "screens/index.json"
+  ],
+  "workflow_files": [
+    "workflow/state.json",
+    "workflow/artifact-history.json",
+    "workflow/migration-log.json"
+  ],
+  "global_artifact_paths": [
+    "style/reference-inventory.json",
+    "style/style-contract.json",
+    "style/font-manifest.json",
+    "style/component-contract.json"
+  ],
+  "screen_artifact_files": [
+    "screen-contract.json",
+    "component-bindings.json",
+    "layout-proposals.json",
+    "approved-layout.json",
+    "reference-pack.json",
+    "underlay-contract.json",
+    "underlay-critique.json",
+    "underlay-repair-task.json",
+    "composition-manifest.json",
+    "composition-output.json",
+    "fidelity-report.json",
+    "visual-task.json",
+    "explorations/results.json"
+  ],
+  "screen_support_paths": [
+    "inputs.json",
+    "inputs/requirement.md",
+    "inputs/wireframe.png",
+    "underlays/*.png",
+    "compositions/{mode}-v{version}.png",
+    "reviews/{id}-semantic-response.json"
+  ],
+  "golden_workspace": "release-evidence/golden-samples/existing-continuation/evidence/workspace",
+  "golden_required_files": [
+    "project.json",
+    "screens/index.json",
+    "workflow/state.json",
+    "workflow/artifact-history.json",
+    "style/reference-inventory.json",
+    "style/style-contract.json",
+    "style/font-manifest.json",
+    "style/component-contract.json",
+    "screens/main/screen-contract.json",
+    "screens/main/component-bindings.json",
+    "screens/main/layout-proposals.json",
+    "screens/main/approved-layout.json",
+    "screens/main/underlay-contract.json",
+    "screens/main/underlay-critique.json",
+    "screens/main/underlay-repair-task.json",
+    "screens/main/composition-manifest.json",
+    "screens/main/composition-output.json",
+    "screens/main/fidelity-report.json",
+    "screens/main/inputs.json",
+    "screens/main/inputs/wireframe.png",
+    "screens/main/explorations/results.json"
+  ],
+  "golden_notes": "The frozen golden sample stores the requirement inline in screens/main/inputs.json (migration-era layout), so inputs/requirement.md is only required in live workspaces, not in the release evidence."
+}

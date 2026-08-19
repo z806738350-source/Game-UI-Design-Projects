@@ -8,10 +8,10 @@
 
 - [ ] `pnpm lint` 通过
 - [ ] `pnpm test` 全绿（Node --test，服务层全部用例）
-- [ ] `pnpm run fixture-e2e` 通过（FixtureProvider 全链路）
+- [ ] `pnpm test:fixture-e2e` 通过（FixtureProvider 全链路）
 - [ ] `pnpm run test:ui-unit` 通过（组件级单测）
 - [ ] `pnpm run test:ui-e2e` 通过（Playwright Electron E2E）
-- [ ] `pnpm run test:docs` 通过（文档校验，含 check-error-docs）
+- [ ] `pnpm run test:docs` 通过（check-docs + check-error-docs + check-doc-commands + check-project-tree 四检聚合）
 - [ ] `pnpm run build` 通过（Vite + Electron 产物）
 
 ## 2. 安全与审查
@@ -31,7 +31,7 @@
 | macos-validate | macOS 单测门禁 |
 | ui-unit | 前端组件单测 |
 | ui-e2e | Playwright Electron E2E |
-| docs-validate | 文档校验（check-docs + check-error-docs） |
+| docs-validate | 文档校验（pnpm test:docs：check-docs + check-error-docs + check-doc-commands + check-project-tree） |
 
 全部绿才能合并；不得以 --admin 绕过。
 

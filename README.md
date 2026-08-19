@@ -91,31 +91,36 @@ KUNPO_API_KEY=your-local-key
 
 ## 项目 Artifact
 
-默认项目目录为 `~/Game UI Design Projects`：
+默认项目目录为 `~/Game UI Design Projects`（此树由 `docs/schemas/project-directory.required.json` 机器事实源校验，修改时同步两处）：
 
+<!-- PROJECT_TREE:BEGIN -->
 ```text
 project/
 ├── project.json
-├── inputs/
-│   ├── requirement.md
-│   └── wireframe.png
-├── screens/index.json
-├── screens/main/
-│   ├── screen-contract.json
-│   ├── layout-proposals.json
-│   ├── approved-layout.json
-│   ├── component-bindings.json
-│   ├── underlay-contract.json
-│   ├── underlay-layout-guide.png
-│   ├── underlay-critique.json
-│   ├── composition-manifest.json
-│   ├── composition-output.json
-│   ├── fidelity-report.json
-│   ├── inputs.json
-│   ├── underlays/*.png
-│   ├── compositions/{mode}-v{version}.png
-│   ├── reviews/{id}-semantic-response.json
-│   └── explorations/results.json
+├── screens/
+│   ├── index.json
+│   └── main/
+│       ├── inputs.json
+│       ├── inputs/
+│       │   ├── requirement.md
+│       │   └── wireframe.png
+│       ├── screen-contract.json
+│       ├── layout-proposals.json
+│       ├── approved-layout.json
+│       ├── component-bindings.json
+│       ├── reference-pack.json
+│       ├── underlay-contract.json
+│       ├── underlay-layout-guide.png
+│       ├── underlay-critique.json
+│       ├── underlay-repair-task.json
+│       ├── visual-task.json
+│       ├── composition-manifest.json
+│       ├── composition-output.json
+│       ├── fidelity-report.json
+│       ├── underlays/*.png
+│       ├── compositions/{mode}-v{version}.png
+│       ├── reviews/{id}-semantic-response.json
+│       └── explorations/results.json
 ├── style/
 │   ├── style-contract.json
 │   ├── font-manifest.json
@@ -129,6 +134,7 @@ project/
     ├── artifact-history.json
     └── migration-log.json
 ```
+<!-- PROJECT_TREE:END -->
 
 所有模型 Artifact 都包含 `schema_version`、`id`、`version`、`status` 和 `source`。上游 Artifact 重新生成时，下游结果会标记为 `stale`，避免旧批准结果被误用。
 

@@ -9,8 +9,6 @@
 ```
 <project-dir>/
 ├── project.json                      # 项目元数据（name、continuation_mode、screen_id 等）
-├── inputs/
-│   └── requirement.md                # 需求原文
 ├── style/
 │   ├── style-contract.json           # STYLE-CONTRACT-2.0
 │   ├── font-manifest.json            # FONT-MANIFEST
@@ -25,13 +23,18 @@
 │       ├── component-bindings.json   # COMPONENT-BINDINGS
 │       ├── layout-proposals.json     # 3 个布局提案
 │       ├── approved-layout.json      # APPROVED-LAYOUT
+│       ├── reference-pack.json       # REFERENCE-PACK
 │       ├── underlay-contract.json    # UNDERLAY-CONTRACT
 │       ├── underlay-layout-guide.png # Layout Guide 标注图
 │       ├── underlay-critique.json    # UNDERLAY-CRITIQUE
+│       ├── underlay-repair-task.json # UNDERLAY-REPAIR-TASK
 │       ├── composition-manifest.json # COMPOSITION-MANIFEST
 │       ├── composition-output.json   # COMPOSITION-OUTPUT
 │       ├── fidelity-report.json      # FIDELITY-REPORT
+│       ├── visual-task.json          # VISUAL-TASK（视觉任务参数）
 │       ├── inputs.json               # 屏幕级输入（wireframe 等）
+│       ├── inputs/requirement.md     # 需求原文（屏幕级）
+│       ├── inputs/wireframe.png      # 线框图
 │       ├── underlays/*.png           # underlay 图像（含修复产物）
 │       ├── compositions/{mode}-v{version}.png  # 合成输出
 │       ├── reviews/{id}-semantic-response.json # 语义审查原始响应
@@ -63,3 +66,4 @@
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
+| 1.1 | 2026-08-19 | PR-22 修正 per-screen inputs 位置；补 reference-pack / underlay-repair-task / visual-task |
