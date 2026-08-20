@@ -8,6 +8,7 @@ const sharp = require('sharp');
 const { createDesignPipeline } = require('./designPipeline.cjs');
 const { createProjectStore } = require('./projectStore.cjs');
 const {
+  assertFinalApprovalForExport,
   exactRenderer,
   exportCompositionOutput,
   hashBuffer,
@@ -234,4 +235,17 @@ test('a failed composition regeneration leaves the evidence chain stale (UIE2E-0
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
+});
+
+test('final export requires an approved composition manifest (FINAL_APPROVAL_REQUIRED)', () => {
+  const approved = { artifacts: { compositionManifest: { status: 'approved' } } };
+  assert.doesNotThrow(() => assertFinalApprovalForExport(approved));
+  for (const status of ['draft', 'generated', 'reviewed', 'stale', 'rejected']) {
+    assert.throws(
+      () => assertFinalApprovalForExport({ artifacts: { compositionManifest: { status } } }),
+      (error) => error.code === 'FINAL_APPROVAL_REQUIRED'
+    );
+  }
+  // 无 manifest（从未进入合成阶段）同样阻断
+  assert.throws(() => assertFinalApprovalForExport({ artifacts: {} }), (error) => error.code === 'FINAL_APPROVAL_REQUIRED');
 });

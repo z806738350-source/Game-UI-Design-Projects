@@ -6,7 +6,7 @@ const { loadKunpoConfig, saveModelConfig } = require('./services/env.cjs');
 const kunpoClient = require('./services/kunpoClient.cjs');
 const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
-const { exportCompositionOutput, hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('./services/compositionRenderer.cjs');
+const { assertFinalApprovalForExport, exportCompositionOutput, hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('./services/compositionRenderer.cjs');
 
 // UI E2E runs the packaged renderer (dist/) from an unpackaged checkout via
 // DESIGN_COPILOT_FORCE_DIST; a dev server URL always wins for local dev.
@@ -107,6 +107,14 @@ function registerIpc() {
     shell.showItemInFolder(path.join(project.workspacePath, 'project.json'));
     return { ok: true };
   });
+  // 顶栏「使用说明书」入口：用系统默认浏览器打开随仓库分发的单文件 HTML 说明书
+  ipcMain.handle('copilot:guide:open', async () => {
+    const guidePath = path.join(__dirname, '..', 'docs', 'user', 'quick-start-guide.html');
+    const exists = await fs.access(guidePath).then(() => true).catch(() => false);
+    if (!exists) return { ok: false };
+    const openError = await shell.openPath(guidePath);
+    return { ok: !openError };
+  });
   ipcMain.handle('copilot:projects:import', async (_event, projectId, kind, screenId) => {
     const selection = await dialog.showOpenDialog({
       title: kind === 'wireframe' ? '选择 UE Wireframe' : '选择批准的视觉参考',
@@ -180,6 +188,9 @@ function registerIpc() {
         && fidelity.source?.composition_manifest_version === project.artifacts.compositionManifest?.version
         && fidelity.source?.composition_output_hash === output?.hash);
       if (!fidelityFresh) throw Object.assign(new Error('无法导出最终成图：需要先通过针对当前合成结果的 Final Fidelity 检查。'), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
+      // 交付边界：最终批准（Composition Manifest approved）必须先于导出，
+      // 避免未签核产物被当作正式交付外流。
+      assertFinalApprovalForExport(project);
       const verification = await verifyCompositionOutput(project.workspacePath, output, { requireFinal: true });
       if (!verification.passed) throw Object.assign(new Error(`无法导出最终成图：${verification.issues.map((item) => item.message).join('；')}`), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
       const selection = await dialog.showSaveDialog({

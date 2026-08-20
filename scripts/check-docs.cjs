@@ -32,6 +32,8 @@ const REQUIRED_FILES = [
   ...CONTRACT_DOCS.map((name) => `docs/contracts/${name}.md`),
   ...USER_DOCS.map((name) => `docs/user/${name}.md`),
   ...DEV_DOCS.map((name) => `docs/dev/${name}.md`),
+  // 新用户使用说明书是单文件 HTML（浏览器直接打开），同样纳入存在性与 README 索引校验
+  'docs/user/quick-start-guide.html',
   'README.md', 'CHANGELOG.md'
 ];
 
@@ -118,6 +120,7 @@ if (fs.existsSync(readmePath)) {
     const entry = `${name}.md`;
     if (!readmeLines.some((line) => line.includes(entry))) fail(`README.md: missing doc index entry for ${entry}`);
   }
+  if (!readmeLines.some((line) => line.includes('quick-start-guide.html'))) fail('README.md: missing doc index entry for quick-start-guide.html');
 }
 
 if (errors.length > 0) {

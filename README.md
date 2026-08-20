@@ -37,6 +37,8 @@ Start Game UI Design Copilot.command
 pnpm quick-start
 ```
 
+首次使用请阅读 `docs/user/quick-start-guide.html`（双击用浏览器打开即可的新手说明书）；启动前可用 `pnpm quick-start:check` 检查依赖与端口。
+
 常规开发模式：
 
 ```bash
@@ -166,7 +168,7 @@ Game UI Forge 负责后半段：
 
 用户文档（`docs/user/`）：
 
-- `EXISTING-PROJECT-SOP.md`、`STRICT-CONTINUATION-GUIDE.md`、`WORKBENCH-GUIDE.md`、`FAILURE-RECOVERY.md`
+- `quick-start-guide.html`（新用户使用说明书，浏览器直接打开）、`EXISTING-PROJECT-SOP.md`、`STRICT-CONTINUATION-GUIDE.md`、`WORKBENCH-GUIDE.md`、`FAILURE-RECOVERY.md`
 
 开发运维文档（`docs/dev/`）：
 

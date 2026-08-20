@@ -1,7 +1,7 @@
 import {
   Check, ChevronDown, Clock3, FileJson, Layers3, LockKeyhole, Maximize2, ScanSearch, Upload, WandSparkles, X
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Artifact, DesignProject, ScreenControl } from '../../types';
 
 export const stages = [
@@ -109,6 +109,8 @@ export type DropdownOption = { value: string; label: string; disabled?: boolean 
 
 // 自绘下拉框：macOS 下原生 <select> 的展开列表是系统菜单，无法套用设计令牌，
 // 故统一用 DOM 列表框替代，展开态完全遵循 Darkroom Precision 风格。
+// 键盘模型遵循 WAI-ARIA Listbox Button 模式：焦点始终停留在触发按钮上，
+// 通过 aria-activedescendant 指向活动选项；禁用项不可被键盘或鼠标选中。
 export function Dropdown({ value, options, onChange, disabled = false, testId, ariaLabel, placeholder }: {
   value: string;
   options: DropdownOption[];
@@ -119,33 +121,125 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [dropUp, setDropUp] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
+  const menuId = useId();
+  const typedRef = useRef({ prefix: '', at: 0 });
+  const enabledCount = options.filter((option) => !option.disabled).length;
+  const currentIndex = options.findIndex((option) => option.value === value && !option.disabled);
+  const firstEnabled = options.findIndex((option) => !option.disabled);
+  let lastEnabled = -1;
+  options.forEach((option, index) => { if (!option.disabled) lastEnabled = index; });
+
+  const openAt = (index: number) => { setActiveIndex(index); setOpen(true); };
+  // 关闭时重置 typeahead 缓冲，避免上一轮输入污染关闭后的下一次前缀搜索
+  const close = () => { setOpen(false); typedRef.current.prefix = ''; };
+  const closeAndFocusButton = () => { close(); buttonRef.current?.focus(); };
+  const selectAt = (index: number) => {
+    const option = options[index];
+    if (!option || option.disabled) return;
+    onChange(option.value);
+    closeAndFocusButton();
+  };
+  const moveActive = (direction: 1 | -1) => {
+    if (enabledCount === 0) return;
+    let next = activeIndex;
+    for (let step = 0; step < options.length; step += 1) {
+      next = (next + direction + options.length) % options.length;
+      if (!options[next].disabled) break;
+    }
+    setActiveIndex(next);
+  };
+
   useEffect(() => {
     if (!open) return;
-    const onPointerDown = (event: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false); };
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    const onPointerDown = (event: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(event.target as Node)) close(); };
     document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => { document.removeEventListener('mousedown', onPointerDown); document.removeEventListener('keydown', onKeyDown); };
+    return () => document.removeEventListener('mousedown', onPointerDown);
   }, [open]);
+  // 活动项滚入视野 + 菜单贴近视口底部时向上翻转，避免被裁切
+  useEffect(() => { if (open && activeIndex >= 0) optionRefs.current[activeIndex]?.scrollIntoView?.({ block: 'nearest' }); }, [open, activeIndex]);
+  useEffect(() => {
+    if (!open || !rootRef.current) return;
+    const rect = rootRef.current.getBoundingClientRect();
+    const menuHeight = Math.min(Math.max(options.length, 1), 8) * 34 + 14;
+    setDropUp(window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight);
+  }, [open]);
+
+  const onButtonKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        if (!open) openAt(currentIndex >= 0 ? currentIndex : firstEnabled);
+        else moveActive(1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        if (!open) openAt(currentIndex >= 0 ? currentIndex : lastEnabled);
+        else moveActive(-1);
+        break;
+      case 'Home':
+        if (open && firstEnabled >= 0) { event.preventDefault(); setActiveIndex(firstEnabled); }
+        break;
+      case 'End':
+        if (open && lastEnabled >= 0) { event.preventDefault(); setActiveIndex(lastEnabled); }
+        break;
+      case 'Enter':
+      case ' ':
+        // 阻止按钮自身的 Enter/Space 激活行为，避免与 openAt/selectAt 双重触发
+        event.preventDefault();
+        if (!open) openAt(currentIndex >= 0 ? currentIndex : firstEnabled);
+        else if (activeIndex >= 0) selectAt(activeIndex);
+        else close();
+        break;
+      case 'Escape':
+        if (open) { event.preventDefault(); closeAndFocusButton(); }
+        break;
+      case 'Tab':
+        // 不拦截：菜单随焦点离开关闭，焦点按正常顺序前进
+        if (open) close();
+        break;
+      default:
+        if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.nativeEvent.isComposing) {
+          const now = Date.now();
+          const typed = typedRef.current;
+          typed.prefix = now - typed.at < 600 ? typed.prefix + event.key.toLocaleLowerCase() : event.key.toLocaleLowerCase();
+          typed.at = now;
+          const match = options.findIndex((option) => !option.disabled && option.label.toLocaleLowerCase().startsWith(typed.prefix));
+          if (match >= 0) {
+            event.preventDefault();
+            if (open) setActiveIndex(match);
+            else openAt(match);
+          }
+        }
+    }
+  };
+
   const current = options.find((option) => option.value === value);
   return (
     <div className="dropdown" ref={rootRef} data-testid={testId}>
-      <button type="button" className="dropdown-button" aria-haspopup="listbox" aria-expanded={open} aria-label={ariaLabel} disabled={disabled} onClick={() => setOpen((wasOpen) => !wasOpen)}>
+      <button type="button" ref={buttonRef} className="dropdown-button" aria-haspopup="listbox" aria-expanded={open} aria-controls={menuId} aria-activedescendant={open && activeIndex >= 0 ? `${menuId}-option-${activeIndex}` : undefined} aria-label={ariaLabel} disabled={disabled} onClick={() => (open ? close() : openAt(currentIndex >= 0 ? currentIndex : firstEnabled))} onKeyDown={onButtonKeyDown}>
         <span className={current ? undefined : 'is-placeholder'}>{current ? current.label : placeholder}</span>
         <ChevronDown size={13} />
       </button>
-      {open && <ul className="dropdown-menu" role="listbox" aria-label={ariaLabel}>
-        {options.map((option) => (
-          <li key={option.value} role="option" aria-selected={option.value === value} data-value={option.value}
-            className={`dropdown-option${option.value === value ? ' is-selected' : ''}${option.disabled ? ' is-disabled' : ''}`}
+      {open && <ul className={`dropdown-menu${dropUp ? ' is-up' : ''}`} id={menuId} role="listbox" aria-label={ariaLabel}>
+        {options.map((option, index) => (
+          <li key={option.value} id={`${menuId}-option-${index}`} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} data-value={option.value}
+            ref={(node) => { optionRefs.current[index] = node; }}
+            className={`dropdown-option${option.value === value ? ' is-selected' : ''}${option.disabled ? ' is-disabled' : ''}${index === activeIndex ? ' is-active' : ''}`}
             // Dropdown 常被包在 <label> 里：不取消默认行为时，label 的激活行为会把
             // 这次点击转发给触发按钮，菜单刚关上又被重新打开（挡住下一个字段）。
-            onClick={(event) => { event.preventDefault(); if (option.disabled) return; onChange(option.value); setOpen(false); }}>
+            onClick={(event) => { event.preventDefault(); selectAt(index); }}
+            onMouseEnter={() => { if (!option.disabled) setActiveIndex(index); }}>
             <Check size={12} className="dropdown-check" />
             <span title={option.label}>{option.label}</span>
           </li>
         ))}
+        {options.length === 0 && <li className="dropdown-option is-disabled" role="option" aria-selected={false} aria-disabled><span>无可选项</span></li>}
       </ul>}
     </div>
   );

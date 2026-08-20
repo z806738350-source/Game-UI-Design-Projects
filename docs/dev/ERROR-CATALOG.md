@@ -77,6 +77,7 @@
 | `COMPOSITION_OUTPUT_HASH_MISMATCH` | `electron/services/compositionRenderer.cjs` | PNG 文件哈希与 artifact 记录不一致 | 重新合成（文件被外部改动） |
 | `COMPOSITION_OUTPUT_DIMENSION_MISMATCH` | `electron/services/compositionRenderer.cjs` | PNG 实际尺寸与 artifact 记录不一致 | 重新合成 |
 | `FINAL_OUTPUT_REQUIRED` | `electron/services/compositionRenderer.cjs` | final 校验时只有 preview 输出 | 先以 final 模式合成 |
+| `FINAL_APPROVAL_REQUIRED` | `electron/services/compositionRenderer.cjs`、`electron/main.cjs` | strict 导出时合成清单未完成最终批准 | 先在 STRICT PRODUCTION 面板执行最终批准 |
 | `FINAL_EXPORT_BLOCKED` | `electron/services/compositionRenderer.cjs`、`electron/main.cjs` | strict 导出时 final 输出校验未通过 | 按校验 issues 修复后重新合成 |
 | `FINAL_EXPORT_HASH_MISMATCH` | `electron/services/compositionRenderer.cjs` | 导出文件哈希与记录不一致 | 重新合成并导出 |
 | `GENERATED_EVIDENCE_READ_ONLY` | `electron/services/designPipeline.cjs` | 尝试编辑 `composition-manifest`/`fidelity-report` | 生成类证据只能由管线重写 |

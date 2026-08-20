@@ -114,9 +114,22 @@
 一律使用 `src/features/shared/ui.tsx` 的自绘 `Dropdown` 组件，**禁止原生 `<select>`**。
 
 - 按钮：36px 高（`field-card` 内 48px），深底 `#0b0c10` + `--line-strong` 描边；右侧 ChevronDown 13px，`aria-expanded=true` 时旋转 180°。
-- 菜单：`.dropdown-menu`，`max-height:264px` 滚动，`max-width:min(420px, 100vw-48px)` 防溢出；选项超长时 ellipsis 截断并挂 `title` 全文。
+- 菜单：`.dropdown-menu`，`max-height:264px` 滚动，`max-width:min(420px, 100vw-48px)` 防溢出；贴近视口底部时自动向上翻转（`.is-up`）；选项超长时 ellipsis 截断并挂 `title` 全文。
 - 选中项：`.is-selected` 金字 + 淡金底 + 左侧勾选（属"选中"红线合法用法）。
-- 禁用项：`.is-disabled` 灰字禁点，配合不可选原因文案。
+- 禁用项：`.is-disabled` 灰字禁点，配合不可选原因文案；键盘导航自动跳过。
+
+键盘与无障碍契约（对齐原生 `<select>`，回归由 `src/features/shared/Dropdown.test.tsx` 与 `tests/ui-e2e/dropdown-keyboard.spec.ts` 守护）：
+
+| 按键 | 行为 |
+|---|---|
+| ArrowDown / ArrowUp | 打开菜单并定位当前值（无值时定位第一个/最后一个可用项）；已打开时移动活动项 |
+| Enter / Space | 关闭时打开菜单；打开时选择活动项并关闭 |
+| Home / End | 跳到第一个/最后一个可用项 |
+| 字母数字 | 600ms 内连续输入按前缀定位可用项（typeahead），菜单关闭时打开并定位匹配项 |
+| Escape | 关闭菜单并恢复按钮焦点 |
+| Tab | 关闭菜单并正常离开（不拦截焦点顺序） |
+
+ARIA：按钮 `aria-haspopup="listbox"` + `aria-expanded` + `aria-controls` + `aria-activedescendant`；菜单 `role="listbox"`，选项 `role="option"` + `aria-selected` + `aria-disabled`；活动项用 `aria-activedescendant` 表达（不移动真实焦点）；组件禁用使用原生 `disabled`（自动移出焦点顺序）；空列表打开时展示「无可选项」而非拒绝打开；每个使用点必须通过 `ariaLabel` 或包裹 `<label>` 提供稳定可访问名称。
 
 ### 6.2 输入框 / 文本域
 

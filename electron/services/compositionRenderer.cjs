@@ -274,6 +274,16 @@ async function verifyCompositionOutput(projectPath, output, { requireFinal = fal
   return { passed: issues.length === 0, issues, actual_hash: bytes ? hashBuffer(bytes) : undefined, metadata };
 }
 
+// Final delivery boundary: exporting the final PNG is the irreversible,
+// cross-system handoff of the pipeline. It must not happen before the
+// Composition Manifest carries an explicit human approval, otherwise an
+// unreviewed composition could leave the tool as if it were signed off.
+function assertFinalApprovalForExport(project) {
+  if (project?.artifacts?.compositionManifest?.status !== 'approved') {
+    throw Object.assign(new Error('无法导出最终成图：请先完成最终批准，再导出正式交付文件。'), { code: ERROR_CODES.FINAL_APPROVAL_REQUIRED });
+  }
+}
+
 async function exportCompositionOutput(projectPath, output, destinationPath) {
   const verification = await verifyCompositionOutput(projectPath, output, { requireFinal: true });
   if (!verification.passed) {
@@ -287,6 +297,7 @@ async function exportCompositionOutput(projectPath, output, destinationPath) {
 
 module.exports = {
   RENDERER_VERSION,
+  assertFinalApprovalForExport,
   exactRenderer,
   exportCompositionOutput,
   hashBuffer,

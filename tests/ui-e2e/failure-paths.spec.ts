@@ -88,6 +88,9 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     await expect(page.getByTestId('strict-gate-critique')).toHaveClass(/is-ready/);
     await clickRun(page, 'composition-final');
     await clickRun(page, 'fidelity-run');
+    // FINAL_APPROVAL_REQUIRED 门禁下导出按钮在批准前禁用：先完成最终批准，
+    // 才能走到“final PNG 文件缺失”这一层后端校验。
+    await clickRun(page, 'final-approve');
 
     const project = await getProject(page);
     const relativeOutput = String((project.artifacts.compositionOutput as { path?: string })?.path || '');

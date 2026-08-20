@@ -774,11 +774,15 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .dropdown-button:focus-visible { border-color: rgba(227, 166, 61, .55); box-shadow: 0 0 0 3px rgba(227, 166, 61, .1); outline: none; }
 .dropdown-button:disabled { opacity: .45; cursor: not-allowed !important; }
 .dropdown-menu { position: absolute; z-index: 80; top: calc(100% + 5px); left: 0; min-width: 100%; max-width: min(420px, calc(100vw - 48px)); max-height: 264px; overflow: auto; margin: 0; padding: 5px; list-style: none; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel-2); box-shadow: var(--shadow); }
+.dropdown-menu.is-up { top: auto; bottom: calc(100% + 5px); }
 .dropdown-option { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-radius: 6px; color: var(--ink); font-size: var(--type-small); white-space: nowrap; cursor: pointer; }
 .dropdown-option > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .dropdown-option:hover { background: var(--panel-3); }
+/* 键盘/鼠标共同驱动的活动项：描边提示 + 底色，与 is-selected 的选中语义区分 */
+.dropdown-option.is-active { background: var(--panel-3); box-shadow: inset 0 0 0 1px rgba(227, 166, 61, .4); }
+.dropdown-option.is-active.is-disabled { background: transparent; box-shadow: none; }
 .dropdown-option .dropdown-check { flex: none; opacity: 0; color: var(--accent-hi); }
 .dropdown-option.is-selected { color: var(--accent-hi); background: var(--accent-soft); }
 .dropdown-option.is-selected .dropdown-check { opacity: 1; }
 .dropdown-option.is-disabled { color: var(--faint); cursor: not-allowed; }
-.dropdown-option.is-disabled:hover { background: transparent; }
+.dropdown-option.is-disabled:hover, .dropdown-option.is-disabled.is-active:hover { background: transparent; }

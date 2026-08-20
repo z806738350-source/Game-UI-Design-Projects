@@ -111,13 +111,21 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     expect(['passed', 'passed-with-waiver']).toContain(project.artifacts.underlayCritique?.result);
   });
 
-  test('UIE2E-06 final composition, fidelity gate, export hash, final approval', async () => {
+  test('UIE2E-06 final composition, fidelity gate, final approval, export hash', async () => {
     const finalGate = page.getByTestId('strict-gate-final-png');
     const fidelityGate = page.getByTestId('strict-gate-fidelity');
     await clickRun(page, 'composition-final');
     await expect(finalGate).toHaveClass(/is-ready/);
     await clickRun(page, 'fidelity-run');
     await expect(fidelityGate).toHaveClass(/is-ready/);
+
+    // FINAL_APPROVAL_REQUIRED: 最终批准前导出按钮在 UI 层即被禁用，
+    // 交付顺序固定为 Final PNG → Fidelity passed → Final Approval → Export。
+    await expect(page.getByTestId('final-export')).toBeDisabled();
+    await clickRun(page, 'final-approve');
+    const approved = await getProject(page);
+    expect(approved.artifacts.compositionManifest?.status).toBe('approved');
+    expect(approved.artifacts.fidelityReport?.status).toBe('passed');
 
     const exportPath = path.join(launched.exportDir, 'final-export.png');
     await queueSaveFile(launched.app, exportPath);
@@ -129,10 +137,5 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     expect(output.mode).toBe('final');
     const exportedHash = crypto.createHash('sha256').update(fs.readFileSync(exportPath)).digest('hex');
     expect(`sha256:${exportedHash}`).toBe(output.hash);
-
-    await clickRun(page, 'final-approve');
-    const approved = await getProject(page);
-    expect(approved.artifacts.compositionManifest?.status).toBe('approved');
-    expect(approved.artifacts.fidelityReport?.status).toBe('passed');
   });
 });
