@@ -109,25 +109,30 @@ export type DropdownOption = { value: string; label: string; disabled?: boolean 
 
 // 自绘下拉框：macOS 下原生 <select> 的展开列表是系统菜单，无法套用设计令牌，
 // 故统一用 DOM 列表框替代，展开态完全遵循 Darkroom Precision 风格。
-// 键盘模型遵循 WAI-ARIA Listbox Button 模式：焦点始终停留在触发按钮上，
+// 语义模型遵循 WAI-ARIA select-only combobox + listbox 模式：触发元素是
+// role=combobox 的可聚焦容器（不再是普通 button），焦点始终停留在其上，
 // 通过 aria-activedescendant 指向活动选项；禁用项不可被键盘或鼠标选中。
-export function Dropdown({ value, options, onChange, disabled = false, testId, ariaLabel, placeholder }: {
+// Accessible Name 由 aria-labelledby（优先）或 aria-label 提供，
+// 占位文本不构成名称；开发态两者都缺失时输出一次警告。
+export function Dropdown({ value, options, onChange, disabled = false, testId, ariaLabel, ariaLabelledBy, placeholder }: {
   value: string;
   options: DropdownOption[];
   onChange: (value: string) => void;
   disabled?: boolean;
   testId?: string;
   ariaLabel?: string;
+  ariaLabelledBy?: string;
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [dropUp, setDropUp] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const comboboxRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
   const menuId = useId();
   const typedRef = useRef({ prefix: '', at: 0 });
+  const nameWarnedRef = useRef(false);
   const enabledCount = options.filter((option) => !option.disabled).length;
   const currentIndex = options.findIndex((option) => option.value === value && !option.disabled);
   const firstEnabled = options.findIndex((option) => !option.disabled);
@@ -137,12 +142,12 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
   const openAt = (index: number) => { setActiveIndex(index); setOpen(true); };
   // 关闭时重置 typeahead 缓冲，避免上一轮输入污染关闭后的下一次前缀搜索
   const close = () => { setOpen(false); typedRef.current.prefix = ''; };
-  const closeAndFocusButton = () => { close(); buttonRef.current?.focus(); };
+  const closeAndFocusCombobox = () => { close(); comboboxRef.current?.focus(); };
   const selectAt = (index: number) => {
     const option = options[index];
     if (!option || option.disabled) return;
     onChange(option.value);
-    closeAndFocusButton();
+    closeAndFocusCombobox();
   };
   const moveActive = (direction: 1 | -1) => {
     if (enabledCount === 0) return;
@@ -154,6 +159,12 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
     setActiveIndex(next);
   };
 
+  useEffect(() => {
+    if (import.meta.env.DEV && !ariaLabel && !ariaLabelledBy && !nameWarnedRef.current) {
+      nameWarnedRef.current = true;
+      console.warn('Dropdown requires ariaLabel or ariaLabelledBy');
+    }
+  }, [ariaLabel, ariaLabelledBy]);
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(event.target as Node)) close(); };
@@ -169,7 +180,7 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
     setDropUp(window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight);
   }, [open]);
 
-  const onButtonKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+  const onComboboxKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return;
     switch (event.key) {
       case 'ArrowDown':
@@ -190,14 +201,14 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
         break;
       case 'Enter':
       case ' ':
-        // 阻止按钮自身的 Enter/Space 激活行为，避免与 openAt/selectAt 双重触发
+        // div combobox 没有原生激活行为，Enter/Space 的开合只由这里驱动
         event.preventDefault();
         if (!open) openAt(currentIndex >= 0 ? currentIndex : firstEnabled);
         else if (activeIndex >= 0) selectAt(activeIndex);
         else close();
         break;
       case 'Escape':
-        if (open) { event.preventDefault(); closeAndFocusButton(); }
+        if (open) { event.preventDefault(); closeAndFocusCombobox(); }
         break;
       case 'Tab':
         // 不拦截：菜单随焦点离开关闭，焦点按正常顺序前进
@@ -222,17 +233,17 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
   const current = options.find((option) => option.value === value);
   return (
     <div className="dropdown" ref={rootRef} data-testid={testId}>
-      <button type="button" ref={buttonRef} className="dropdown-button" aria-haspopup="listbox" aria-expanded={open} aria-controls={menuId} aria-activedescendant={open && activeIndex >= 0 ? `${menuId}-option-${activeIndex}` : undefined} aria-label={ariaLabel} disabled={disabled} onClick={() => (open ? close() : openAt(currentIndex >= 0 ? currentIndex : firstEnabled))} onKeyDown={onButtonKeyDown}>
+      <div ref={comboboxRef} role="combobox" tabIndex={disabled ? -1 : 0} className="dropdown-button" aria-haspopup="listbox" aria-expanded={open} aria-controls={menuId} aria-activedescendant={open && activeIndex >= 0 ? `${menuId}-option-${activeIndex}` : undefined} aria-disabled={disabled || undefined} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} onClick={() => { if (disabled) return; if (open) close(); else openAt(currentIndex >= 0 ? currentIndex : firstEnabled); }} onKeyDown={onComboboxKeyDown}>
         <span className={current ? undefined : 'is-placeholder'}>{current ? current.label : placeholder}</span>
         <ChevronDown size={13} />
-      </button>
+      </div>
       {open && <ul className={`dropdown-menu${dropUp ? ' is-up' : ''}`} id={menuId} role="listbox" aria-label={ariaLabel}>
         {options.map((option, index) => (
           <li key={option.value} id={`${menuId}-option-${index}`} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} data-value={option.value}
             ref={(node) => { optionRefs.current[index] = node; }}
             className={`dropdown-option${option.value === value ? ' is-selected' : ''}${option.disabled ? ' is-disabled' : ''}${index === activeIndex ? ' is-active' : ''}`}
-            // Dropdown 常被包在 <label> 里：不取消默认行为时，label 的激活行为会把
-            // 这次点击转发给触发按钮，菜单刚关上又被重新打开（挡住下一个字段）。
+            // 触发元素是 div[role=combobox]，不属于 labelable element，外围 <label>
+            // 的激活行为不会转发到它；此 preventDefault 仅为防御性保留。
             onClick={(event) => { event.preventDefault(); selectAt(index); }}
             onMouseEnter={() => { if (!option.disabled) setActiveIndex(index); }}>
             <Check size={12} className="dropdown-check" />

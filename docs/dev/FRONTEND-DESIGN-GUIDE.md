@@ -113,7 +113,7 @@
 
 一律使用 `src/features/shared/ui.tsx` 的自绘 `Dropdown` 组件，**禁止原生 `<select>`**。
 
-- 按钮：36px 高（`field-card` 内 48px），深底 `#0b0c10` + `--line-strong` 描边；右侧 ChevronDown 13px，`aria-expanded=true` 时旋转 180°。
+- 触发元素：`role="combobox"` 的可聚焦容器（非原生 button），36px 高（`field-card` 内 48px），深底 `#0b0c10` + `--line-strong` 描边；右侧 ChevronDown 13px，`aria-expanded=true` 时旋转 180°。
 - 菜单：`.dropdown-menu`，`max-height:264px` 滚动，`max-width:min(420px, 100vw-48px)` 防溢出；贴近视口底部时自动向上翻转（`.is-up`）；选项超长时 ellipsis 截断并挂 `title` 全文。
 - 选中项：`.is-selected` 金字 + 淡金底 + 左侧勾选（属"选中"红线合法用法）。
 - 禁用项：`.is-disabled` 灰字禁点，配合不可选原因文案；键盘导航自动跳过。
@@ -129,7 +129,7 @@
 | Escape | 关闭菜单并恢复按钮焦点 |
 | Tab | 关闭菜单并正常离开（不拦截焦点顺序） |
 
-ARIA：按钮 `aria-haspopup="listbox"` + `aria-expanded` + `aria-controls` + `aria-activedescendant`；菜单 `role="listbox"`，选项 `role="option"` + `aria-selected` + `aria-disabled`；活动项用 `aria-activedescendant` 表达（不移动真实焦点）；组件禁用使用原生 `disabled`（自动移出焦点顺序）；空列表打开时展示「无可选项」而非拒绝打开；每个使用点必须通过 `ariaLabel` 或包裹 `<label>` 提供稳定可访问名称。
+ARIA（WAI-ARIA select-only combobox + listbox 模型）：触发元素是 `role="combobox"` 的可聚焦容器，携带 `aria-haspopup="listbox"` + `aria-expanded` + `aria-controls` + `aria-activedescendant`（活动项只用它表达，不移动真实焦点）；菜单 `role="listbox"`，选项 `role="option"` + `aria-selected` + `aria-disabled`；组件禁用使用 `tabIndex=-1` + `aria-disabled` + 事件直接返回（移出 Tab 顺序）；空列表打开时展示「无可选项」而非拒绝打开。Accessible Name 必须显式提供：`ariaLabelledBy`（优先，可多个 id 拼接，如 Binding 行的「字段名 + 控件图例」）或 `ariaLabel`；占位文本不构成名称，开发态两者都缺失时组件输出一次警告。一行多控件（如绑定行的组件/状态/字体角色）不得共用一个外围 `<label>` 命名，必须用 fieldset/legend 分组 + 独立 labelledby。
 
 ### 6.2 输入框 / 文本域
 

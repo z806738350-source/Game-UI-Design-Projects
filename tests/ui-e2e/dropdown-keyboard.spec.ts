@@ -30,24 +30,28 @@ test.describe.serial('dropdown keyboard & ARIA (UIE2E-08)', () => {
 
   test('listbox ARIA wiring is complete', async () => {
     const root = page.getByTestId('create-continuation-select');
+    // 语义定位：触发元素是 select-only combobox，以 Accessible Name 可被辅助技术识别
+    const combobox = page.getByRole('combobox', { name: '选择继承强度' });
+    await expect(combobox).toBeVisible();
     const button = root.locator('.dropdown-button');
-    await expect(button).toHaveAttribute('aria-haspopup', 'listbox');
-    await expect(button).toHaveAttribute('aria-expanded', 'false');
-    await expect(button).toHaveAttribute('aria-controls', /.+/);
-    await button.focus();
+    await expect(combobox).toHaveAttribute('aria-haspopup', 'listbox');
+    await expect(combobox).toHaveAttribute('aria-expanded', 'false');
+    await expect(combobox).toHaveAttribute('aria-controls', /.+/);
+    await combobox.focus();
     await page.keyboard.press('ArrowDown');
-    await expect(button).toHaveAttribute('aria-expanded', 'true');
-    const menuId = await button.getAttribute('aria-controls');
+    await expect(combobox).toHaveAttribute('aria-expanded', 'true');
+    const menuId = await combobox.getAttribute('aria-controls');
     // useId() 生成的 id 含冒号，用带引号的属性选择器即可安全匹配（CSS.escape 是浏览器全局，Node 侧不可用）
     const menu = page.locator(`ul[id="${menuId}"]`);
     await expect(menu).toHaveAttribute('role', 'listbox');
     const options = menu.locator('[role="option"]');
     await expect(options).toHaveCount(2);
     await expect(options.first()).toHaveAttribute('aria-selected', 'true');
-    // 当前值定位：活动项指向已选中的严格继承
-    const activeId = await button.getAttribute('aria-activedescendant');
+    // 当前值定位：活动项指向已选中的严格继承；aria-activedescendant 只挂在 combobox 上
+    const activeId = await combobox.getAttribute('aria-activedescendant');
     expect(activeId).toBeTruthy();
     await expect(page.locator(`[id="${activeId}"]`)).toContainText('严格继承');
+    await expect(menu).not.toHaveAttribute('aria-activedescendant', /.+/);
     await page.keyboard.press('Escape');
   });
 

@@ -88,9 +88,16 @@ export function BindingWorkbench({ project, busy, run }: { project: DesignProjec
     const policy = ROLE_POLICIES[role];
     const allowedFontRoles = (policy?.allowed_font_roles || []).filter((fontRole) => fontRoles.includes(fontRole));
     const fontRoleRequired = needsFontRole(control);
-    return <label key={control.id}>
-      <span>{control.label}（角色：{role}）{role === 'action' && <em className="binding-unresolved-role" data-testid={`binding-unresolved-role-${control.id}`}>待语义解析：严格继承批准前，请在功能契约中改为具体角色</em>}</span>
-      <Dropdown testId={`binding-component-select-${control.id}`} value={choice.component_id} onChange={(next) => {
+    // 一行绑定含组件/状态/字体角色三个独立 combobox，不能用单个 <label> 同时命名；
+    // fieldset/legend 提供控件组语义，每个 Dropdown 通过 aria-labelledby 获得独立可读名称
+    //（字段名 + 控件名，如「组件 确认按钮（角色：primary-action）」），互不混淆。
+    return <fieldset className="binding-row" key={control.id}>
+      <legend id={`binding-legend-${control.id}`}>
+        {control.label}（角色：{role}）{role === 'action' && <em className="binding-unresolved-role" data-testid={`binding-unresolved-role-${control.id}`}>待语义解析：严格继承批准前，请在功能契约中改为具体角色</em>}
+      </legend>
+      <div className="binding-field">
+        <span id={`binding-component-label-${control.id}`}>组件</span>
+        <Dropdown testId={`binding-component-select-${control.id}`} ariaLabelledBy={`binding-component-label-${control.id} binding-legend-${control.id}`} value={choice.component_id} onChange={(next) => {
         // Selecting a family never confirms state or font role: both stay
         // empty until the designer picks them explicitly.
         setChoice(control.id, { component_id: next, state: '', font_role: '' });
@@ -98,15 +105,22 @@ export function BindingWorkbench({ project, busy, run }: { project: DesignProjec
         const reason = incompatibility(control, family);
         return { value: String(family.id), label: `${String(family.name || family.id)}${reason ? `（不可选：${reason}）` : ''}`, disabled: Boolean(reason) };
       })} />
-      {choice.component_id && <Dropdown testId={`binding-state-select-${control.id}`} value={choice.state} onChange={(next) => setChoice(control.id, { state: next })} placeholder="选择状态（必选）" options={states.map((state) => ({ value: state, label: state }))} />}
+      </div>
+      {choice.component_id && <div className="binding-field">
+        <span id={`binding-state-label-${control.id}`}>状态</span>
+        <Dropdown testId={`binding-state-select-${control.id}`} ariaLabelledBy={`binding-state-label-${control.id} binding-legend-${control.id}`} value={choice.state} onChange={(next) => setChoice(control.id, { state: next })} placeholder="选择状态（必选）" options={states.map((state) => ({ value: state, label: state }))} />
+      </div>}
       {choice.component_id && !choice.state && states.length > 0 && <em className="binding-hint">推荐状态：{states.includes('default') ? 'default' : states[0]}（需手动确认）</em>}
       {choice.component_id && (allowedFontRoles.length
-        ? <Dropdown testId={`binding-font-role-select-${control.id}`} value={choice.font_role} onChange={(next) => setChoice(control.id, { font_role: next })} placeholder={`选择字体角色${fontRoleRequired ? '（必选）' : '（可选）'}`} options={allowedFontRoles.map((fontRole) => ({ value: fontRole, label: fontRole }))} />
+        ? <div className="binding-field">
+            <span id={`binding-font-role-label-${control.id}`}>字体角色</span>
+            <Dropdown testId={`binding-font-role-select-${control.id}`} ariaLabelledBy={`binding-font-role-label-${control.id} binding-legend-${control.id}`} value={choice.font_role} onChange={(next) => setChoice(control.id, { font_role: next })} placeholder={`选择字体角色${fontRoleRequired ? '（必选）' : '（可选）'}`} options={allowedFontRoles.map((fontRole) => ({ value: fontRole, label: fontRole }))} />
+          </div>
         : fontRoleRequired
           ? <em className="binding-hint binding-hint--conflict">该组件需要文字层，但角色 {role} 没有可用的字体角色，请调整控件角色或组件</em>
           : <em className="binding-hint">该角色不使用文字层</em>)}
       {choice.component_id && fontRoleRequired && !choice.font_role && allowedFontRoles.length > 0 && <em className="binding-hint">推荐字体角色：{allowedFontRoles[0]}（需手动确认）</em>}
-    </label>;
+    </fieldset>;
   })}
     {error && <span className="inline-error" role="alert">{error}</span>}
     <div><button className="button button--secondary" data-testid="binding-save" disabled={actionBusy || !allExplicitlyResolved} onClick={prepareBindings}>保存绑定</button><button className="button button--ghost" data-testid="binding-approve" disabled={actionBusy || !project.artifacts.bindings} onClick={approveBindings}><LockKeyhole size={14} />批准覆盖与语义兼容</button></div></article>;

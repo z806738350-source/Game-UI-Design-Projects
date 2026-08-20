@@ -724,7 +724,11 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .strict-grid input:focus { border-color: rgba(227, 166, 61, .55); box-shadow: 0 0 0 3px rgba(227, 166, 61, .1); }
 .strict-grid article > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .strict-bindings { grid-column: 1 / -1; }
-.strict-bindings label { grid-template-columns: minmax(220px, .9fr) 1fr; align-items: center; gap: 9px; }
+/* 绑定行是 fieldset/legend 结构：一个控件分组的三个 combobox 各有独立可访问名称 */
+.strict-bindings .binding-row { display: grid; grid-template-columns: minmax(220px, .9fr) 1fr; align-items: center; gap: 9px; min-width: 0; margin: 0; padding: 0; border: 0; color: var(--muted); font-size: var(--type-small); }
+.strict-bindings .binding-row legend { min-width: 0; padding: 0; font-size: var(--type-small); }
+.strict-bindings .binding-field { display: grid; gap: 4px; min-width: 0; }
+.strict-bindings .binding-field > span { color: var(--faint); font-size: 10px; }
 .binding-workbench-copy { margin: 0; color: var(--muted); font-size: var(--type-small); line-height: 1.6; }
 .binding-hint { color: var(--muted); font-size: 11px; font-style: italic; grid-column: 1 / -1; }
 .binding-hint--conflict { color: var(--warning); }
@@ -772,7 +776,7 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .dropdown-button svg { flex: none; color: var(--muted); transition: transform .16s ease; }
 .dropdown-button[aria-expanded="true"] svg { transform: rotate(180deg); }
 .dropdown-button:focus-visible { border-color: rgba(227, 166, 61, .55); box-shadow: 0 0 0 3px rgba(227, 166, 61, .1); outline: none; }
-.dropdown-button:disabled { opacity: .45; cursor: not-allowed !important; }
+.dropdown-button[aria-disabled="true"] { opacity: .45; cursor: not-allowed !important; }
 .dropdown-menu { position: absolute; z-index: 80; top: calc(100% + 5px); left: 0; min-width: 100%; max-width: min(420px, calc(100vw - 48px)); max-height: 264px; overflow: auto; margin: 0; padding: 5px; list-style: none; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--panel-2); box-shadow: var(--shadow); }
 .dropdown-menu.is-up { top: auto; bottom: calc(100% + 5px); }
 .dropdown-option { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-radius: 6px; color: var(--ink); font-size: var(--type-small); white-space: nowrap; cursor: pointer; }

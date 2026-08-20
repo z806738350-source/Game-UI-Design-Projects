@@ -64,6 +64,8 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     // required control has an explicit component choice.
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     // Semantic incompatibility is surfaced in the dropdown itself.
+    // PR#25 收口：绑定行三个 combobox 以「字段名 + 控件图例」的独立名称区分定位
+    await expect(page.getByRole('combobox', { name: /^组件 .+（角色：primary-action）$/ })).toBeVisible();
     const primarySelect = page.getByTestId('binding-component-select-primary-action');
     await primarySelect.locator('.dropdown-button').click();
     await expect(primarySelect.locator('.dropdown-option[data-value="bottom-navigation"]')).toHaveClass(/is-disabled/);
@@ -74,6 +76,8 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     // An explicit state alone is still incomplete for text-slot families.
     await chooseDropdown(page.getByTestId('binding-state-select-primary-action'), 'default');
+    await expect(page.getByRole('combobox', { name: /^状态 .+（角色：primary-action）$/ })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: /^字体角色 .+（角色：primary-action）$/ })).toBeVisible();
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     await selectAndApproveBindings(page);
     const project = await getProject(page);
