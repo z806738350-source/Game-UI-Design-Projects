@@ -128,19 +128,19 @@
 
 <nav class="tabs">
   <div class="wrap" role="tablist" aria-label="说明书章节">
-    <button role="tab" aria-selected="true" data-tab="start"><span class="no">1</span>快速上手</button>
-    <button role="tab" aria-selected="false" data-tab="routes" tabindex="-1"><span class="no">2</span>路线选择</button>
-    <button role="tab" aria-selected="false" data-tab="stages" tabindex="-1"><span class="no">3</span>阶段详解</button>
-    <button role="tab" aria-selected="false" data-tab="assets" tabindex="-1"><span class="no">4</span>资产与绑定</button>
-    <button role="tab" aria-selected="false" data-tab="concept" tabindex="-1"><span class="no">5</span>概念与边界</button>
-    <button role="tab" aria-selected="false" data-tab="faq" tabindex="-1"><span class="no">6</span>常见问题</button>
+    <button role="tab" id="tab-start" aria-controls="panel-start" aria-selected="true" data-tab="start"><span class="no">1</span>快速上手</button>
+    <button role="tab" id="tab-routes" aria-controls="panel-routes" aria-selected="false" data-tab="routes" tabindex="-1"><span class="no">2</span>路线选择</button>
+    <button role="tab" id="tab-stages" aria-controls="panel-stages" aria-selected="false" data-tab="stages" tabindex="-1"><span class="no">3</span>阶段详解</button>
+    <button role="tab" id="tab-assets" aria-controls="panel-assets" aria-selected="false" data-tab="assets" tabindex="-1"><span class="no">4</span>资产与绑定</button>
+    <button role="tab" id="tab-concept" aria-controls="panel-concept" aria-selected="false" data-tab="concept" tabindex="-1"><span class="no">5</span>概念与边界</button>
+    <button role="tab" id="tab-faq" aria-controls="panel-faq" aria-selected="false" data-tab="faq" tabindex="-1"><span class="no">6</span>常见问题</button>
   </div>
 </nav>
 
 <main class="wrap">
 
   <!-- ============ 1 快速上手 ============ -->
-  <section class="panel active" id="panel-start" role="tabpanel">
+  <section class="panel active" id="panel-start" role="tabpanel" aria-labelledby="tab-start">
     <h2>这是什么工具？</h2>
     <p class="lead">你把<b>一张 UE 线框稿 + 一段设计意图</b>交给它，AI 会沿着一条流水线逐步产出：功能契约 → 布局 → 风格规范 → 组件绑定 → 底层图 → 最终成图。每一步的产出（产物，Artifact）都<b>由你人工检查并批准</b>，AI 不会替你拍板；每次生成与批准都留有版本和证据，可以随时回看。</p>
 
@@ -170,7 +170,7 @@
       <ul class="plain">
         <li><b>macOS 桌面端</b>：主要形态，本文档所有截图级描述以它为准。</li>
         <li><b>Windows / Linux</b>：功能一致，通过终端命令启动（见下）。</li>
-        <li><b>Web 在线版</b>：由组织服务端部署，浏览器访问；核心流程一致，但没有「在 Finder 中显示项目」等桌面专属入口，且需飞书登录。</li>
+                <li><b>Web 在线版</b>：由组织服务端部署，浏览器访问；核心流程一致，但没有「在系统文件管理器中显示项目」等桌面专属入口，且需飞书登录。</li>
       </ul>
     </div>
 
@@ -181,7 +181,7 @@
         <li>安装 <b>Node.js 22 LTS</b>（终端运行 <code>node -v</code> 能看到版本号）。</li>
         <li>安装 <b>pnpm</b>（版本 11，终端运行 <code>pnpm -v</code> 能看到版本号）。</li>
         <li>在项目根目录运行 <code>pnpm install</code> 安装依赖。</li>
-        <li>之后每次启动：双击项目根目录的 <code>Start Game UI Design Copilot.command</code>，或运行 <code>pnpm quick-start</code>。</li>
+        <li>之后每次启动：双击项目根目录的 <code data-local-path>Start Game UI Design Copilot.command</code>，或运行 <code>pnpm quick-start</code>。</li>
       </ol>
       <p><b>Windows / Linux</b>：在项目根目录运行 <code>pnpm install</code>，然后 <code>pnpm quick-start</code>。</p>
       <div class="warn-box">注意：<code>.command</code> 启动脚本<b>不会自动安装依赖</b>。依赖缺失时它会直接提示「项目依赖不完整，请先在项目目录运行 pnpm install」，照做即可。</div>
@@ -191,18 +191,22 @@
 
     <h3>配置 AI 连接（只需做一次）</h3>
     <div class="card tight">
-      <p>工具通过 Kunpo 调用模型。推荐在项目根目录 <code>.env</code> 里指向本地 Gateway：</p>
+      <p>工具通过 Kunpo 调用模型，两种接入方式二选一：</p>
+      <p><b>方式 A · 本地 Gateway（推荐）</b>：先确认本地 Gateway 服务已在运行——<code>127.0.0.1:9020</code> 是它在你电脑上的默认地址，<b>本工具不会替你启动它</b>；然后在项目根目录 <code>.env</code> 里写：</p>
       <pre><code>KUNPO_GATEWAY_BASE_URL=http://127.0.0.1:9020/v1</code></pre>
-      <p>配置好后看窗口顶栏右侧：出现 <span class="tag ok">Gateway 已就绪</span> 说明连接成功；显示 <span class="tag bad">Kunpo 未配置</span> 则检查 <code>.env</code> 拼写后重启工具。</p>
+      <p><b>方式 B · 桌面端直连</b>：没有本地 Gateway 时，直接指向 Kunpo 服务地址与 Key：</p>
+      <pre><code>KUNPO_API_BASE_URL=https://your-kunpo-host/v1
+KUNPO_API_KEY=your-local-key</code></pre>
+      <p>配置好后看窗口顶栏右侧：出现 <span class="tag ok">Gateway 已就绪</span>（或 Kunpo API 已就绪）说明连接成功；显示 <span class="tag bad">Kunpo 未配置</span> 则检查 <code>.env</code> 拼写后重启工具。连接失败、超时、模型不存在等问题的排查步骤见 <code data-local-path>docs/dev/PROVIDER-TROUBLESHOOTING.md</code>。</p>
       <p>模型名称可在顶栏 <span class="kbd">⚙ 设置</span>（模型与工作区配置）里修改：视觉理解模型、图像模型两项自由填写，保存后新任务立即生效。</p>
-      <div class="warn-box">真实 API Key 只保存在 <code>.env</code> 或 Gateway 服务端，<b>永远不要提交到代码仓库</b>。</div>
+      <div class="warn-box">真实 API Key 只保存在本地 <code>.env</code> 或受控服务端（Gateway），<b>永远不要提交到代码仓库</b>。</div>
     </div>
 
     <h3>认识界面</h3>
     <div class="card">
       <table>
         <tr><th>区域</th><th>位置</th><th>作用</th></tr>
-        <tr><td><b>顶栏</b></td><td>最上方</td><td>新建项目、切换项目、管理项目；右侧是连接状态、在 Finder 中显示项目（仅 macOS 桌面端）、产物检查器、设置</td></tr>
+        <tr><td><b>顶栏</b></td><td>最上方</td><td>新建项目、切换项目、管理项目；右侧是连接状态、在系统文件管理器中显示项目（macOS 为 Finder）、产物检查器、使用说明书、设置</td></tr>
         <tr><td><b>页面栏</b></td><td>顶栏下方横条</td><td>多页面管理：切换当前页面、重命名、新建、复制（含全部产物）、归档</td></tr>
         <tr><td><b>设计流导航</b></td><td>左侧竖排 5 个节点</td><td>流水线的 5 个阶段（00 输入 → 04 视觉探索），点哪个进哪个阶段；每个节点的颜色状态表示该阶段进度</td></tr>
         <tr><td><b>主工作区</b></td><td>中间</td><td>当前阶段的工作台，所有操作都在这里完成</td></tr>
@@ -214,10 +218,10 @@
 
     <h3>10 分钟练习：新项目最短路径</h3>
     <div class="card">
-      <p class="lead" style="margin-bottom:6px">目标：不求质量，只求把流程完整走一遍。练习素材可以直接使用仓库 <code>test-artifacts/</code> 目录下的示例线框稿（如 <code>portrait-party-formation-wireframe.png</code>）。</p>
+      <p class="lead" style="margin-bottom:6px">目标：不求质量，只求把流程完整走一遍。练习素材用仓库自带的示例线框稿 <code data-local-path>docs/user/examples/quick-start-wireframe.png</code>（侠客阵容编成页面，来源与授权说明见 <code data-local-path>docs/user/examples/README.md</code>）。</p>
       <ol class="steps">
-        <li><b>建立项目</b> — 首次打开会自动弹出创建窗口（也可以点顶栏 <span class="kbd">＋ 新项目</span>）。填项目名称，项目类型选「新项目」，点「创建并进入工作台」。项目文件默认保存在 <code>~/Game UI Design Projects</code>。</li>
-        <li><b>00 输入</b> — 在右侧「UE WIREFRAME」卡片点 <span class="kbd">选择图片</span> 导入练习线框稿；设计意图留空，点 <span class="kbd">AI 解读并预填写</span> 让 AI 先读图生成草稿，检查后点 <span class="kbd">确认意图并开始功能解读</span>。</li>
+        <li><b>建立项目</b> — 首次打开会自动弹出创建窗口（也可以点顶栏 <span class="kbd">＋ 新项目</span>）。项目名称建议填「快速上手示例」，项目类型选「新项目」，点「创建并进入工作台」。项目文件默认保存在 <code>~/Game UI Design Projects</code>。</li>
+        <li><b>00 输入</b> — 在右侧「UE WIREFRAME」卡片点 <span class="kbd">选择图片</span> 导入上面的练习线框稿；在设计意图里粘贴「设计一个角色编队页面，玩家可以查看成员、调整上阵顺序并确认阵容。」（也可以留空，点 <span class="kbd">AI 解读并预填写</span> 让 AI 先读图生成草稿），检查后点 <span class="kbd">确认意图并开始功能解读</span>。</li>
         <li><b>01 功能解读</b> — 等 AI 生成功能契约，浏览四类信息（必需控件 / 必要信息 / 交互状态 / 边界情况），然后点 <span class="kbd">批准功能契约</span>。</li>
         <li><b>沿界面按钮往下走</b> — 每个阶段底部都有下一步按钮（如「生成布局提案」「进入风格锁定」）。<b>按钮置灰不是故障</b>，旁边的灰字会说明缺什么。</li>
         <li><b>随时看证据</b> — 点顶栏检查器图标，可以看到每个产物的版本、来源和 JSON。</li>
@@ -228,7 +232,7 @@
   </section>
 
   <!-- ============ 2 路线选择 ============ -->
-  <section class="panel" id="panel-routes" role="tabpanel">
+  <section class="panel" id="panel-routes" role="tabpanel" aria-labelledby="tab-routes">
     <h2>先选路线：这个项目是「从零探索」还是「延续已有风格」？</h2>
     <p class="lead">创建项目时的选择决定整条流水线的走法。<b>创建时选错也没关系</b>：已有项目可以随时在「00 输入」里切换继承强度（见下文），新项目则建议直接重建。</p>
 
@@ -298,7 +302,7 @@
 
     <h3>引导继承（实验性）的当前限制</h3>
     <div class="card tight">
-      <p>引导继承是已有项目的宽松模式：生成底层图时不阻止共享组件与正式文字进入图片，也不要求 strict 的完整证据门禁。但请注意当前版本的真实边界：</p>
+      <p>引导继承当前仍采用底层图（underlay-only）生成方式，同样禁止共享按钮、共享页签、导航、图标和正式文字进入图片。它与严格继承的区别主要在于部分后端门禁更宽松，但当前同样没有最终合成入口（共享组件与正式文字不参与合成），因此不能作为正式交付路线。请注意当前版本的真实边界：</p>
       <ul class="plain">
         <li>当前只生成结构底层图（背景与页面专属装饰）；</li>
         <li>字体、组件、控件绑定与最终合成面板<b>仅在严格继承/锁定继承下开放</b>，引导继承没有共享组件与正式文字的最终合成入口；</li>
@@ -322,7 +326,7 @@
   </section>
 
   <!-- ============ 3 阶段详解 ============ -->
-  <section class="panel" id="panel-stages" role="tabpanel">
+  <section class="panel" id="panel-stages" role="tabpanel" aria-labelledby="tab-stages">
     <h2>五个阶段逐一拆解</h2>
     <p class="lead">左侧「DESIGN FLOW」的 5 个节点就是这 5 个阶段。节点上的彩色状态点表示进度；阶段内所有操作都在主工作区完成，阶段底部始终有「下一步」按钮。术语首次出现时括注英文，后续只用中文。</p>
 
@@ -431,7 +435,7 @@
   </section>
 
   <!-- ============ 4 资产与绑定 ============ -->
-  <section class="panel" id="panel-assets" role="tabpanel">
+  <section class="panel" id="panel-assets" role="tabpanel" aria-labelledby="tab-assets">
     <h2>参考图、字体、组件与控件绑定</h2>
     <p class="lead">这四个工作台是严格继承路线的核心门禁，全部位于「03 风格锁定」阶段。它们共同回答一个问题：<b>AI 可以复用哪些真实资产，以什么方式复用？</b></p>
 
@@ -512,7 +516,7 @@
   </section>
 
   <!-- ============ 5 概念与边界 ============ -->
-  <section class="panel" id="panel-concept" role="tabpanel">
+  <section class="panel" id="panel-concept" role="tabpanel" aria-labelledby="tab-concept">
     <h2>看懂界面上的状态、边界与术语</h2>
 
     <h3>状态标签对照表</h3>
@@ -599,7 +603,7 @@
   </section>
 
   <!-- ============ 6 常见问题 ============ -->
-  <section class="panel" id="panel-faq" role="tabpanel">
+  <section class="panel" id="panel-faq" role="tabpanel" aria-labelledby="tab-faq">
     <h2>遇到问题先对号入座</h2>
 
     <h3>流程与按钮</h3>
@@ -649,7 +653,7 @@
         <div class="a">报告中的问题按严重度分为 blocker / critical / major，任何一档存在报告都不会是通过。当前版本没有逐条豁免入口：按报告指出的成因回上游修复（布局、组件、字体或重新合成），再重新运行保真校验，直至通过。若报 FIDELITY_EVIDENCE_STALE，通常是批准前项目文件被外部动过，重跑保真校验即可。</div>
       </div>
       <div class="faq-item">
-        <div class="q"><span class="tag bad">导出</span>导出按钮不可用 / 导出错错？</div>
+        <div class="q"><span class="tag bad">导出</span>导出按钮不可用 / 导出报错？</div>
         <div class="a">严格路线的导出顺序固定为：最终 PNG → 保真校验通过 → 最终批准 → 导出最终 PNG。未最终批准时导出按钮不可用，绕过界面也会被后端阻断（FINAL_APPROVAL_REQUIRED）。FINAL_EXPORT_HASH_MISMATCH 表示输出文件被外部改动，重新合成后再导出。</div>
       </div>
     </div>

@@ -123,6 +123,30 @@ if (fs.existsSync(readmePath)) {
   if (!readmeLines.some((line) => line.includes('quick-start-guide.html'))) fail('README.md: missing doc index entry for quick-start-guide.html');
 }
 
+// 6. quick-start-guide.html fact gates (PR#25 final review).
+// 6a. guided-mode wording must match pipeline facts: visualTask() in
+// electron/services/prompts.cjs is underlay-only for every continuation mode
+// and always excludes shared UI and formal text from generated images.
+const guideRel = 'docs/user/quick-start-guide.html';
+const guideFile = path.join(root, guideRel);
+if (fs.existsSync(guideFile)) {
+  const guideText = fs.readFileSync(guideFile, 'utf8');
+  for (const fact of ['引导继承当前仍采用底层图', '禁止共享按钮', '没有最终合成入口']) {
+    if (!guideText.includes(fact)) fail(`${guideRel}: missing required guided-mode fact "${fact}"`);
+  }
+  for (const claim of ['不阻止共享组件与正式文字进入图片']) {
+    if (guideText.includes(claim)) fail(`${guideRel}: contains outdated guided-mode claim "${claim}"`);
+  }
+  // 6b. <code data-local-path>…</code> tokens promise repo-local files;
+  // fresh-clone users must be able to open every one of them.
+  const localPathPattern = /<code data-local-path>([^<]+)<\/code>/g;
+  let match;
+  while ((match = localPathPattern.exec(guideText)) !== null) {
+    const rel = match[1].trim();
+    if (!fs.existsSync(path.join(root, rel))) fail(`${guideRel}: data-local-path not found in repo: ${rel}`);
+  }
+}
+
 if (errors.length > 0) {
   console.error(`check-docs: ${errors.length} problem(s) found`);
   for (const message of errors) console.error(`  - ${message}`);
