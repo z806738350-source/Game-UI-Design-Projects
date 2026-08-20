@@ -59,7 +59,7 @@ test.describe.serial('nine-slice UI configuration (UIE2E-03B)', () => {
     await clickRun(page, 'underlay-critique');
     provider.armRepair();
     await clickRun(page, 'underlay-repair');
-    await expect(page.locator('.strict-production header i', { hasText: 'Critique' })).toHaveClass(/is-ready/);
+    await expect(page.getByTestId('strict-gate-critique')).toHaveClass(/is-ready/);
     await clickRun(page, 'composition-final');
     await clickRun(page, 'fidelity-run');
 

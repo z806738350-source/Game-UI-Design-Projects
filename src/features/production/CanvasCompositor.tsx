@@ -15,7 +15,7 @@ type CompositionOutputReference = {
  */
 export function CanvasCompositor({ manifest, resolveAsset }: { manifest: Artifact; resolveAsset: (path: string) => string }) {
   const output = (manifest.output || {}) as CompositionOutputReference;
-  if (!output.path) return <p role="status">Composition Manifest 尚未产生可验证的 PNG 输出。</p>;
+  if (!output.path) return <p role="status">合成清单尚未产出可验证的 PNG 文件。</p>;
   return <figure className="composition-output">
     <img
       src={resolveAsset(output.path)}

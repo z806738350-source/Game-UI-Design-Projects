@@ -100,7 +100,7 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
 
   test('UIE2E-05 underlay critique blocks contamination and repair passes', async () => {
     provider.armCritiqueSequence(['contaminated', 'repaired']);
-    const critiqueGate = page.locator('.strict-production header i', { hasText: 'Critique' });
+    const critiqueGate = page.getByTestId('strict-gate-critique');
     await clickRun(page, 'underlay-critique');
     await expect(critiqueGate).not.toHaveClass(/is-ready/);
     await expect(page.getByTestId('underlay-repair')).toBeEnabled();
@@ -112,8 +112,8 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
   });
 
   test('UIE2E-06 final composition, fidelity gate, export hash, final approval', async () => {
-    const finalGate = page.locator('.strict-production header i', { hasText: 'Final PNG' });
-    const fidelityGate = page.locator('.strict-production header i', { hasText: 'Fidelity' });
+    const finalGate = page.getByTestId('strict-gate-final-png');
+    const fidelityGate = page.getByTestId('strict-gate-fidelity');
     await clickRun(page, 'composition-final');
     await expect(finalGate).toHaveClass(/is-ready/);
     await clickRun(page, 'fidelity-run');

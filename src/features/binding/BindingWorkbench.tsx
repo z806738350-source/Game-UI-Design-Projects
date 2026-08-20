@@ -49,7 +49,7 @@ export function BindingWorkbench({ project, busy, run }: { project: DesignProjec
     const policy = ROLE_POLICIES[roleOf(control)];
     if (!policy) return '';
     const category = String(family.category || 'page-specific');
-    return policy.allowed_categories.includes(category) ? '' : `该控件角色为 ${roleOf(control)}，组件 category 为 ${category}，语义不兼容`;
+    return policy.allowed_categories.includes(category) ? '' : `该控件角色为 ${roleOf(control)}，组件类别为 ${category}，语义不兼容`;
   };
   const choiceOf = (control: Control) => choices[control.id] || { component_id: '', state: '', font_role: '' };
   const setChoice = (controlId: string, next: Partial<BindingChoice>) => setChoices((previous) => ({ ...previous, [controlId]: { ...(previous[controlId] || { component_id: '', state: '', font_role: '' }), ...next } }));
@@ -89,7 +89,7 @@ export function BindingWorkbench({ project, busy, run }: { project: DesignProjec
     const allowedFontRoles = (policy?.allowed_font_roles || []).filter((fontRole) => fontRoles.includes(fontRole));
     const fontRoleRequired = needsFontRole(control);
     return <label key={control.id}>
-      <span>{control.label}（角色：{role}）{role === 'action' && <em className="binding-unresolved-role" data-testid={`binding-unresolved-role-${control.id}`}>待语义解析：strict 批准前请在功能契约中改为具体角色</em>}</span>
+      <span>{control.label}（角色：{role}）{role === 'action' && <em className="binding-unresolved-role" data-testid={`binding-unresolved-role-${control.id}`}>待语义解析：严格继承批准前，请在功能契约中改为具体角色</em>}</span>
       <Dropdown testId={`binding-component-select-${control.id}`} value={choice.component_id} onChange={(next) => {
         // Selecting a family never confirms state or font role: both stay
         // empty until the designer picks them explicitly.
@@ -104,7 +104,7 @@ export function BindingWorkbench({ project, busy, run }: { project: DesignProjec
         ? <Dropdown testId={`binding-font-role-select-${control.id}`} value={choice.font_role} onChange={(next) => setChoice(control.id, { font_role: next })} placeholder={`选择字体角色${fontRoleRequired ? '（必选）' : '（可选）'}`} options={allowedFontRoles.map((fontRole) => ({ value: fontRole, label: fontRole }))} />
         : fontRoleRequired
           ? <em className="binding-hint binding-hint--conflict">该组件需要文字层，但角色 {role} 没有可用的字体角色，请调整控件角色或组件</em>
-          : <em>该角色不使用文字层</em>)}
+          : <em className="binding-hint">该角色不使用文字层</em>)}
       {choice.component_id && fontRoleRequired && !choice.font_role && allowedFontRoles.length > 0 && <em className="binding-hint">推荐字体角色：{allowedFontRoles[0]}（需手动确认）</em>}
     </label>;
   })}

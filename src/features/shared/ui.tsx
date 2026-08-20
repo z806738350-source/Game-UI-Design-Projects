@@ -56,7 +56,7 @@ export function JsonSummary({ artifact, history = [] }: { artifact: Artifact; hi
   return <div className="json-summary">
     <div className="artifact-meta"><div><code>{String(artifact.id)}</code><small>版本 V{String(artifact.version || 1)}</small></div><StatusPill status={String(artifact.status)} /></div>
     {Boolean(artifact.designer_summary) && <p className="artifact-summary">{String(artifact.designer_summary)}</p>}
-    <div className="lineage"><b>来源</b>{Object.entries((artifact.source || {}) as Record<string, unknown>).map(([key, value]) => <span key={key}>{key.replaceAll('_', ' ')}<code>{String(value)}</code></span>)}</div>
+    <div className="lineage"><b>来源</b>{Object.entries((artifact.source || {}) as Record<string, unknown>).map(([key, value]) => <span key={key}>{key.replaceAll('_', ' ')}<code>{value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—')}</code></span>)}</div>
     {entries.slice(0, 10).map(([key, value]) => <div className="summary-row" key={key}><span>{key.replaceAll('_', ' ')}</span><b>{Array.isArray(value) ? `${value.length} 项` : typeof value === 'object' ? `${Object.keys((value as object) || {}).length} 条结构化规则` : String(value)}</b></div>)}
     <details className="raw-artifact"><summary>查看机器可读 JSON</summary><pre>{JSON.stringify(artifact, null, 2)}</pre></details>
     {history?.length ? <details className="artifact-history"><summary>历史版本（{history.length}）</summary>{history.slice(0, 8).map((item) => <div key={item.snapshot}><Clock3 size={13} /><span>{item.kind} · V{item.version} · {statusLabel(item.status || '')}</span><small>{new Date(item.saved_at).toLocaleString()}</small></div>)}</details> : null}
@@ -143,7 +143,7 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
             // 这次点击转发给触发按钮，菜单刚关上又被重新打开（挡住下一个字段）。
             onClick={(event) => { event.preventDefault(); if (option.disabled) return; onChange(option.value); setOpen(false); }}>
             <Check size={12} className="dropdown-check" />
-            <span>{option.label}</span>
+            <span title={option.label}>{option.label}</span>
           </li>
         ))}
       </ul>}
