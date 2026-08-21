@@ -60,3 +60,25 @@ describe('StrictProductionPanel（人工复核入口）', () => {
     expect(screen.queryByTestId('underlay-manual-review-done')).toBeNull();
   });
 });
+
+// P0-04：证据链匹配——选中底图必须是被审查的那张，否则合成入口禁用
+// 并展示警告条，避免 A 的审查证据被用于合成 B。
+describe('StrictProductionPanel（证据链匹配守卫）', () => {
+  const withSource = (underlay: string) => withCritique({ id: 'critique-1', status: 'reviewed', result: 'passed', source: { underlay }, issues: [], evidence: {}, manual_waivers: [] });
+
+  it('选中底图与审查对象不一致时展示警告并禁用合成入口', () => {
+    render(<StrictProductionPanel project={withSource('v1')} underlayId="v2" busy={false} run={run} />);
+    const warning = screen.getByTestId('underlay-evidence-mismatch');
+    expect(warning.textContent).toContain('审查对象是 v1');
+    expect(warning.textContent).toContain('选中底图是 v2');
+    expect((screen.getByTestId('composition-preview') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('证据匹配时不出现警告条，合成入口不因证据链禁用', () => {
+    render(<StrictProductionPanel project={withSource('v1')} underlayId="v1" busy={false} run={run} />);
+    expect(screen.queryByTestId('underlay-evidence-mismatch')).toBeNull();
+    expect((screen.getByTestId('composition-preview') as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(false);
+  });
+});

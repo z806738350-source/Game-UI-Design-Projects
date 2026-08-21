@@ -103,6 +103,15 @@ export function preserveProjectPreviews(next: DesignProject, current: DesignProj
   };
 }
 
+// P0-07：并发项目上下文。任务结果可能在用户切换项目后才返回：
+// 结果只能写回任务发起时的项目（jobId），绝不能覆盖用户当前正在
+// 看的另一个项目；jobId 缺失（如创建项目任务）时不存在跨项目
+// 覆盖风险，直接放行。
+export function applyJobResult(current: DesignProject | null, next: DesignProject, jobId?: string) {
+  if (jobId && current && current.id !== jobId) return current;
+  return preserveProjectPreviews(next, current);
+}
+
 export const strictContinuation = (project: DesignProject) => project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
 
 export type DropdownOption = { value: string; label: string; disabled?: boolean };

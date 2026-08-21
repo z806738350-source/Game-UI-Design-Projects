@@ -19,6 +19,9 @@ vi.mock('../../api', () => ({
   }
 }));
 
+// strict 生产面板有自己的测试套件；本文件只关注视觉选择逻辑。
+vi.mock('../strict-continuation/StrictProductionPanel', () => ({ StrictProductionPanel: () => null }));
+
 const runStage = vi.mocked(copilotApi.runStage);
 
 // P0-02：视觉生成的参考图容量确认必须有可达入口，且确认携带 Pack hash。
@@ -70,5 +73,37 @@ describe('VisualWorkspace（参考图容量确认入口）', () => {
     expect(screen.queryByTestId('visual-omission-panel')).toBeNull();
     render(<VisualWorkspace project={projectWithPack(underlayPack({ requires_omission_confirmation: false, status: 'approved' }))} busy={false} run={run} canCancel={false} onCancel={vi.fn()} />);
     expect(screen.queryAllByTestId('visual-omission-panel')).toHaveLength(0);
+  });
+});
+
+// P0-04：strict 路线评审选择必须自动对齐到已审查的底图，保证
+// 合成入口（selected[0]）永远落在证据链上。
+describe('VisualWorkspace（strict 选择自动对齐审查证据）', () => {
+  const strictProject = (critiqueUnderlay: string) => makeProject({
+    continuation_mode: 'existing-strict' as never,
+    artifacts: {
+      visualResults: makeArtifact({
+        id: 'visual-results-1', status: 'generated',
+        variations: [
+          { id: 'v1', strategy: 'conservative', image_url: 'https://example.com/v1.png' },
+          { id: 'v2', strategy: 'expressive', image_url: 'https://example.com/v2.png' }
+        ]
+      }),
+      underlayCritique: makeArtifact({ id: 'critique-1', status: 'reviewed', result: 'passed', source: { underlay: critiqueUnderlay } })
+    }
+  });
+
+  it('审查对象存在时选择自动对齐，而不是默认第一张', () => {
+    render(<VisualWorkspace project={strictProject('v2')} busy={false} run={run} canCancel={false} onCancel={vi.fn()} />);
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    expect(checkboxes[0].checked).toBe(false);
+    expect(checkboxes[1].checked).toBe(true);
+  });
+
+  it('审查对象不在当前方向列表时回退默认选择', () => {
+    render(<VisualWorkspace project={strictProject('v-removed')} busy={false} run={run} canCancel={false} onCancel={vi.fn()} />);
+    const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
+    expect(checkboxes[0].checked).toBe(true);
+    expect(checkboxes[1].checked).toBe(false);
   });
 });
