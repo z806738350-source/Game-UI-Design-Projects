@@ -11,6 +11,7 @@ push 前 L3 深度安全审核的摘要证据。
 | 轮次 | 审核时间窗口 | 审核范围（Commit SHA） | 工具 | 规则基线 | 发现数 |
 | --- | --- | --- | --- | --- | --- |
 | R1 | 2026-08-20（commit 后至 push 前） | 30cfe5b..abee373（82c67a1、5cf4fad、abee373） | Qoder Security L3 deep review（qodersec CLI，版本随执行时运行时，未追溯记录） | 仓库规则集 20995492（见 `release-evidence/ruleset-20995492-export-2026-08-19.json`）+ GitHub Secret Scan（远程，已通过） | 0 |
+| R2 | 2026-08-21（commit 后至 push 前） | abee373..abb4da2（bcbbce1、25d5ea6、abb4da2） | Qoder Security L3 deep review（qodersec CLI，版本随执行时运行时） | 同 R1 | 0 |
 
 ## 备注
 
@@ -18,3 +19,6 @@ push 前 L3 深度安全审核的摘要证据。
   与说明书修订、C：guide-open 失败上报），推送前执行 L3 且零发现，随后推送至
   `origin/feat/darkroom-ui-dropdown-rework` 并触发 CI 七项 Required Checks 全绿。
 - 后续轮次在每次 push 前 L3 完成后追加一行，保持同一字段结构。
+- R2 对应独立工程验收（abee373 审核报告）整改三提交：D（应用内说明书弹窗）、
+  E1（Major-01 listbox 可访问名称）、E2（Minor-01 负向用例 + Evidence-01 台账），
+  推送前执行 L3 且零发现。
