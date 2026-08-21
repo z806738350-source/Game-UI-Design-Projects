@@ -28,6 +28,7 @@ interface DesignCopilotApi {
   draftRequirement(projectId: string, screenId: string): Promise<DesignProject>;
   cancelStage(projectId: string, stage: PipelineStage, screenId: string): Promise<DesignProject>;
   approveArtifact(projectId: string, kind: 'reference-inventory' | 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'composition-manifest' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject>;
+  repairRouteCycle(projectId: string, input: { screenId: string }): Promise<DesignProject>;
   updateArtifact(projectId: string, kind: 'screen-contract' | 'component-bindings' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject>;
   generateUnderlayContract(projectId: string, screenId: string): Promise<DesignProject>;
   generateLayoutGuide(projectId: string, screenId: string): Promise<DesignProject>;

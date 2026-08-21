@@ -80,6 +80,7 @@ function previewApi(): DesignCopilotApi {
       if (kind === 'screen-contract' && project.artifacts.screenContract) project.artifacts.screenContract.status = 'approved';
       return project;
     },
+    repairRouteCycle: async (id) => find(id),
     updateArtifact: async (id, kind, patch) => {
       const project = find(id);
       const key = kind === 'screen-contract' ? 'screenContract' : kind === 'style-contract' ? 'styleContract' : 'visualResults';
@@ -193,6 +194,7 @@ function webApi(): DesignCopilotApi {
     draftRequirement: (id, screenId) => request(`${projectPath(id)}/requirement/draft`, { method: 'POST', body: JSON.stringify({ screenId }) }),
     cancelStage: (id, stage, screenId) => request(`${projectPath(id)}/pipeline/cancel`, { method: 'POST', body: JSON.stringify({ stage, screenId }) }),
     approveArtifact: (id, kind, input) => request(`${projectPath(id)}/pipeline/approve`, { method: 'POST', body: JSON.stringify({ kind, input }) }),
+    repairRouteCycle: (id, input) => request(`${projectPath(id)}/pipeline/repair-route-cycle`, { method: 'POST', body: JSON.stringify(input) }),
     updateArtifact: (id, kind, patch) => request(`${projectPath(id)}/artifact`, { method: 'PATCH', body: JSON.stringify({ kind, patch }) }),
     generateUnderlayContract: (id, screenId) => request(`${projectPath(id)}/underlay/contract`, { method: 'POST', body: JSON.stringify({ screenId }) }),
     generateLayoutGuide: (id, screenId) => request(`${projectPath(id)}/underlay/guide`, { method: 'POST', body: JSON.stringify({ screenId }) }),
@@ -258,6 +260,7 @@ export const copilotApi = {
   draftRequirement: async (id: string, screenId?: string): Promise<DesignProject> => rememberScreen(await api().draftRequirement(id, screenIdFor(id, screenId))),
   cancelStage: async (id: string, stage: PipelineStage, screenId?: string): Promise<DesignProject> => rememberScreen(await api().cancelStage(id, stage, screenIdFor(id, screenId))),
   approveArtifact: async (id: string, kind: 'reference-inventory' | 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'composition-manifest' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => rememberScreen(await api().approveArtifact(id, kind, withScreen(id, input))),
+  repairRouteCycle: async (id: string, screenId?: string): Promise<DesignProject> => rememberScreen(await api().repairRouteCycle(id, withScreen(id, { screenId: screenIdFor(id, screenId) }))),
   updateArtifact: async (id: string, kind: 'screen-contract' | 'component-bindings' | 'underlay-contract' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', patch: Record<string, unknown>): Promise<DesignProject> => rememberScreen(await api().updateArtifact(id, kind, withScreen(id, patch))),
   generateUnderlayContract: async (id: string, screenId?: string) => rememberScreen(await api().generateUnderlayContract(id, screenIdFor(id, screenId))),
   generateLayoutGuide: async (id: string, screenId?: string) => rememberScreen(await api().generateLayoutGuide(id, screenIdFor(id, screenId))),

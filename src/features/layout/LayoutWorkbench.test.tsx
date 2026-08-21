@@ -8,11 +8,17 @@ import { LayoutWorkbench } from './LayoutWorkbench';
 
 vi.mock('../../api', () => ({
   copilotApi: {
-    approveArtifact: vi.fn()
+    approveArtifact: vi.fn(),
+    repairRouteCycle: vi.fn(),
+    runStage: vi.fn()
   }
 }));
 
-const api = { approveArtifact: vi.mocked(copilotApi.approveArtifact) };
+const api = {
+  approveArtifact: vi.mocked(copilotApi.approveArtifact),
+  repairRouteCycle: vi.mocked(copilotApi.repairRouteCycle),
+  runStage: vi.mocked(copilotApi.runStage)
+};
 
 const projectWithProposals = () => makeProject({
   artifacts: {
@@ -72,6 +78,48 @@ describe('LayoutWorkbench（布局批准）', () => {
     });
     render(<LayoutWorkbench project={project} busy={false} />);
     expect(screen.queryByTestId('layout-approve')).toBeNull();
-    expect(screen.getByText(/旧布局只能用于对照/)).toBeTruthy();
+    expect(screen.getByText(/布局提案已失效/)).toBeTruthy();
+    expect(screen.getByTestId('layout-generate')).toBeTruthy();
+  });
+
+  it('stale 原因区分：契约变化提示回到功能契约，不出现修复按钮', () => {
+    const project = makeProject({
+      artifacts: {
+        layouts: makeArtifact({ id: 'layouts-1', status: 'stale', stale_reason: 'screen-contract_changed', proposals: [{ id: 'layout-a', name: '效率优先', strategy: 'efficiency' }] }),
+        approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'stale', stale_reason: 'screen-contract_changed', source_proposal: 'layout-a' })
+      }
+    });
+    render(<LayoutWorkbench project={project} busy={false} />);
+    expect(screen.getByText(/功能契约或画布输入已变化/)).toBeTruthy();
+    expect(screen.queryByTestId('layout-repair')).toBeNull();
+  });
+
+  it('旧版风格循环失效：非 strict 路线提供一次性修复按钮并调用修复 API', async () => {
+    const project = makeProject({
+      continuation_mode: 'existing-guided',
+      artifacts: {
+        layouts: makeArtifact({ id: 'layouts-1', status: 'stale', stale_reason: 'style_contract_regenerated', proposals: [{ id: 'layout-a', name: '效率优先', strategy: 'efficiency' }] }),
+        approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'stale', stale_reason: 'style_contract_regenerated', source_proposal: 'layout-a' })
+      }
+    });
+    api.repairRouteCycle.mockResolvedValue(project);
+    const user = userEvent.setup();
+    render(<LayoutWorkbench project={project} busy={false} />);
+    expect(screen.getByText(/旧版风格循环缺陷/)).toBeTruthy();
+    await user.click(screen.getByTestId('layout-repair'));
+    expect(api.repairRouteCycle).toHaveBeenCalledWith('project-1');
+  });
+
+  it('旧版失效原因出现在 strict 路线时不提供修复按钮，提示重新生成', () => {
+    const project = makeProject({
+      continuation_mode: 'existing-strict',
+      artifacts: {
+        layouts: makeArtifact({ id: 'layouts-1', status: 'stale', stale_reason: 'style_contract_regenerated', proposals: [{ id: 'layout-a', name: '效率优先', strategy: 'efficiency' }] }),
+        approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'stale', stale_reason: 'style_contract_regenerated', source_proposal: 'layout-a' })
+      }
+    });
+    render(<LayoutWorkbench project={project} busy={false} />);
+    expect(screen.queryByTestId('layout-repair')).toBeNull();
+    expect(screen.getByText(/风格规范已变化/)).toBeTruthy();
   });
 });

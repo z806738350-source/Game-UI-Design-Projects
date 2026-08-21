@@ -5,6 +5,7 @@ const path = require('node:path');
 const { pipeline } = require('node:stream/promises');
 const { createProjectStore } = require('../electron/services/projectStore.cjs');
 const { createDesignPipeline } = require('../electron/services/designPipeline.cjs');
+const { createFlowStateRepair } = require('../electron/services/flowStateRepair.cjs');
 const { hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('../electron/services/compositionRenderer.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
 const kunpoClient = require('../electron/services/kunpoClient.cjs');
@@ -249,7 +250,8 @@ function createApplication(environment = process.env) {
     const projectStore = createProjectStore({ workspaceRoot });
     const kunpoConfig = loadKunpoConfig(projectRoot, environment, { modelConfigPath });
     const designPipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig });
-    const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, kunpoConfig, designPipeline };
+    const flowStateRepair = createFlowStateRepair({ projectStore });
+    const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, kunpoConfig, designPipeline, flowStateRepair };
     contexts.set(tenantId, context);
     return context;
   }
@@ -423,6 +425,7 @@ function createApplication(environment = process.env) {
       else if (request.method === 'POST' && suffix === '/requirement/draft') value = await designPipeline.draftRequirement(projectId, body);
       else if (request.method === 'POST' && suffix === '/pipeline/cancel') value = await designPipeline.cancelStage(projectId, body.stage, body);
       else if (request.method === 'POST' && suffix === '/pipeline/approve') value = await designPipeline.approveArtifact(projectId, body.kind, body.input);
+      else if (request.method === 'POST' && suffix === '/pipeline/repair-route-cycle') value = await context.flowStateRepair.repairRouteCycle(projectId, body).then(() => projectStore.open(projectId, { includePreviews: false, screenId: body.screenId }));
       else if (request.method === 'PATCH' && suffix === '/artifact') value = await designPipeline.updateArtifact(projectId, body.kind, body.patch);
       else if (request.method === 'POST' && suffix === '/underlay/contract') value = await designPipeline.createUnderlayContract(projectId, body);
       else if (request.method === 'POST' && suffix === '/underlay/guide') value = await designPipeline.createLayoutGuide(projectId, body);

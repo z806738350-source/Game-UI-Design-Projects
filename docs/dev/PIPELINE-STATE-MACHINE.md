@@ -75,7 +75,20 @@ composition-manifest、composition-output、fidelity-report 的
 - **font-manifest roles/fonts 编辑**：拒绝，抛
   `FONT_CONFIRMATION_ACTION_REQUIRED`（必须走导入+确认动作）；
 - **composition-manifest final 批准**：五重门禁，通过后
-  `workflow.fidelity_review = approved`。
+  `workflow.fidelity_review = approved`；
+- **编辑不是洗回路径**：stale Artifact 被 `updateArtifact` 编辑后
+  仍保持 stale（保留 `stale_at`/`stale_reason`），只能通过重新生成
+  （或允许确定性重验的资产重批）恢复；
+- **批准新鲜度门禁**：批准时若 Artifact 为 stale，除字体/组件/绑定
+  （批准即重跑完整确定性校验）外一律抛 `STALE_REAPPROVAL_BLOCKED`；
+  style-contract 额外校验风格基线新鲜（basis 必须仍是当前已批准的
+  路线基线）；approved-layout 批准拦截 stale 布局提案；
+- **旧版风格循环一次性修复**：布局先行路线上被旧版缺陷错误标为
+  stale（`stale_reason = style_contract_regenerated`）且输入未变的
+  布局链路，可由 `flowStateRepair` 在备份后恢复：重跑
+  `validateLayout` → 恢复 approved → 写修复台账
+  `workflow/repairs/route-cycle-v1.json`；幂等，strict/locked 与
+  其他失效原因一律拒绝（`ROUTE_CYCLE_REPAIR_INELIGIBLE`）。
 
 ## 5. Stale 传播机制
 
@@ -84,7 +97,8 @@ composition-manifest、composition-output、fidelity-report 的
 Global 变化 fan-out 到所有未归档 Screen，Screen 变化只影响本屏并向
 Global 传播一次；把所有下游置为 stale 并同步 workflow 阶段，返回
 `{ changed_kind, profile, affected_screens, stale_artifacts }`。
-批准时发现依赖 stale 抛 `STALE_DEPENDENCY`。
+传播只发生在阶段成功之后（事务安全：先调模型、校验通过后才失效
+下游并写入新 Artifact）；失败的模型尝试不会破坏现有可用链路。
 
 ## 6. 路线顺序与导航/执行分离
 
@@ -115,5 +129,6 @@ exploration/guided 恒为已批准 approved-layout，记录于 style-contract
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.1 | 2026-08-21 | PR-27 批准新鲜度门禁、编辑保留 stale、事务安全与旧版循环一次性修复 |
 | 2.0 | 2026-08-21 | PR-26 三路线顺序、scope-aware stale 传播、导航/执行分离 |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
