@@ -71,4 +71,21 @@ describe('StyleWorkspace（风格分析只由用户显式触发）', () => {
     expect(screen.getByText('请先批准布局。')).toBeTruthy();
     expect(runStage).not.toHaveBeenCalled();
   });
+
+  it('风格锁定后「生成 3 个方向」只能由用户显式点击触发', async () => {
+    const user = userEvent.setup();
+    const project = readyExplorationProject({
+      artifacts: {
+        approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'approved', source_proposal: 'layout-a', manual_adjustments: [] }),
+        styleContract: makeArtifact({ id: 'style-contract-1', status: 'approved' })
+      }
+    });
+    const run: RunTask = async (task) => task();
+    render(<StyleWorkspace project={project} busy={false} run={run} />);
+    // 进入页面不会自动发起视觉生成
+    expect(runStage).not.toHaveBeenCalled();
+    await user.click(screen.getByTestId('visual-generate'));
+    expect(runStage).toHaveBeenCalledTimes(1);
+    expect(runStage).toHaveBeenCalledWith('project-1', 'visual_exploration', expect.anything());
+  });
 });

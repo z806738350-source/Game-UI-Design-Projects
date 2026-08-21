@@ -1,8 +1,35 @@
+const { createHash } = require('node:crypto');
 const { reviewGate } = require('./underlayCritique.cjs');
 const { ERROR_CODES, BINDING_VALIDATION_CODES } = require('./errorCodes.cjs');
 const { validateFontManifest } = require('./typographyAssets.cjs');
 const { validateBindings } = require('./componentBindings.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
+
+// P0-05：视觉评审指纹。Manifest 在合成时记录当前 Visual Results 的
+// 版本/选择/评审 hash；最终批准与导出边界用它重验交付链是否仍对应
+// 当前评审，视觉结果或评审变化后旧交付链不得继续放行。
+function visualReviewHash(visualResults) {
+  const review = visualResults?.review;
+  if (!review) return '';
+  return createHash('sha256').update(JSON.stringify({
+    mode: review.mode || '',
+    selected_variation_ids: review.selected_variation_ids || [],
+    notes: review.notes || ''
+  })).digest('hex');
+}
+
+// P0-05：最终批准与导出边界的交付链重验：Manifest 是否仍对应当前
+// Visual Results 评审。只对记录了 visual_results_version 的新格式
+// Manifest 强制；升级前的旧产物由 stale 失效机制保底。
+function visualBindingMismatch(manifest, visualResults) {
+  const source = manifest?.source || {};
+  if (source.visual_results_version === undefined) return null;
+  if (!visualResults) return '当前 Visual Results 已缺失';
+  if (source.visual_results_version !== visualResults.version) return `视觉结果版本已变化（合成时 V${source.visual_results_version}，当前 V${visualResults.version}）`;
+  if (JSON.stringify(source.selected_variation_ids || []) !== JSON.stringify(visualResults.review?.selected_variation_ids || [])) return '评审选择的视觉方向已变化';
+  if (source.review_hash !== visualReviewHash(visualResults)) return '视觉评审内容已变化';
+  return null;
+}
 
 function componentLayer(binding, slot, family) {
   // validateBindings rejects bindings without an explicit state before any
@@ -66,12 +93,13 @@ function createCompositionManifest({ project, underlay, layout, bindings, compon
   for (const layer of layers) if (layer.type === 'text') layer.composition_mode = mode;
   if (mode !== 'final' && layers.some((layer) => layer.type === 'text' && layer.fidelity_mode !== 'exact')) layers.push({ type: 'watermark', content: 'TYPOGRAPHY PREVIEW · FONT FIDELITY UNRESOLVED', z_index: 10000 });
   layers.sort((left, right) => left.z_index - right.z_index || `${left.type}:${left.control_id || ''}`.localeCompare(`${right.type}:${right.control_id || ''}`));
+  const visualResults = project.artifacts?.visualResults;
   return {
     schema_version: '2.0', id: `${project.screen_id}-composition-${mode}`, version, status: 'draft',
-    source: { screen_contract: project.artifacts?.screenContract?.id, approved_layout: layout.id, component_bindings: bindings.id, component_contract: componentContract.id, font_manifest: fontManifest.id, style_contract: styleContract.id, underlay_critique: critique.id },
+    source: { screen_contract: project.artifacts?.screenContract?.id, approved_layout: layout.id, component_bindings: bindings.id, component_contract: componentContract.id, font_manifest: fontManifest.id, style_contract: styleContract.id, underlay_critique: critique.id, visual_results: visualResults?.id, visual_results_version: visualResults?.version, selected_variation_ids: visualResults?.review?.selected_variation_ids || [], review_hash: visualReviewHash(visualResults) },
     mode, canvas: [project.canvas_spec.width, project.canvas_spec.height], underlay,
     layers, coverage: bindingResult.coverage, renderer: { engine: 'sharp-libvips', deterministic_order: true, registry: ['exact', 'nine-slice', 'vector-token'] }
   };
 }
 
-module.exports = { createCompositionManifest, textLayer };
+module.exports = { createCompositionManifest, textLayer, visualBindingMismatch, visualReviewHash };

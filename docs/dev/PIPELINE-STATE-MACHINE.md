@@ -83,6 +83,9 @@ composition-manifest、composition-output、fidelity-report 的
   （批准即重跑完整确定性校验）外一律抛 `STALE_REAPPROVAL_BLOCKED`；
   style-contract 额外校验风格基线新鲜（basis 必须仍是当前已批准的
   路线基线）；approved-layout 批准拦截 stale 布局提案；
+  `validateLayout` 的组件绑定门禁仅在严格继承路线执行，探索/引导
+  路线没有 bindings 资产，布局批准与 route-cycle 修复不得被缺失
+  绑定误拦截；
 - **旧版风格循环一次性修复**：布局先行路线上被旧版缺陷错误标为
   stale（`stale_reason = style_contract_regenerated`）且输入未变的
   布局链路，可由 `flowStateRepair` 在备份后恢复：重跑
@@ -102,7 +105,19 @@ composition-manifest、composition-output、fidelity-report 的
 - **严格底层规范状态机**：布局页下一步按 Underlay Contract 完整状态
   判断（无→建立、generated/reviewed→批准、stale→按当前布局重建、
   approved 无 Guide→生成 Guide、approved 有 Guide→生成底层图），
-  不得只看 `layout_guide` 是否存在。
+  不得只看 `layout_guide` 是否存在；
+- **证据链匹配门禁**：合成必须显式指定 variationId，未知/缺失抛
+  `VISUAL_VARIATION_NOT_FOUND`（不再静默回退第一张）；strict 路线
+  额外要求 `critique.source.underlay === variation.id`，否则抛
+  `UNDERLAY_EVIDENCE_MISMATCH`。校验在失效旧证据之前：失败的合成
+  尝试不得把仍然有效的链路变 stale；
+- **交付链绑定重验**：Manifest 合成时记录当前 Visual Results 的
+  版本/选择/评审 hash（`source.visual_results_version` 等）；最终
+  批准与导出边界重验绑定，漂移抛 `VISUAL_RESULTS_BINDING_STALE`；
+  未记录绑定字段的旧格式 Manifest 由 stale 机制保底；
+- **来源修订重验**：screen-contract / style-contract 批准时比对
+  `source.input_revisions` 与当前输入修订，不一致抛
+  `STALE_REAPPROVAL_BLOCKED`，对着旧输入生成的契约不得批准为新事实。
 
 ## 5. Stale 传播机制
 
@@ -113,6 +128,10 @@ Global 传播一次；把所有下游置为 stale 并同步 workflow 阶段，�
 `{ changed_kind, profile, affected_screens, stale_artifacts }`。
 传播只发生在阶段成功之后（事务安全：先调模型、校验通过后才失效
 下游并写入新 Artifact）；失败的模型尝试不会破坏现有可用链路。
+例外：视觉证据的“取代型”事件（重新生成、评审决策变化、修复新增
+variation）在动作开始时即失效旧链（`visual_results_regenerated` /
+`visual_review_changed` / `visual_results_repaired`），因为旧证据已
+不再可信，即使后续生图失败也不得回滚失效。
 
 ## 6. 路线顺序与导航/执行分离
 
@@ -143,6 +162,7 @@ exploration/guided 恒为已批准 approved-layout，记录于 style-contract
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.3 | 2026-08-21 | PR-29 证据链匹配门禁、交付链绑定重验、来源修订重验、视觉取代型失效与布局校验绑定门禁限 strict 路线 |
 | 2.2 | 2026-08-21 | PR-28 三条死路解除：严格底层规范状态机、视觉省略确认绑定 Pack hash、Underlay 人工复核入口 |
 | 2.1 | 2026-08-21 | PR-27 批准新鲜度门禁、编辑保留 stale、事务安全与旧版循环一次性修复 |
 | 2.0 | 2026-08-21 | PR-26 三路线顺序、scope-aware stale 传播、导航/执行分离 |

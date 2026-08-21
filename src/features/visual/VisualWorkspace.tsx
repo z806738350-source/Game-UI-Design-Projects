@@ -20,10 +20,20 @@ export function VisualWorkspace({ project, busy, run, canCancel, onCancel }: Wor
   const strategies = ['conservative', 'expressive', 'innovative'];
   const missingStrategies = strategies.filter((strategy) => !variations.some((variation) => variation.strategy === strategy));
   const approvedIds = ((artifact?.review as Record<string, unknown>)?.selected_variation_ids as string[]) || [];
+  const strict = strictContinuation(project);
+  const critique = project.artifacts.underlayCritique;
+  const critiqueUnderlayId = String((critique?.source as Record<string, unknown>)?.underlay || '');
   const [selected, setSelected] = useState<string[]>(approvedIds.length ? approvedIds : variations[0]?.id ? [variations[0].id] : []);
   const [lightbox, setLightbox] = useState('');
   const [notes, setNotes] = useState(String((artifact?.review as Record<string, unknown>)?.notes || ''));
-  useEffect(() => { setSelected(approvedIds.length ? approvedIds : variations[0]?.id ? [variations[0].id] : []); }, [project.id, artifact?.version, variations.length]);
+  useEffect(() => {
+    // P0-04：strict 路线把评审选择自动对齐到已审查的底图，保证合成
+    // 入口（selected[0]）永远落在证据链上；审查对象变化时重新对齐。
+    const aligned = strict && critiqueUnderlayId && variations.some((variation) => variation.id === critiqueUnderlayId)
+      ? [critiqueUnderlayId]
+      : approvedIds.length ? approvedIds : variations[0]?.id ? [variations[0].id] : [];
+    setSelected(aligned);
+  }, [project.id, artifact?.version, variations.length, critique?.id, critique?.version]);
   const toggle = (id: string) => setSelected((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   const active = variations.find((item) => item.id === lightbox);
   // P0-02：视觉生成的参考图容量确认入口。后端会落盘待确认 Pack，本页
@@ -36,7 +46,6 @@ export function VisualWorkspace({ project, busy, run, canCancel, onCancel }: Wor
   const omissionInput = omissionConfirmationInput(omission);
   const confirmOmissions = () => run(() => copilotApi.runStage(project.id, 'visual_exploration', omissionInput), { label: '确认省略项并生成视觉方向', stage: 'visual_exploration', total: 3 });
   const approve = (mode: 'selected' | 'combine') => run(() => copilotApi.approveArtifact(project.id, 'visual-results', { selectedIds: selected, mode, notes }), { label: mode === 'combine' ? '保存组合方向' : '批准视觉方向', stage: 'visual_exploration' });
-  const strict = strictContinuation(project);
   return <>
     <div className="workspace-content visual-workspace">
     <section className="workspace-heading"><div><span className="kicker">04 · AI VISUAL EXPLORATION</span><h1>评审、组合并交付视觉方向</h1><p>支持多选组合、全屏检查、批注意见、批准版本、全部否决和单张导出。</p></div>{variations.length > 0 && <StatusPill status={artifact?.status || 'reviewed'} />}</section>

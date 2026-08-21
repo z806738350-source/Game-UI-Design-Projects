@@ -6,7 +6,7 @@ import {
 import { copilotApi } from './api';
 import type { AppConfig, CreateProjectInput, DesignProject, ProjectSummary } from './types';
 import {
-  Dropdown, EmptyArtifact, JsonSummary, friendlyError, preserveProjectPreviews, stages, statusOf
+  Dropdown, EmptyArtifact, JsonSummary, applyJobResult, friendlyError, stages, statusOf
 } from './features/shared/ui';
 import type { RunOptions, RunTask, StageId } from './features/shared/ui';
 import { InputWorkspace } from './features/input/InputWorkspace';
@@ -91,7 +91,7 @@ export function App() {
   const [project, setProject] = useState<DesignProject | null>(null);
   const [activeStage, setActiveStage] = useState<StageId>('input');
   const [busy, setBusy] = useState(false);
-  const [busyJob, setBusyJob] = useState<(RunOptions & { startedAt: number }) | null>(null);
+  const [busyJob, setBusyJob] = useState<(RunOptions & { startedAt: number; projectId?: string; projectName?: string }) | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState('');
   const [retryTask, setRetryTask] = useState<{ task: () => Promise<DesignProject>; options: RunOptions } | null>(null);
@@ -106,25 +106,35 @@ export function App() {
   useEffect(() => { Promise.all([copilotApi.getConfig(), copilotApi.listProjects()]).then(([nextConfig, nextProjects]) => { setConfig(nextConfig); setProjects(nextProjects); if (nextProjects[0]) copilotApi.openProject(nextProjects[0].id).then(setProject); else setCreateOpen(true); }).catch((cause) => setError(cause.message)); }, []);
   useEffect(() => { const nextStage = project?.workflow?.current_stage as StageId | undefined; if (nextStage && stages.some((stage) => stage.id === nextStage)) setActiveStage(nextStage); }, [project?.id, project?.workflow?.current_stage]);
   useEffect(() => { mainWorkspaceRef.current?.scrollTo({ top: 0, behavior: 'auto' }); }, [activeStage, project?.id]);
-  useEffect(() => { if (!busyJob || !project) return; const timer = window.setInterval(() => { setElapsed(Math.floor((Date.now() - busyJob.startedAt) / 1000)); copilotApi.openProject(project.id, { includePreviews: false }).then((next) => setProject((current) => preserveProjectPreviews(next, current))).catch(() => undefined); }, 1200); return () => window.clearInterval(timer); }, [busyJob, project?.id]);
+  useEffect(() => { if (!busyJob) return; const timer = window.setInterval(() => {
+    setElapsed(Math.floor((Date.now() - busyJob.startedAt) / 1000));
+    // P0-07：轮询任务所属项目而不是当前打开的项目；结果只写回任务项目。
+    if (!busyJob.projectId) return;
+    copilotApi.openProject(busyJob.projectId, { includePreviews: false }).then((next) => setProject((current) => applyJobResult(current, next, busyJob.projectId))).catch(() => undefined);
+  }, 1200); return () => window.clearInterval(timer); }, [busyJob]);
 
   const run: RunTask = async (task, options) => {
+    // P0-07：Job Context——任务启动时冻结项目上下文，运行中用户切换
+    // 项目后，结果/轮询/取消都只作用于任务发起时的项目。
+    const jobProjectId = project?.id;
+    const jobProjectName = project?.name;
     if (options.stage) setActiveStage(options.stage);
-    setBusy(true); setBusyJob({ ...options, startedAt: Date.now() }); setElapsed(0); setError('');
-    try { const next = await task(); setProject((current) => preserveProjectPreviews(next, current)); setRetryTask(null); await refreshProjects(); return next; }
+    setBusy(true); setBusyJob({ ...options, startedAt: Date.now(), projectId: jobProjectId, projectName: jobProjectName }); setElapsed(0); setError('');
+    try { const next = await task(); setProject((current) => applyJobResult(current, next, jobProjectId)); setRetryTask(null); await refreshProjects(); return next; }
     catch (cause) {
       setError(friendlyError(cause)); setRetryTask({ task, options });
       // A failed attempt may still have changed backend state (e.g. a
       // regeneration attempt invalidates stale evidence before it fails).
-      // Reload the project so gates reflect the current truth; guard against
-      // a late response overwriting a project the user switched to meanwhile.
-      if (project) copilotApi.openProject(project.id, { includePreviews: false }).then((next) => setProject((current) => (current && current.id !== next.id ? current : preserveProjectPreviews(next, current)))).catch(() => undefined);
+      // Reload the job's project so gates reflect the current truth; never
+      // overwrite a project the user switched to meanwhile.
+      if (jobProjectId) copilotApi.openProject(jobProjectId, { includePreviews: false }).then((next) => setProject((current) => applyJobResult(current, next, jobProjectId))).catch(() => undefined);
     }
     finally { setBusy(false); setBusyJob(null); }
   };
   const cancelVisual = async () => {
-    if (!project) return;
-    try { setProject(await copilotApi.cancelStage(project.id, 'visual_exploration')); }
+    const jobId = busyJob?.projectId || project?.id;
+    if (!jobId) return;
+    try { const next = await copilotApi.cancelStage(jobId, 'visual_exploration'); setProject((current) => applyJobResult(current, next, jobId)); }
     catch (cause) { setError(friendlyError(cause)); }
   };
   const create = async (input: CreateProjectInput) => { await run(() => copilotApi.createProject(input), { label: '创建项目' }); setCreateOpen(false); setActiveStage('input'); };
@@ -146,7 +156,7 @@ export function App() {
     <header className="topbar"><div className="brand"><div><Aperture size={19} /></div><span><b>Game UI</b><small>Design Copilot</small></span></div><div className="project-switcher"><button onClick={() => setCreateOpen(true)}><Plus size={15} />新项目</button><Dropdown testId="project-switcher-select" ariaLabel="切换项目" placeholder="选择项目" value={project?.id || ''} onChange={(next) => { if (next) switchProject(next); }} options={projects.map((item) => ({ value: item.id, label: `${item.status === 'archived' ? '〔归档〕' : ''}${item.name}` }))} />{project && <button className="manage-button" onClick={() => setManagerOpen(true)}><MoreHorizontal size={16} />管理</button>}</div><nav><div className={`connection ${config?.kunpo.configured ? 'is-online' : ''}`}><i />{config?.kunpo.configured ? `${config.kunpo.mode === 'gateway' ? 'Gateway' : 'Kunpo API'} 已就绪` : 'Kunpo 未配置'}</div>{project && config?.platform !== 'web' && <button title="在系统文件管理器中显示项目（macOS 为 Finder）" onClick={() => copilotApi.revealProject(project.id)}><FolderOpen size={17} /></button>}<button title="查看 AI 输入、产物与历史版本" onClick={() => setInspectorOpen(!inspectorOpen)}><PanelLeftClose size={17} /></button>{config?.platform !== 'web' && <button title="使用说明书" onClick={() => setGuideOpen(true)}><BookOpen size={17} /></button>}<button title="模型与工作区配置" onClick={() => setSettingsOpen(true)}><Settings2 size={17} /></button>{config?.platform === 'web' && <button title="退出当前飞书账号" onClick={() => copilotApi.logout()}><LogOut size={17} /></button>}</nav></header>
     {project && <div className="screen-manager-dock"><ScreenManager project={project} busy={busy} onProject={setProject} /></div>}
     <aside className="stage-rail"><div className="rail-title"><span>DESIGN FLOW</span></div><div className="stage-list">{stages.map((stage, index) => { const status = statusOf(project, stage.id); const Icon = stage.icon; return <button key={stage.id} data-testid={`stage-${stage.id}`} disabled={!project} className={`${activeStage === stage.id ? 'is-active' : ''} is-${status}`} onClick={() => setActiveStage(stage.id)}><div className="stage-node"><Icon size={16} /></div><div><span>{stage.number} · {stage.eyebrow}</span><b>{stage.label}</b><small>{stage.description}</small></div>{index < stages.length - 1 && <i className="stage-line" />}</button>; })}</div><div className="rail-principle"><Bot size={17} /><p><b>状态属于设计流水线</b><br />模型生成、人工修改和批准都保留可追踪版本。</p></div></aside>
-    <main ref={mainWorkspaceRef} className="main-workspace">{busyJob && <div className="busy-bar"><LoaderCircle className="spin" size={14} /><div><b>{busyJob.label}</b><span>{progress ? `${progress.completed}/${progress.total} · ${progress.message || ''}` : '正在处理'} · 已用时 {elapsed}s</span></div><small>{busyJob.stage === 'visual_exploration' ? '结果会逐张保存' : '可继续浏览其他阶段'}</small></div>}{error && <div className="error-banner"><b>当前步骤未完成</b><span>{error}</span>{retryTask && !busy && <button className="error-retry" onClick={() => run(retryTask.task, retryTask.options)}><RefreshCw size={13} />重试</button>}<button aria-label="关闭错误" onClick={() => setError('')}>×</button></div>}{!project ? <div className="welcome"><Aperture size={38} /><h1>为游戏 UI 设计师准备的 AI 流水线</h1><p>从 UE 理解到视觉交付，每个决策都可修改、可追踪、可复现。</p><button className="button button--primary" onClick={() => setCreateOpen(true)}><Plus size={16} />建立第一个项目</button></div> : activeStage === 'input' ? <InputWorkspace project={project} busy={busy} run={run} /> : activeStage === 'wireframe_interpretation' ? <ContractWorkspace project={project} busy={busy} run={run} onNavigate={setActiveStage} /> : activeStage === 'layout_design' ? <LayoutWorkspace project={project} busy={busy} run={run} onNavigate={setActiveStage} /> : activeStage === 'style_resolution' ? <StyleWorkspace project={project} busy={busy} run={run} /> : <VisualWorkspace project={project} busy={busy} run={run} canCancel={busyJob?.stage === 'visual_exploration'} onCancel={cancelVisual} />}</main>
+    <main ref={mainWorkspaceRef} className="main-workspace">{busyJob && <div className="busy-bar"><LoaderCircle className="spin" size={14} /><div><b>{busyJob.label}</b><span>{progress ? `${progress.completed}/${progress.total} · ${progress.message || ''}` : '正在处理'} · 已用时 {elapsed}s</span></div><small>{busyJob.projectId && project && busyJob.projectId !== project.id ? `任务属于项目「${busyJob.projectName || '其他项目'}」，结果不会覆盖当前页面` : busyJob.stage === 'visual_exploration' ? '结果会逐张保存' : '可继续浏览其他阶段'}</small></div>}{error && <div className="error-banner"><b>当前步骤未完成</b><span>{error}</span>{retryTask && !busy && <button className="error-retry" onClick={() => run(retryTask.task, retryTask.options)}><RefreshCw size={13} />重试</button>}<button aria-label="关闭错误" onClick={() => setError('')}>×</button></div>}{!project ? <div className="welcome"><Aperture size={38} /><h1>为游戏 UI 设计师准备的 AI 流水线</h1><p>从 UE 理解到视觉交付，每个决策都可修改、可追踪、可复现。</p><button className="button button--primary" onClick={() => setCreateOpen(true)}><Plus size={16} />建立第一个项目</button></div> : activeStage === 'input' ? <InputWorkspace project={project} busy={busy} run={run} /> : activeStage === 'wireframe_interpretation' ? <ContractWorkspace project={project} busy={busy} run={run} onNavigate={setActiveStage} /> : activeStage === 'layout_design' ? <LayoutWorkspace project={project} busy={busy} run={run} onNavigate={setActiveStage} /> : activeStage === 'style_resolution' ? <StyleWorkspace project={project} busy={busy} run={run} /> : <VisualWorkspace project={project} busy={busy} run={run} canCancel={busyJob?.stage === 'visual_exploration'} onCancel={cancelVisual} />}</main>
     {inspectorOpen && <aside className="artifact-inspector"><div className="inspector-head"><span>AI 输入、产物与版本</span><FileJson size={17} /></div>{activeStage === 'input' && project ? <InputSourceSummary project={project} /> : currentArtifact ? <JsonSummary artifact={currentArtifact} history={project?.artifactHistory?.filter((item) => item.id === currentArtifact.id || item.kind.includes(activeStage.split('_')[0]))} /> : <EmptyArtifact title="当前阶段尚无 AI 产物" copy="完成当前步骤后，版本、来源、结构化内容和历史快照会显示在这里。" />}<div className="inspector-foot"><b>{config?.platform === 'web' ? '在线项目空间' : '本地项目目录'}</b><code>{config?.workspaceRoot || '加载中…'}</code><small>批准与生成结果均保存在这里，可随时回看历史版本。</small></div></aside>}
     {createOpen && <NewProjectDialog onCreate={create} onClose={projects.length ? () => setCreateOpen(false) : undefined} onLogout={config?.platform === 'web' ? () => { void copilotApi.logout(); } : undefined} busy={busy} />}{settingsOpen && config && <SettingsDialog config={config} onSaved={setConfig} onClose={() => setSettingsOpen(false)} />}{managerOpen && project && <ProjectManager project={project} projects={projects} busy={busy} run={run} onClose={() => setManagerOpen(false)} onSwitch={switchProject} />}{guideOpen && <GuideModal onClose={() => setGuideOpen(false)} onOpenExternal={openGuide} />}
   </div>;

@@ -7,7 +7,7 @@
 错误码分三组：
 
 - **管线错误码（`ERROR_CODES`）**：由后端以 `Error.code` 抛出，或被 IPC/导出门禁引用，
-  共 51 个。
+  共 54 个。
 - **Fidelity 检查码（`FIDELITY_ISSUE_CODES`）**：写入 Fidelity Report `issues[].code`
   或 Underlay Critique 门禁的结构化检查码，共 27 个。
 - **Binding 校验码（`BINDING_VALIDATION_CODES`）**：`validateBindings` 返回的
@@ -17,7 +17,7 @@
 `COMPOSITION_OUTPUT_UNREADABLE` 既是管线错误码，也被像素检查器作为 issue code 使用；
 它们只定义在 `ERROR_CODES` 中，检查器直接引用 `ERROR_CODES.*`。
 
-## 一、管线错误码（ERROR_CODES，51 个）
+## 一、管线错误码（ERROR_CODES，54 个）
 
 ### Screen 上下文
 
@@ -34,7 +34,7 @@
 | `FONT_MANIFEST_REQUIRED` | `electron/services/designPipeline.cjs` | strict 布局要求 Font Manifest 已批准 | 先完成字体导入与确认并批准 |
 | `COMPONENT_CONTRACT_REQUIRED` | `electron/services/designPipeline.cjs` | strict 布局要求 Component Contract 已批准 | 先导入组件资产并批准 |
 | `BINDING_COVERAGE_INCOMPLETE` | `electron/services/designPipeline.cjs` | 绑定未覆盖全部必要控件或语义校验失败 | 按 `BINDING_*` 错误提示补全显式选择 |
-| `LAYOUT_CONSTRAINT_VIOLATION` | `electron/services/designPipeline.cjs` | `validateLayout` 报出 slot/缩放/9-slice 违规 | 修正布局 slot 或组件缩放策略 |
+| `LAYOUT_CONSTRAINT_VIOLATION` | `electron/services/designPipeline.cjs` | `validateLayout` 报出 slot/缩放/9-slice 违规；组件绑定门禁仅限严格继承路线 | 修正布局 slot 或组件缩放策略 |
 | `STYLE_CONTRACT_INVALID` | `electron/services/designPipeline.cjs` | 批准时 Style Contract 校验未通过 | 重新生成或编辑 Style Contract |
 | `UNDERLAY_SPEC_REQUIRED` | `electron/services/designPipeline.cjs` | strict 视觉生成缺少已批准 Underlay Contract 或 Layout Guide | 先生成并批准 Underlay Contract、生成 Layout Guide |
 
@@ -73,6 +73,9 @@
 | `EXACT_NON_UNIFORM_SCALE` | `electron/services/compositionRenderer.cjs` | exact 组件被非等比缩放 | 调整 slot 尺寸保持等比 |
 | `EXACT_SCALE_OUT_OF_POLICY` | `electron/services/compositionRenderer.cjs` | exact 组件缩放超出 `scale_policy` 范围 | 调整 slot 或组件缩放策略 |
 | `COMPOSITION_GATE_FAILED` | `electron/services/compositor.cjs` | 合成前置门禁（critique/binding/layout/font）未通过 | 按 `missing_requirements` 列表逐项修复 |
+| `VISUAL_VARIATION_NOT_FOUND` | `electron/services/designPipeline.cjs` | 合成时未指定或指定了不存在的视觉方向（不再静默回退第一张） | 在视觉探索页选择一个有效方向后再合成 |
+| `UNDERLAY_EVIDENCE_MISMATCH` | `electron/services/designPipeline.cjs` | strict 合成时 Critique 审查对象与待合成底图不一致 | 先对选中的底图执行污染审查 |
+| `VISUAL_RESULTS_BINDING_STALE` | `electron/services/designPipeline.cjs`、`electron/services/compositionRenderer.cjs` | 最终批准/导出时 Manifest 已不对应当前 Visual Results 评审 | 重新合成最终 PNG 并重走保真与批准 |
 
 ### Composition Output 与导出
 

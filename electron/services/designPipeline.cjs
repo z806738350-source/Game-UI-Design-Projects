@@ -20,7 +20,7 @@ const { writeLayoutGuide } = require('./layoutGuideRenderer.cjs');
 const { buildUnderlayCritique, reviewGate } = require('./underlayCritique.cjs');
 const { executeRepairTask, planRepairTask } = require('./underlayRepair.cjs');
 const { computeDeterministicMetrics, hashBuffer: hashEvidence, normalizeSemanticEvidence, safePath, writeComponentBoard, writeRepairMask, writeReviewOverlay } = require('./underlayReview.cjs');
-const { createCompositionManifest } = require('./compositor.cjs');
+const { createCompositionManifest, visualBindingMismatch } = require('./compositor.cjs');
 const { renderComposition, verifyCompositionOutput } = require('./compositionRenderer.cjs');
 const { finalApprovalGate, runFidelityChecks } = require('./fidelity.cjs');
 const { inspectFidelityEvidence } = require('./fidelityInspector.cjs');
@@ -296,6 +296,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         ? previousVariations
         : input.preserveExisting ? previousVariations.filter((variation) => !strategies.includes(variation.strategy)) : [];
       const variations = [...preserved];
+      // P0-05：重新生成即取代旧证据（与合成重试同语义）：即使后续
+      // 生图失败，旧的审查/合成/保真链也不得继续被信任。
+      await invalidateArtifacts(projectId, 'visual-results', 'visual_results_regenerated', { screenId: project.screen_id });
       await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, {
         progress: { completed: 0, total: tasks.length, message: '正在准备视觉任务' }
       });
@@ -400,6 +403,16 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     }
   }
 
+  // P0-06：来源修订重验。即使失效传播被绕过，批准时也要对着当前输入
+  // 修订再检查一次：对着旧输入生成的产物不得被批准为新事实。
+  function assertSourceRevisionsFresh(kind, current, project) {
+    const recorded = current?.source?.input_revisions;
+    if (!recorded) return;
+    if (JSON.stringify(recorded) !== JSON.stringify(project.input_revisions || {})) {
+      throw Object.assign(new Error(`${kind} 的输入修订已变化，必须重新生成后才能批准。`), { code: ERROR_CODES.STALE_REAPPROVAL_BLOCKED });
+    }
+  }
+
   async function approveArtifact(projectId, kind, input = {}) {
     const project = ['reference-inventory', 'style-contract', 'font-manifest', 'component-contract'].includes(kind)
       ? await openProject(projectId) : await openScreen(projectId, input.screenId);
@@ -416,6 +429,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const current = project.artifacts.screenContract;
       if (!current) throw new Error('Screen Contract does not exist.');
       assertApprovableFreshness(kind, current);
+      assertSourceRevisionsFresh(kind, current, project);
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'wireframe_interpretation', 'approved', `screens/${project.screen_id}/screen-contract.json`);
     } else if (kind === 'component-bindings') {
@@ -447,6 +461,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const output = project.artifacts.compositionOutput;
       const report = project.artifacts.fidelityReport;
       if (!manifest || manifest.mode !== 'final') throw new Error('A final Composition Manifest is required.');
+      assertApprovableFreshness(kind, manifest);
+      // P0-05：最终批准重验交付链：Manifest 必须仍对应当前 Visual
+      // Results 评审，视觉变化后旧交付链不得继续放行。
+      const bindingMismatch = visualBindingMismatch(manifest, project.artifacts.visualResults);
+      if (bindingMismatch) {
+        throw Object.assign(new Error(`Composition Manifest 已不对应当前视觉评审：${bindingMismatch}。请重新合成最终 PNG 并重走保真与批准。`), { code: ERROR_CODES.VISUAL_RESULTS_BINDING_STALE });
+      }
       const resolved = await projectStore.resolveProject(projectId);
       const outputVerification = await verifyCompositionOutput(resolved.workspacePath, output, { requireFinal: true });
       if (!outputVerification.passed || manifest.output?.hash !== output?.hash || manifest.output?.path !== output?.path) {
@@ -494,6 +515,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const current = project.artifacts.styleContract;
       if (!current) throw new Error('Style Contract does not exist.');
       assertApprovableFreshness(kind, current);
+      assertSourceRevisionsFresh(kind, current, project);
       // 风格基线新鲜度：锁定的规范必须建立在当前已批准的路线基线之上。
       const basis = profileOf(project) === 'strict' ? project.artifacts.screenContract : project.artifacts.approvedLayout;
       const recordedBasis = current.source?.style_basis;
@@ -531,6 +553,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!selectedIds.length || selectedIds.some((id) => !validIds.has(id))) throw new Error('请选择有效的视觉方向。');
       const mode = input.mode === 'combine' ? 'combine' : 'selected';
       if (mode === 'combine' && selectedIds.length < 2) throw new Error('组合方向至少需要选择两个方案。');
+      // P0-05：评审决策变化属于 visual-results 变化事件：先失效生产链
+      // （合成/保真/最终批准），再写入新评审，旧交付链不得继续放行。
+      await invalidateArtifacts(projectId, 'visual-results', 'visual_review_changed', { screenId: project.screen_id });
       await projectStore.saveArtifact(projectId, 'visual-results', {
         ...current,
         version: Number(current.version || 1) + 1,
@@ -778,6 +803,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const repaired = await materializeUnderlay(project, resolved, { id: repairedId, image_url: result.image_url });
       const currentResults = project.artifacts.visualResults;
       const variation = { id: repairedId, strategy: 'underlay-repair', ...(result.storageMode === 'inline_snapshot' ? {} : { image_url: result.image_url }), image_path: repaired.path, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay, repair_task_id: task.id, repair_mode: task.repair_mode, storage_mode: result.storageMode, status: 'generated', created_at: new Date().toISOString(), canvas_spec: project.canvas_spec };
+      // P0-05：修复新增 variation 同样是 visual-results 内容变化事件。
+      await invalidateArtifacts(projectId, 'visual-results', 'visual_results_repaired', { screenId: project.screen_id });
       await invalidateArtifacts(projectId, 'underlay-critique', 'underlay_repaired');
       await projectStore.saveArtifact(projectId, 'visual-results', { ...currentResults, version: Number(currentResults.version || 1) + 1, status: 'generated', variations: [...(currentResults.variations || []), variation] });
       await projectStore.saveArtifact(projectId, 'underlay-repair-task', { ...task, status: 'completed', completed_at: new Date().toISOString(), output: { underlay_id: repairedId, path: repaired.path, hash: repaired.hash, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay } });
@@ -834,8 +861,20 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   async function composeVisual(projectId, input = {}) {
     const project = await openScreen(projectId, input.screenId);
     const resolved = await projectStore.resolveProject(projectId);
-    const variation = (project.artifacts.visualResults?.variations || []).find((item) => item.id === input.variationId) || (project.artifacts.visualResults?.variations || [])[0];
-    if (!variation?.image_url && !variation?.image_path) throw new Error('Select a generated underlay before composition.');
+    const variations = project.artifacts.visualResults?.variations || [];
+    // P0-04：不再静默回退第一张：未指定或未知的 variationId 必须直接暴露，
+    // 否则 A 的审查证据会被静默用于合成 B。
+    const variation = variations.find((item) => item.id === input.variationId);
+    if (!variation) throw Object.assign(new Error('未指定要合成的底图或该方向不存在，请先在视觉探索页选择一个有效方向。'), { code: ERROR_CODES.VISUAL_VARIATION_NOT_FOUND });
+    if (!variation.image_url && !variation.image_path) throw new Error('Select a generated underlay before composition.');
+    // P0-04：证据链匹配门禁：审查对象必须与待合成底图一致，否则
+    // “A Underlay 的 Critique 批准 B Underlay”。校验必须在失效旧
+    // 证据之前：失败的尝试不得把仍然有效的链路变 stale。
+    const critique = project.artifacts.underlayCritique;
+    const strictProduction = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
+    if (strictProduction && (!critique || critique.source?.underlay !== variation.id)) {
+      throw Object.assign(new Error(`当前选中底图尚未审查：审查对象是 ${critique?.source?.underlay || '（无）'}，请先对 ${variation.id} 执行污染审查。`), { code: ERROR_CODES.UNDERLAY_EVIDENCE_MISMATCH });
+    }
     const mode = input.mode === 'final' ? 'final' : 'preview';
     // A regeneration attempt supersedes the previous evidence even when the
     // render itself fails: downstream fidelity/approval gates must not keep
