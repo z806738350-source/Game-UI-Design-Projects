@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
-  AlertTriangle, ArrowRight, Check, CheckSquare, Edit3, Layers3, MessageSquare, Plus, RefreshCw, Save, Search, Trash2, X
+  AlertTriangle, ArrowRight, Check, CheckSquare, Edit3, Layers3, LockKeyhole, MessageSquare, Plus, RefreshCw, Save, Search, Trash2, X
 } from 'lucide-react';
 import { copilotApi } from '../../api';
 import type { ScreenControl } from '../../types';
 import { CONTROL_ROLE_OPTIONS } from '../binding/BindingWorkbench';
+import { pipelineProfileOf } from '../shared/pipelineRoute';
 import { Dropdown, EmptyArtifact, StatusPill, WireframeLightbox, WireframeReference, normalizeDraftControls, screenInput } from '../shared/ui';
-import type { WorkspaceProps } from '../shared/ui';
+import type { StageId, WorkspaceProps } from '../shared/ui';
 
 type ContractCategoryKey = (typeof listFields)[number];
 type ContractReviewStatus = 'unreviewed' | 'confirmed' | 'changed' | 'question';
@@ -24,8 +25,11 @@ const contractCategories = [
 
 // Contract workbench owns its own draft/review state; App only supplies the
 // project snapshot and the shared run() progress/error boundary.
-export function ContractWorkspace({ project, busy, run }: WorkspaceProps) {
+// onNavigate 只切阶段、不执行模型：严格路线批准契约后先进入风格锁定，
+// 探索/引导路线才直接生成布局提案。
+export function ContractWorkspace({ project, busy, run, onNavigate }: WorkspaceProps & { onNavigate: (stage: StageId) => void }) {
   const artifact = project.artifacts.screenContract;
+  const profile = pipelineProfileOf(project);
   const [activeCategory, setActiveCategory] = useState<ContractCategoryKey>('required_controls');
   const [workbenchOpen, setWorkbenchOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContractEditingItem | null>(null);
@@ -115,7 +119,7 @@ export function ContractWorkspace({ project, busy, run }: WorkspaceProps) {
     {Boolean(artifact.coverage) && <div className="coverage-strip"><CheckSquare size={17} /><b>UE 来源覆盖校验通过</b><span>{((artifact.coverage as Record<string, unknown>).covered_items as string[])?.length || 0} 项已映射，0 项遗漏</span></div>}
     <section className="contract-category-overview"><header><div><span>四类关键信息</span><h3>选择一类开始检查</h3></div><small>进入后可连续滚动全部条目，无需翻页</small></header><div>{contractCategories.map((category) => { const stats = reviewStats(category.key); const total = itemsFor(category.key).length; return <button key={category.key} data-testid={`contract-open-${category.key}`} onClick={() => openWorkbench(category.key)}><span>{category.eyebrow}</span><div><h3>{category.label}</h3><em>{total} 项</em></div><p>{category.description}</p><footer><b>{stats.reviewed} / {total} 已检查</b><i style={{ '--progress': `${total ? stats.reviewed / total * 100 : 0}%` } as React.CSSProperties} /><small>{stats.changed ? `${stats.changed} 项修改` : '暂无修改'}{stats.questions ? ` · ${stats.questions} 项疑问` : ''}</small></footer><strong>检查与调整 <ArrowRight size={16} /></strong></button>; })}</div></section></>}
     </div>
-    {artifact && <div className="workspace-footer"><button className="button button--ghost" data-testid="contract-rerun" disabled={busy} onClick={() => run(() => copilotApi.runStage(project.id, 'wireframe_interpretation'), { label: artifact.status === 'stale' ? '根据新输入重新解读功能' : '重新解读功能', stage: 'wireframe_interpretation' })}><RefreshCw size={16} />{artifact.status === 'stale' ? '输入已变化，重新解读' : '重新解读'}</button>{artifact.status === 'stale' ? <span className="stale-guidance">上游输入已变化，旧契约不能再次批准。</span> : artifact.status !== 'approved' ? <button className="button button--primary" data-testid="contract-approve" disabled={busy} onClick={() => run(() => copilotApi.approveArtifact(project.id, 'screen-contract'), { label: '批准功能契约', stage: 'wireframe_interpretation' })}><Check size={17} />批准功能契约</button> : <button className="button button--primary" data-testid="layout-generate" disabled={busy} onClick={() => run(() => copilotApi.runStage(project.id, 'layout_design'), { label: '生成布局提案', stage: 'layout_design' })}><Layers3 size={17} />生成布局提案</button>}</div>}
+    {artifact && <div className="workspace-footer"><button className="button button--ghost" data-testid="contract-rerun" disabled={busy} onClick={() => run(() => copilotApi.runStage(project.id, 'wireframe_interpretation'), { label: artifact.status === 'stale' ? '根据新输入重新解读功能' : '重新解读功能', stage: 'wireframe_interpretation' })}><RefreshCw size={16} />{artifact.status === 'stale' ? '输入已变化，重新解读' : '重新解读'}</button>{artifact.status === 'stale' ? <span className="stale-guidance">上游输入已变化，旧契约不能再次批准。</span> : artifact.status !== 'approved' ? <button className="button button--primary" data-testid="contract-approve" disabled={busy} onClick={() => run(() => copilotApi.approveArtifact(project.id, 'screen-contract'), { label: '批准功能契约', stage: 'wireframe_interpretation' })}><Check size={17} />批准功能契约</button> : profile === 'strict' ? <button className="button button--primary" data-testid="style-enter" disabled={busy} onClick={() => onNavigate('style_resolution')}><LockKeyhole size={17} />进入风格锁定</button> : <button className="button button--primary" data-testid="layout-generate" disabled={busy} onClick={() => run(() => copilotApi.runStage(project.id, 'layout_design'), { label: '生成布局提案', stage: 'layout_design' })}><Layers3 size={17} />生成布局提案</button>}</div>}
     {artifact && workbenchOpen && <div className="contract-focus-backdrop"><section className={`contract-focus-workbench ${summaryOpen ? 'has-summary' : ''}`}><header className="focus-header"><div><span>01 · CONTRACT REVIEW</span><h2>功能契约专注检查</h2><p>所有修改先保存在本轮草稿中，点击“保存本轮修改”后统一生成一个版本。</p></div><div><span className={dirty ? 'draft-state is-dirty' : 'draft-state'}>{dirty ? '有未保存修改' : '当前内容已保存'}</span><button className="icon-button" onClick={requestCloseWorkbench} aria-label="关闭专注检查"><X size={20} /></button></div></header>
       <nav className="focus-tabs" aria-label="功能契约分类">{contractCategories.map((category) => { const stats = reviewStats(category.key); return <button key={category.key} className={activeCategory === category.key ? 'is-active' : ''} onClick={() => setActiveCategory(category.key)}><span>{category.eyebrow}</span><b>{category.label}</b><em>{stats.reviewed}/{itemsFor(category.key).length}</em></button>; })}</nav>
       {summaryOpen && <section className="focus-summary-editor"><label><span>页面名称</span><input value={draft.screen_name} onChange={(event) => setDraft({ ...draft, screen_name: event.target.value })} /></label><label><span>核心动作</span><input value={draft.primary_action} onChange={(event) => setDraft({ ...draft, primary_action: event.target.value })} /></label><label className="span-2"><span>页面目的</span><textarea data-testid="contract-purpose-input" value={draft.purpose} onChange={(event) => setDraft({ ...draft, purpose: event.target.value })} /></label></section>}
