@@ -279,9 +279,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const structureGuides = strictProduction && guideRelativePath
         ? [{ id: `${project.screen_id}-underlay-layout-guide`, path: require('node:path').join(resolvedProject.workspacePath, guideRelativePath) }]
         : [];
-      const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'underlay-generation', structureGuides, omissionsConfirmed: input.confirmReferenceOmissions === true });
+      const probePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'underlay-generation', structureGuides, omissionsConfirmed: false });
+      // 省略确认绑定当前 Pack 的 hash：参考图或容量变化后 hash 改变，
+      // 旧确认自动失效，必须重新确认，避免容量门禁被一次性确认永久绕过。
+      const omissionsConfirmed = probePack.omitted.length > 0 && input.confirmReferenceOmissions === true && input.referencePackHash === probePack.pack_hash;
+      const referencePack = omissionsConfirmed ? buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'underlay-generation', structureGuides, omissionsConfirmed: true }) : probePack;
       await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
-      if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请确认省略项后重试。`), { code: ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED });
+      if (!omissionsConfirmed && probePack.omitted.length > 0) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${probePack.selected.length} 张，省略 ${probePack.omitted.length} 张。请在视觉探索页核对省略清单后点击“确认省略项并生成”。`), { code: ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED });
       const tasks = strategies.map((strategy) => visualTask(project, approved, style, strategy, input.feedback, { underlayContract: project.artifacts.underlayContract, referencePack }));
       await projectStore.saveArtifact(projectId, 'visual-task', {
         schema_version: '1.0', id: `${project.screen_id}-visual-tasks`, version: 1, status: 'approved',
@@ -803,6 +807,30 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
+  // P0-03：人工复核是独立完成动作，只处理“要求人工复核”的 Critique；
+  // 它解除 manual-review 阻断，但绝不把未豁免的阻断问题洗成通过。
+  async function approveUnderlayManualReview(projectId, input = {}) {
+    const project = await openScreen(projectId, input.screenId);
+    const critique = project.artifacts.underlayCritique;
+    if (!critique) throw new Error('Underlay Critique is required.');
+    if (critique.manual_review?.approved === true) throw Object.assign(new Error('本次审查的人工复核已完成。'), { code: ERROR_CODES.UNDERLAY_MANUAL_REVIEW_NOT_REQUIRED });
+    if (critique.manual_review?.required !== true) throw Object.assign(new Error('本次审查未要求人工复核。'), { code: ERROR_CODES.UNDERLAY_MANUAL_REVIEW_NOT_REQUIRED });
+    const conclusion = String(input.conclusion || '').trim();
+    const reason = String(input.reason || '').trim();
+    if (!conclusion) throw new Error('人工复核结论不能为空。');
+    if (reason.length < 10) throw new Error('人工复核理由必须不少于 10 个字符，说明判断依据。');
+    const next = {
+      ...critique,
+      version: Number(critique.version || 1) + 1,
+      manual_review: { ...critique.manual_review, approved: true, approved_by: 'ui-designer', approved_at: new Date().toISOString(), conclusion, reason }
+    };
+    const gate = reviewGate(next);
+    next.result = gate.passed ? ((critique.manual_waivers || []).length ? 'passed-with-waiver' : 'passed') : 'failed';
+    await projectStore.saveArtifact(projectId, 'underlay-critique', next);
+    await projectStore.updateWorkflow(projectId, 'underlay_review', gate.passed ? 'approved' : 'blocked', `screens/${project.screen_id}/underlay-critique.json`, { blocking_issues: gate.blocking.length });
+    return openProject(projectId);
+  }
+
   async function composeVisual(projectId, input = {}) {
     const project = await openScreen(projectId, input.screenId);
     const resolved = await projectStore.resolveProject(projectId);
@@ -857,7 +885,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  return { addComponentAsset, addFontAsset, addForgeManifest, approveArtifact, cancelStage, composeVisual, confirmFontUsage, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
+  return { addComponentAsset, addFontAsset, addForgeManifest, approveArtifact, approveUnderlayManualReview, cancelStage, composeVisual, confirmFontUsage, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
 }
 
 module.exports = { createDesignPipeline };

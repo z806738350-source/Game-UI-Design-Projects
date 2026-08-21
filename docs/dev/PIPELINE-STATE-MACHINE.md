@@ -88,7 +88,21 @@ composition-manifest、composition-output、fidelity-report 的
   布局链路，可由 `flowStateRepair` 在备份后恢复：重跑
   `validateLayout` → 恢复 approved → 写修复台账
   `workflow/repairs/route-cycle-v1.json`；幂等，strict/locked 与
-  其他失效原因一律拒绝（`ROUTE_CYCLE_REPAIR_INELIGIBLE`）。
+  其他失效原因一律拒绝（`ROUTE_CYCLE_REPAIR_INELIGIBLE`）；
+- **Underlay 人工复核**：Critique `manual_review.required = true` 时
+  `reviewGate` 阻断，直到独立动作 `approveUnderlayManualReview`
+  记录结论、理由与 approved_by/approved_at；人工复核只解除
+  manual-review 阻断，不豁免未豁免的阻断问题，也不适用于未要求
+  人工复核的 Critique（`UNDERLAY_MANUAL_REVIEW_NOT_REQUIRED`）；
+- **视觉省略确认绑定 Pack hash**：视觉阶段 underlay-generation Pack
+  超出容量时落盘待确认 Pack 并抛
+  `REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED`；确认必须携带当前
+  `pack_hash`，参考图或容量变化后旧确认自动失效；风格阶段的
+  style-resolution Pack 确认由风格页独立负责，两者互不代替；
+- **严格底层规范状态机**：布局页下一步按 Underlay Contract 完整状态
+  判断（无→建立、generated/reviewed→批准、stale→按当前布局重建、
+  approved 无 Guide→生成 Guide、approved 有 Guide→生成底层图），
+  不得只看 `layout_guide` 是否存在。
 
 ## 5. Stale 传播机制
 
@@ -129,6 +143,7 @@ exploration/guided 恒为已批准 approved-layout，记录于 style-contract
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.2 | 2026-08-21 | PR-28 三条死路解除：严格底层规范状态机、视觉省略确认绑定 Pack hash、Underlay 人工复核入口 |
 | 2.1 | 2026-08-21 | PR-27 批准新鲜度门禁、编辑保留 stale、事务安全与旧版循环一次性修复 |
 | 2.0 | 2026-08-21 | PR-26 三路线顺序、scope-aware stale 传播、导航/执行分离 |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |

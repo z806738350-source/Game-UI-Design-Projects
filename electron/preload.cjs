@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('designCopilot', {
   runUnderlayCritique: (projectId, input) => ipcRenderer.invoke('copilot:underlay:critique', projectId, input),
   repairUnderlay: (projectId, input) => ipcRenderer.invoke('copilot:underlay:repair', projectId, input),
   approveUnderlayWaiver: (projectId, input) => ipcRenderer.invoke('copilot:underlay:waiver', projectId, input),
+  approveUnderlayManualReview: (projectId, input) => ipcRenderer.invoke('copilot:underlay:manual-review', projectId, input),
   composeVisual: (projectId, input) => ipcRenderer.invoke('copilot:composition:create', projectId, input),
   runFidelity: (projectId, screenId) => ipcRenderer.invoke('copilot:fidelity:run', projectId, { screenId }),
   exportVisual: (projectId, variationId) => ipcRenderer.invoke('copilot:visual:export', projectId, variationId),
