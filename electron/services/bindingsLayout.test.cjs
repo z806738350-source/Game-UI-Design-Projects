@@ -23,6 +23,15 @@ test('strict layout validates normalized slots and underlay policy', () => {
   assert.match(validateLayout(invalid, bindings, components, { width: 400, height: 800 }, { strict: true })[0], /keep-clear/);
 });
 
+test('layout-first routes approve layouts without any component bindings', () => {
+  // 探索/引导路线不存在 bindings 资产：槽位没有绑定不得阻断布局批准，
+  // 但几何越界等确定性校验仍然生效。
+  const layout = { slots: [{ id: 'hero', rect: { x: 0.1, y: 0.1, width: 0.8, height: 0.4 } }] };
+  assert.deepEqual(validateLayout(layout, undefined, undefined, { width: 400, height: 800 }, { strict: false }), []);
+  const outOfBounds = { slots: [{ id: 'hero', rect: { x: 0.9, y: 0.1, width: 0.8, height: 0.4 } }] };
+  assert.match(validateLayout(outOfBounds, undefined, undefined, { width: 400, height: 800 }, { strict: false })[0], /canvas bounds/);
+});
+
 test('component contract invalidates bindings through fidelity', () => {
   const downstream = downstreamArtifacts('component-contract', { profile: 'strict' });
   assert.ok(downstream.includes('component-bindings'));

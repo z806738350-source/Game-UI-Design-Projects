@@ -17,6 +17,9 @@ function validateLayout(layout, bindingsArtifact, componentContract, canvasSpec,
     slotIds.add(slot.id);
     errors.push(...rectErrors(slot.rect, `slots[${index}].rect`));
     if (strict && (!slot.underlay_policy || slot.underlay_policy.keep_clear !== true)) errors.push(`${slot.id} requires a keep-clear underlay policy`);
+    // 组件绑定只存在于严格继承路线：探索/引导路线没有 bindings 资产，
+    // 布局批准与修复不得被绑定校验误拦截（route-cycle 阻断根因）。
+    if (!strict) continue;
     const binding = bindings.find((item) => item.slot_id === slot.id);
     if (!binding) errors.push(`${slot.id} has no component binding`);
     const family = families.get(binding?.component_id);
@@ -33,7 +36,7 @@ function validateLayout(layout, bindingsArtifact, componentContract, canvasSpec,
       if (width < left + right || height < top + bottom) errors.push(`${slot.id} is smaller than ${family.id} 9-slice fixed margins`);
     }
   }
-  for (const binding of bindings) if (!slotIds.has(binding.slot_id)) errors.push(`binding ${binding.control_id} is missing slot ${binding.slot_id}`);
+  if (strict) for (const binding of bindings) if (!slotIds.has(binding.slot_id)) errors.push(`binding ${binding.control_id} is missing slot ${binding.slot_id}`);
   return errors;
 }
 
