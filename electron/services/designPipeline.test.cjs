@@ -178,10 +178,12 @@ test('input invalidation marks every dependent artifact stale', async () => {
     await projectStore.saveProject(project.id, { requirement: 'Changed.' });
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
     project = await pipeline.invalidateFromInputChange(project.id, { requirement: true });
+    // 新项目走 exploration 路线：依赖方向为 Contract → Layout → Style，
+    // 因此需求变化会级联使风格规范 stale（与旧图方向相反，不再是漏网产物）。
     assert.equal(project.artifacts.screenContract.status, 'stale');
     assert.equal(project.artifacts.layouts.status, 'stale');
     assert.equal(project.artifacts.approvedLayout.status, 'stale');
-    assert.equal(project.artifacts.styleContract.status, 'approved');
+    assert.equal(project.artifacts.styleContract.status, 'stale');
     assert.equal(project.artifacts.visualResults.status, 'stale');
     assert.equal(project.workflow.current_stage, 'input');
     assert.equal(project.workflow.stages.input.status, 'reviewed');

@@ -116,8 +116,8 @@ test('client-supplied approved flags are not part of the validation gate', () =>
 });
 
 test('font manifest changes invalidate bindings downstream', () => {
-  assert.ok(downstreamArtifacts('font-manifest').includes('component-bindings'));
-  assert.ok(downstreamArtifacts('screen-contract').includes('component-bindings'));
+  assert.ok(downstreamArtifacts('font-manifest', { profile: 'strict' }).includes('component-bindings'));
+  assert.ok(downstreamArtifacts('screen-contract', { profile: 'strict' }).includes('component-bindings'));
 });
 
 test('binding validation codes are frozen in the shared registry', () => {
@@ -195,7 +195,7 @@ test('the strict compositor throws instead of silently falling back to button-la
 });
 
 test('binding edits invalidate composition and fidelity downstream', () => {
-  const downstream = downstreamArtifacts('component-bindings');
+  const downstream = downstreamArtifacts('component-bindings', { profile: 'strict' });
   assert.ok(downstream.includes('composition-manifest'));
   assert.ok(downstream.includes('fidelity-report'));
 });

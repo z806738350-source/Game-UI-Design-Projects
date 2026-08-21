@@ -6,9 +6,11 @@
 
 ## 1. 概述
 
-Style Contract 由批准的布局（strict 模式下可用已批准 Screen Contract 替代）与
-已批准参考图集驱动生成；批准（锁定）前必须通过 `validateStyleContract`
-的可执行值校验。它是字体、组件、视觉生成与合成的共同风格基准。
+Style Contract 由路线风格基线（style_basis）与已批准参考图集驱动生成：
+strict 路线基线为已批准 Screen Contract，exploration/guided 路线基线为
+已批准布局；基线记录在 `source.style_basis`。批准（锁定）前必须通过
+`validateStyleContract` 的可执行值校验。它是字体、组件、视觉生成与
+合成的共同风格基准。
 
 ## 2. Artifact 标识与存储
 
@@ -77,11 +79,15 @@ Style Contract 由批准的布局（strict 模式下可用已批准 Screen Contr
 | `STYLE_CONTRACT_INVALID` | 批准时未通过可执行值校验 |
 | `REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED` | 生成时参考图超容量需确认省略项 |
 
-## 9. strict 与 guided 模式
+## 9. strict 与 guided 模式（路线与风格基线）
 
-- strict/locked：生成前置为"已批准 Screen Contract"（布局可后补）；
-  旧项目（`project_type='existing'`）至少需要一张已批准参考页。
-- guided：前置为已批准布局。
+- strict/locked：基线恒为已批准 Screen Contract（布局可后补，Style
+  变化不会反向使布局 stale）；旧项目（`project_type='existing'`）
+  至少需要一张已批准参考页。
+- exploration/guided：基线恒为已批准布局；风格分析只能由风格页面
+  的显式按钮触发，进入阶段不会自动分析。
+- `source.style_basis` 形如 `{ kind, id, screen_id }`，kind 为
+  `screen-contract` 或 `approved-layout`。
 - 模式切换使 style-contract stale（`input-continuation-mode` 是其上游）。
 
 ## 10. 前端交互要求
@@ -98,7 +104,7 @@ StyleWorkspace（`src/features/style/`）：生成（`style-generate`）、批�
   "id": "project-style-contract",
   "version": 1,
   "status": "approved",
-  "source": { "approved_layout": "main-approved-layout-v1" },
+  "source": { "style_basis": { "kind": "approved-layout", "id": "main-approved-layout-v1", "screen_id": "main" } },
   "style_id": "locked-style",
   "visual_identity": { "theme": "dark-gold", "fidelity": "strict-continuation", "source": "approved-reference-pages" },
   "colors": { "primary": "#d6b05f", "surface": "#173b46", "text": "#fff7d6" },
@@ -151,8 +157,10 @@ StyleWorkspace（`src/features/style/`）：生成（`style-generate`）、批�
 
 ## 14. 与其他契约的关系
 
-上游：reference-pack、approved-layout/screen-contract；下游：FONT-MANIFEST、
-COMPONENT-CONTRACT、UNDERLAY-CONTRACT、visual-task、合成提示词。
+上游：reference-pack、style_basis（strict 为 screen-contract，
+exploration/guided 为 approved-layout）；下游：strict 为 FONT-MANIFEST、
+COMPONENT-CONTRACT、layout-proposals、UNDERLAY-CONTRACT、visual-task 与
+合成提示词；exploration/guided 仅 visual-task（不回指布局）。
 
 ## 15. 源码指针
 

@@ -68,7 +68,7 @@ function attachmentInstructions(referencePack) {
   return lines.length ? `Attachments are provided in this exact order. Interpret each only for its declared role:\n${lines.join('\n')}` : 'No visual reference attachments are provided.';
 }
 
-function stylePrompt(project, approvedLayout, referencePack) {
+function stylePrompt(project, styleBasis, referencePack) {
   const branch = project.project_type === 'existing'
     ? `Reconstruct the existing project's stable visual language from the attached approved reference pages. Do not invent a different art direction.`
     : `Resolve a production-ready visual direction for a new project from the broad art direction and attached inspiration references.`;
@@ -77,7 +77,7 @@ function stylePrompt(project, approvedLayout, referencePack) {
     `Project art direction: ${project.art_direction || 'derive from requirements and references'}\n` +
     `${canvasInstruction(project)}\n` +
     `${attachmentInstructions(referencePack)}\n` +
-    `Approved layout:\n${JSON.stringify(approvedLayout)}\n\n` +
+    `Locked upstream basis (approved screen contract on strict routes, approved layout on exploration/guided routes):\n${JSON.stringify(styleBasis)}\n\n` +
     `Return: "style_id", "visual_identity":{"theme" string,"mood" string[],"keywords" string[]}, ` +
     `"colors" object mapping the required semantic roles primary, surface, text (plus optional roles) to concrete hex colors like #d6b05f, ` +
     `"typography" object containing at least the roles display and body, where every role defines size integer 6..256 px, weight integer 100..900, letter_spacing number -8..64 px, line_height number 0.7..3 ratio, fill hex color, and optional stroke {width 0..32 px, color hex} and shadow {blur 0..64 px, offset_x/offset_y -64..64 px, color hex}, ` +
