@@ -9,7 +9,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { FixtureProvider, GOLDEN_ASSETS } from './fixtureProvider';
 import {
-  approveContract, clickRun, createStrictProject, deriveAsset, findProjectDir, getProject,
+  approveContract, chooseDropdown, clickRun, createStrictProject, deriveAsset, findProjectDir, getProject,
   importWireframeAndIntent, launchApp, queueOpenFiles, switchScreen
 } from './helpers';
 import type { LaunchedApp } from './helpers';
@@ -48,7 +48,10 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
     const dock = page.getByTestId('screen-manager');
     await dock.locator('input[placeholder="新页面名称"]').fill('battle');
     await dock.getByTestId('screen-manager-create').click();
-    await expect(dock.locator('select').first().locator('option')).toHaveCount(2);
+    const activeDropdown = dock.getByTestId('screen-active-select');
+    await activeDropdown.locator('.dropdown-button').click();
+    await expect(activeDropdown.locator('.dropdown-option')).toHaveCount(2);
+    await page.keyboard.press('Escape');
     await switchScreen(page, 'battle');
     await expect(dock.locator('b', { hasText: 'battle' })).toBeVisible();
 
@@ -121,7 +124,10 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
   test('Screen B is duplicated through the UI with its data', async () => {
     const dock = page.getByTestId('screen-manager');
     await dock.locator('button[title="复制当前页面及全部产物"]').click();
-    await expect(dock.locator('select').first().locator('option')).toHaveCount(3);
+    const duplicatedDropdown = dock.getByTestId('screen-active-select');
+    await duplicatedDropdown.locator('.dropdown-button').click();
+    await expect(duplicatedDropdown.locator('.dropdown-option')).toHaveCount(3);
+    await page.keyboard.press('Escape');
 
     // Switch to the copy and verify identity plus copied data.
     await switchScreen(page, 'battle-copy');
@@ -140,11 +146,13 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
     const dock = page.getByTestId('screen-manager');
     // Archiving requires a different active screen; switch back to the original.
     await switchScreen(page, 'battle');
-    await dock.locator('select[aria-label="要归档的非当前页面"]').selectOption('battle-copy');
+    await chooseDropdown(page.getByTestId('screen-archive-select'), 'battle-copy');
     await dock.locator('button[title="归档选中的非当前页面"]').click();
 
     // Archived screens disappear from the switcher but stay in the registry.
-    await expect(dock.locator('select').first().locator('option')).toHaveCount(2);
+    const activeDropdown = dock.getByTestId('screen-active-select');
+    await activeDropdown.locator('.dropdown-button').click();
+    await expect(activeDropdown.locator('.dropdown-option')).toHaveCount(2);
     const project = await getProject(page);
     const copy = (project.screens || []).find((screen) => screen.id === 'battle-copy');
     expect(copy?.status).toBe('archived');

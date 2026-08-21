@@ -57,6 +57,7 @@ function previewApi(): DesignCopilotApi {
     importComponentAsset: async (id) => find(id),
     importForgeManifest: async (id) => find(id),
     revealProject: async () => ({ ok: true }),
+    openUserGuide: async () => ({ ok: true }),
     runStage: async (id, stage) => {
       const project = find(id);
       project.workflow.current_stage = stage;
@@ -186,6 +187,8 @@ function webApi(): DesignCopilotApi {
     importComponentAsset: async (id, input) => { const file = await chooseAsset('image/png,image/jpeg,image/webp,image/svg+xml'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/component?meta=${encodeURIComponent(JSON.stringify(input))}`, { method: 'POST', body: file, headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } }); },
     importForgeManifest: async (id) => { const file = await chooseAsset('application/json,.json'); if (!file) return request(projectPath(id)); return request(`${projectPath(id)}/assets/forge-manifest`, { method: 'POST', body: file, headers: { 'Content-Type': 'application/json', 'X-File-Name': encodeURIComponent(file.name) } }); },
     revealProject: async () => ({ ok: false }),
+    // Web 版不随页面分发说明书 HTML，顶栏帮助入口在 Web 平台不渲染
+    openUserGuide: async () => ({ ok: false }),
     runStage: (id, stage, input) => request(`${projectPath(id)}/pipeline/run`, { method: 'POST', body: JSON.stringify({ stage, input }) }),
     draftRequirement: (id, screenId) => request(`${projectPath(id)}/requirement/draft`, { method: 'POST', body: JSON.stringify({ screenId }) }),
     cancelStage: (id, stage, screenId) => request(`${projectPath(id)}/pipeline/cancel`, { method: 'POST', body: JSON.stringify({ stage, screenId }) }),
@@ -250,6 +253,7 @@ export const copilotApi = {
   importComponentAsset: (id: string, input: Record<string, unknown>) => api().importComponentAsset(id, input),
   importForgeManifest: (id: string) => api().importForgeManifest(id),
   revealProject: (id: string) => api().revealProject(id),
+  openUserGuide: () => api().openUserGuide(),
   runStage: async (id: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject> => rememberScreen(await api().runStage(id, stage, withScreen(id, input))),
   draftRequirement: async (id: string, screenId?: string): Promise<DesignProject> => rememberScreen(await api().draftRequirement(id, screenIdFor(id, screenId))),
   cancelStage: async (id: string, stage: PipelineStage, screenId?: string): Promise<DesignProject> => rememberScreen(await api().cancelStage(id, stage, screenIdFor(id, screenId))),

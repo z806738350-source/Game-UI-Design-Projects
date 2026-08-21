@@ -19,7 +19,8 @@ const PNPM_BUILTINS = new Set([
 // (audit verdicts); they are exempt from command validation.
 const EXEMPT_DOCS = [
   'docs/Game UI Design Copilot 剩余整改任务与执行指导.md',
-  'docs/Game-UI-Design-Copilot-v0.2.1-剩余未闭环要求与最终整改执行指导.md'
+  'docs/Game-UI-Design-Copilot-v0.2.1-剩余未闭环要求与最终整改执行指导.md',
+  'docs/Game UI Design Copilot PR #25 前端整合与新用户说明书审核结论.md'
 ];
 
 function listMarkdownFiles(dir) {
@@ -40,7 +41,9 @@ function checkDocCommands(root) {
   const scripts = new Set(Object.keys(pkg.scripts || {}));
 
   const docsDir = path.join(root, 'docs');
-  const candidates = [path.join(root, 'README.md'), ...(fs.existsSync(docsDir) ? listMarkdownFiles(docsDir) : [])];
+  // 新用户说明书是单文件 HTML，内联代码块中的 pnpm 命令同样需要校验
+  const guideHtml = path.join(docsDir, 'user', 'quick-start-guide.html');
+  const candidates = [path.join(root, 'README.md'), ...(fs.existsSync(docsDir) ? listMarkdownFiles(docsDir) : []), ...(fs.existsSync(guideHtml) ? [guideHtml] : [])];
   const problems = [];
 
   for (const file of candidates) {

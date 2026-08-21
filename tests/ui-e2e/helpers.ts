@@ -141,11 +141,17 @@ export function getProject(page: Page, name?: string): Promise<ProjectSnapshot> 
   }, name);
 }
 
+// 自绘下拉框交互：点击展开后点击目标选项（data-value）。
+export async function chooseDropdown(root: Locator, value: string): Promise<void> {
+  await root.locator('.dropdown-button').click();
+  await root.locator(`.dropdown-option[data-value="${value}"]`).click();
+}
+
 // Switch the active screen through the Screen Manager UI and wait until the
 // backend confirms the switch; the select change is asynchronous, so reading
 // the project immediately afterwards would race the setActiveScreen IPC.
 export async function switchScreen(page: Page, screenId: string): Promise<void> {
-  await page.getByTestId('screen-manager').locator('select').first().selectOption(screenId);
+  await chooseDropdown(page.getByTestId('screen-active-select'), screenId);
   await expect.poll(async () => (await getProject(page)).screen_id, { timeout: 15_000 }).toBe(screenId);
 }
 
@@ -178,7 +184,7 @@ export async function createStrictProject(page: Page, name: string): Promise<voi
   await page.getByTestId('create-project-dialog').waitFor({ state: 'visible', timeout: 60_000 });
   await page.locator('.create-dialog input[placeholder*="云境计划"]').fill(name);
   await page.locator('.project-type-grid button', { hasText: '已有项目' }).click();
-  await expect(page.locator('.create-dialog select')).toHaveValue('existing-strict');
+  await expect(page.getByTestId('create-continuation-select').locator('.dropdown-button > span')).toHaveText('严格继承（推荐）');
   await clickRun(page, 'create-project');
   await expect(page.getByTestId('stage-input')).toBeVisible();
 }
@@ -262,14 +268,14 @@ export async function importComponentState(launched: LaunchedApp, family: string
   const { app, page } = launched;
   const workbench = page.getByTestId('component-kit-workbench');
   await workbench.locator('label', { hasText: '组件 ID' }).locator('input').fill(family);
-  await workbench.locator('label', { hasText: '类别' }).locator('select').selectOption(COMPONENT_CATEGORY[family]);
-  await workbench.locator('label', { hasText: /^状态/ }).locator('select').selectOption(state);
-  await workbench.locator('label', { hasText: '复用策略' }).locator('select').selectOption(options.reuse || 'exact');
+  await chooseDropdown(workbench.locator('label', { hasText: '类别' }), COMPONENT_CATEGORY[family]);
+  await chooseDropdown(workbench.locator('label', { hasText: /^状态/ }), state);
+  await chooseDropdown(workbench.locator('label', { hasText: '复用策略' }), options.reuse || 'exact');
   if (options.reuse === 'nine-slice') {
     // UIE2E-03B: nine-slice margins are configured through the workbench UI.
     await workbench.locator('label', { hasText: '9-Slice 边距' }).locator('input').fill(options.margins || '12,12,12,12');
   }
-  await workbench.locator('label', { hasText: '文字策略' }).locator('select').selectOption(COMPONENT_TEXT_POLICY[family] || 'text-slot');
+  await chooseDropdown(workbench.locator('label', { hasText: '文字策略' }), COMPONENT_TEXT_POLICY[family] || 'text-slot');
   await workbench.locator('label', { hasText: '最大缩放' }).locator('input').fill('1');
   await queueOpenFiles(app, [options.filePath || GOLDEN_ASSETS.componentAsset(family, state)]);
   await clickRun(page, 'component-import');
@@ -313,10 +319,10 @@ const BINDING_FONT_ROLE_BY_CONTROL: Record<string, string> = {
 
 export async function selectAndApproveBindings(page: Page): Promise<void> {
   for (const [controlId, family] of Object.entries(BINDING_FAMILY_BY_CONTROL)) {
-    await page.getByTestId(`binding-component-select-${controlId}`).locator('select').first().selectOption(family);
-    await page.getByTestId(`binding-state-select-${controlId}`).selectOption('default');
+    await chooseDropdown(page.getByTestId(`binding-component-select-${controlId}`), family);
+    await chooseDropdown(page.getByTestId(`binding-state-select-${controlId}`), 'default');
     const fontRole = BINDING_FONT_ROLE_BY_CONTROL[controlId];
-    if (fontRole) await page.getByTestId(`binding-font-role-select-${controlId}`).selectOption(fontRole);
+    if (fontRole) await chooseDropdown(page.getByTestId(`binding-font-role-select-${controlId}`), fontRole);
   }
   await clickRun(page, 'binding-save');
   await clickRun(page, 'binding-approve');
@@ -342,7 +348,7 @@ export async function switchContinuationModeViaUi(page: Page, mode: 'existing-st
   await page.getByTestId('stage-input').click();
   const select = page.getByTestId('continuation-mode-select');
   await expect(select).toBeVisible();
-  await select.selectOption(mode);
+  await chooseDropdown(select, mode);
   await page.waitForTimeout(250);
   await page.locator('.busy-bar').waitFor({ state: 'detached', timeout: 120_000 });
   await expect(page.locator('.error-banner')).toHaveCount(0);

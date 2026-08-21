@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Game UI Design Copilot · 使用说明书</title>
+<style>
+  /* 状态色与前端设计规范（docs/dev/FRONTEND-DESIGN-GUIDE.md）保持一致 */
+  :root {
+    --bg: #0b0c10;
+    --panel: #14151a;
+    --panel-2: #191b21;
+    --panel-3: #22242c;
+    --ink: #e9e7e2;
+    --ink-soft: #a7abb5;
+    --faint: #6d7280;
+    --accent: #e3a63d;
+    --accent-hi: #f0b84e;
+    --accent-soft: rgba(227, 166, 61, .12);
+    --line: #262932;
+    --line-strong: #343845;
+    --ok: #5cab82;
+    --warn: #de7433;
+    --bad: #d95f66;
+    --shadow: 0 18px 44px rgba(0, 0, 0, .5);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.75; padding-bottom: 72px;
+  }
+  header { background: linear-gradient(180deg, #14151a, #0b0c10); border-bottom: 1px solid var(--line); padding: 40px 24px 26px; }
+  header .wrap, .wrap { max-width: 1000px; margin: 0 auto; }
+  header .kicker { color: var(--accent); font-size: 12px; letter-spacing: 3px; font-weight: 700; }
+  header h1 { font-size: 26px; font-weight: 650; letter-spacing: .5px; margin-top: 6px; }
+  header h1 .badge { display: inline-block; background: var(--panel-3); border: 1px solid var(--line-strong); color: var(--ink-soft); font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; margin-left: 10px; vertical-align: 3px; }
+  header p { color: var(--ink-soft); font-size: 14px; margin-top: 8px; }
+
+  nav.tabs { position: sticky; top: 0; z-index: 10; background: rgba(11, 12, 16, .92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line-strong); }
+  nav.tabs .wrap { display: flex; gap: 2px; overflow-x: auto; }
+  nav.tabs button {
+    appearance: none; border: none; background: none; cursor: pointer;
+    font-size: 14.5px; color: var(--ink-soft); padding: 14px 18px;
+    border-bottom: 2px solid transparent; white-space: nowrap; font-family: inherit;
+  }
+  nav.tabs button:hover { color: var(--accent-hi); }
+  nav.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px 4px 0 0; }
+  nav.tabs button[aria-selected="true"] { color: var(--accent-hi); border-bottom-color: var(--accent); font-weight: 650; }
+  nav.tabs button .no { color: var(--faint); font-family: "SF Mono", Menlo, monospace; font-size: 12px; margin-right: 6px; }
+  nav.tabs button[aria-selected="true"] .no { color: var(--accent); }
+
+  main { padding: 30px 24px 0; }
+  section.panel { display: none; }
+  section.panel.active { display: block; }
+  h2 { font-size: 21px; margin: 6px 0 14px; }
+  h3 { font-size: 16.5px; margin: 26px 0 10px; color: var(--accent-hi); }
+  h4 { font-size: 14.5px; margin: 16px 0 8px; }
+  p, li { font-size: 14.5px; }
+  .lead { color: var(--ink-soft); margin-bottom: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
+  .card.tight > p + p { margin-top: 8px; }
+  code, .mono {
+    font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px;
+    background: var(--accent-soft); color: var(--accent-hi); padding: 1px 7px; border-radius: 5px;
+  }
+  pre { background: var(--panel-3); border: 1px solid var(--line-strong); color: #dfe2e9; border-radius: 10px; padding: 14px 16px; font-size: 13px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .steps { counter-reset: step; list-style: none; }
+  .steps > li { position: relative; padding: 12px 0 12px 46px; border-bottom: 1px dashed var(--line); }
+  .steps > li:last-child { border-bottom: none; }
+  .steps > li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: 14px; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #14151a; font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .steps b { color: var(--accent-hi); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--panel-2); color: var(--ink-soft); font-weight: 600; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 9px; border-radius: 5px; font-family: "SF Mono", Menlo, monospace; }
+  .tag.ok { background: rgba(92, 171, 130, .15); color: var(--ok); }
+  .tag.warn { background: rgba(222, 116, 51, .15); color: var(--warn); }
+  .tag.bad { background: rgba(217, 95, 102, .15); color: var(--bad); }
+  .tag.neutral { background: var(--panel-3); color: var(--ink-soft); }
+  .tip { background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 12px 16px; font-size: 14px; margin: 12px 0; }
+  .warn-box { background: rgba(222, 116, 51, .09); border-left: 3px solid var(--warn); border-radius: 0 10px 10px 0; padding: 12px 16px; font-size: 14px; margin: 12px 0; }
+  .danger-box { background: rgba(217, 95, 102, .09); border-left: 3px solid var(--bad); border-radius: 0 10px 10px 0; padding: 12px 16px; font-size: 14px; margin: 12px 0; }
+  .flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 12px 0; }
+  .flow .node { background: var(--panel-3); border: 1px solid var(--line-strong); color: var(--ink); font-size: 13px; padding: 5px 12px; border-radius: 7px; }
+  .flow .node.hl { background: var(--accent); color: #14151a; border-color: var(--accent); font-weight: 650; }
+  .flow .arrow { color: var(--accent); font-weight: 700; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  footer.page-footer { text-align: center; color: var(--faint); font-size: 12px; margin-top: 48px; }
+  .faq-item { border-bottom: 1px solid var(--line); padding: 13px 0; }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-item .q { font-weight: 650; font-size: 14.5px; }
+  .faq-item .q .tag { margin-right: 6px; vertical-align: 1px; }
+  .faq-item .a { color: var(--ink-soft); font-size: 14px; margin-top: 5px; }
+  .route-card { border: 1px solid var(--line-strong); border-radius: 12px; background: var(--panel); padding: 18px 20px; margin-bottom: 14px; }
+  .route-card h4 { margin-top: 0; color: var(--accent-hi); font-size: 15.5px; }
+  .route-card .for { color: var(--ink-soft); font-size: 13.5px; margin-bottom: 8px; }
+  .kbd { display: inline-block; background: var(--panel-3); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 6px; padding: 0 8px; font-size: 13px; color: var(--ink); font-weight: 600; }
+  .stage-head { display: flex; align-items: baseline; gap: 10px; margin: 30px 0 10px; padding-top: 18px; border-top: 1px solid var(--line-strong); }
+  .stage-head:first-of-type { border-top: none; margin-top: 6px; padding-top: 0; }
+  .stage-head .num { font-family: "SF Mono", Menlo, monospace; color: var(--accent); font-weight: 700; font-size: 13px; letter-spacing: 2px; }
+  .stage-head h3 { margin: 0; }
+  ul.plain { padding-left: 22px; }
+  ul.plain li { margin: 5px 0; }
+  .toc { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin: 12px 0; }
+  .toc a { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; color: var(--ink); text-decoration: none; font-size: 14px; transition: border-color .15s ease; }
+  .toc a:hover, .toc a:focus-visible { border-color: var(--accent); }
+  .toc a small { display: block; color: var(--faint); font-size: 12.5px; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">GAME UI DESIGN COPILOT · USER MANUAL</div>
+    <h1>使用说明书 <span class="badge">当前开发版（PR #25 及以后）</span></h1>
+    <p>面向游戏 UI 设计师的 AI 设计流水线：从一张 UE 线框稿，走到一张可交付、全程可追溯的 UI 成图。</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap" role="tablist" aria-label="说明书章节">
+    <button role="tab" id="tab-start" aria-controls="panel-start" aria-selected="true" data-tab="start"><span class="no">1</span>快速上手</button>
+    <button role="tab" id="tab-routes" aria-controls="panel-routes" aria-selected="false" data-tab="routes" tabindex="-1"><span class="no">2</span>路线选择</button>
+    <button role="tab" id="tab-stages" aria-controls="panel-stages" aria-selected="false" data-tab="stages" tabindex="-1"><span class="no">3</span>阶段详解</button>
+    <button role="tab" id="tab-assets" aria-controls="panel-assets" aria-selected="false" data-tab="assets" tabindex="-1"><span class="no">4</span>资产与绑定</button>
+    <button role="tab" id="tab-concept" aria-controls="panel-concept" aria-selected="false" data-tab="concept" tabindex="-1"><span class="no">5</span>概念与边界</button>
+    <button role="tab" id="tab-faq" aria-controls="panel-faq" aria-selected="false" data-tab="faq" tabindex="-1"><span class="no">6</span>常见问题</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ============ 1 快速上手 ============ -->
+  <section class="panel active" id="panel-start" role="tabpanel" aria-labelledby="tab-start">
+    <h2>这是什么工具？</h2>
+    <p class="lead">你把<b>一张 UE 线框稿 + 一段设计意图</b>交给它，AI 会沿着一条流水线逐步产出：功能契约 → 布局 → 风格规范 → 组件绑定 → 底层图 → 最终成图。每一步的产出（产物，Artifact）都<b>由你人工检查并批准</b>，AI 不会替你拍板；每次生成与批准都留有版本和证据，可以随时回看。</p>
+
+    <div class="grid2">
+      <div class="card tight">
+        <h4>它擅长</h4>
+        <ul class="plain">
+          <li>读懂 UE 线框稿，整理出页面功能契约</li>
+          <li>给出可比较的布局提案与可复现的风格规范</li>
+          <li>延续已有游戏的 UI 风格（严格继承模式）</li>
+          <li>用你提供的真实组件切图与字体合成最终 PNG</li>
+        </ul>
+      </div>
+      <div class="card tight">
+        <h4>它不做</h4>
+        <ul class="plain">
+          <li>不替你批准任何产物——批准权永远在人</li>
+          <li>不允许手改生成的 JSON/PNG——产物是只读证据</li>
+          <li>不跳过流程——按钮置灰就是前置没完成，这是设计</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>适用版本与平台</h3>
+    <div class="card tight">
+      <p>本文档描述<b>当前开发分支</b>的界面与文案（自 PR #25 的深色界面与自绘下拉框起）。如果你使用的是更早的发布版本，个别按钮名称可能不同，<b>以应用内实际界面为准</b>；正式发布时本文档会标注对应版本号。</p>
+      <ul class="plain">
+        <li><b>macOS 桌面端</b>：主要形态，本文档所有截图级描述以它为准。</li>
+        <li><b>Windows / Linux</b>：功能一致，通过终端命令启动（见下）。</li>
+                <li><b>Web 在线版</b>：由组织服务端部署，浏览器访问；核心流程一致，但没有「在系统文件管理器中显示项目」等桌面专属入口，且需飞书登录。</li>
+      </ul>
+    </div>
+
+    <h3>首次安装与启动</h3>
+    <div class="card tight">
+      <p><b>macOS 首次运行</b>（共四步，只有第一次需要前两步）：</p>
+      <ol class="steps">
+        <li>安装 <b>Node.js 22 LTS</b>（终端运行 <code>node -v</code> 能看到版本号）。</li>
+        <li>安装 <b>pnpm</b>（版本 11，终端运行 <code>pnpm -v</code> 能看到版本号）。</li>
+        <li>在项目根目录运行 <code>pnpm install</code> 安装依赖。</li>
+        <li>之后每次启动：双击项目根目录的 <code data-local-path>Start Game UI Design Copilot.command</code>，或运行 <code>pnpm quick-start</code>。</li>
+      </ol>
+      <p><b>Windows / Linux</b>：在项目根目录运行 <code>pnpm install</code>，然后 <code>pnpm quick-start</code>。</p>
+      <div class="warn-box">注意：<code>.command</code> 启动脚本<b>不会自动安装依赖</b>。依赖缺失时它会直接提示「项目依赖不完整，请先在项目目录运行 pnpm install」，照做即可。</div>
+      <p><b>启动前自检</b>：运行 <code>pnpm quick-start:check</code>，一次性检查依赖是否完整、5174 端口是否被其他应用占用。</p>
+      <p><b>开发模式</b>（改代码时使用）：<code>pnpm install</code> 后运行 <code>pnpm dev</code>。</p>
+    </div>
+
+    <h3>配置 AI 连接（只需做一次）</h3>
+    <div class="card tight">
+      <p>工具通过 Kunpo 调用模型，两种接入方式二选一：</p>
+      <p><b>方式 A · 本地 Gateway（推荐）</b>：先确认本地 Gateway 服务已在运行——<code>127.0.0.1:9020</code> 是它在你电脑上的默认地址，<b>本工具不会替你启动它</b>；然后在项目根目录 <code>.env</code> 里写：</p>
+      <pre><code>KUNPO_GATEWAY_BASE_URL=http://127.0.0.1:9020/v1</code></pre>
+      <p><b>方式 B · 桌面端直连</b>：没有本地 Gateway 时，直接指向 Kunpo 服务地址与 Key：</p>
+      <pre><code>KUNPO_API_BASE_URL=https://your-kunpo-host/v1
+KUNPO_API_KEY=your-local-key</code></pre>
+      <p>配置好后看窗口顶栏右侧：出现 <span class="tag ok">Gateway 已就绪</span>（或 Kunpo API 已就绪）说明连接成功；显示 <span class="tag bad">Kunpo 未配置</span> 则检查 <code>.env</code> 拼写后重启工具。连接失败、超时、模型不存在等问题的排查步骤见 <code data-local-path>docs/dev/PROVIDER-TROUBLESHOOTING.md</code>。</p>
+      <p>模型名称可在顶栏 <span class="kbd">⚙ 设置</span>（模型与工作区配置）里修改：视觉理解模型、图像模型两项自由填写，保存后新任务立即生效。</p>
+      <div class="warn-box">真实 API Key 只保存在本地 <code>.env</code> 或受控服务端（Gateway），<b>永远不要提交到代码仓库</b>。</div>
+    </div>
+
+    <h3>认识界面</h3>
+    <div class="card">
+      <table>
+        <tr><th>区域</th><th>位置</th><th>作用</th></tr>
+        <tr><td><b>顶栏</b></td><td>最上方</td><td>新建项目、切换项目、管理项目；右侧是连接状态、在系统文件管理器中显示项目（macOS 为 Finder）、产物检查器、使用说明书、设置</td></tr>
+        <tr><td><b>页面栏</b></td><td>顶栏下方横条</td><td>多页面管理：切换当前页面、重命名、新建、复制（含全部产物）、归档</td></tr>
+        <tr><td><b>设计流导航</b></td><td>左侧竖排 5 个节点</td><td>流水线的 5 个阶段（00 输入 → 04 视觉探索），点哪个进哪个阶段；每个节点的颜色状态表示该阶段进度</td></tr>
+        <tr><td><b>主工作区</b></td><td>中间</td><td>当前阶段的工作台，所有操作都在这里完成</td></tr>
+        <tr><td><b>产物检查器</b></td><td>右侧抽屉（点顶栏图标展开）</td><td>查看当前阶段 AI 的输入、产物 JSON 与历史版本</td></tr>
+        <tr><td><b>进度条 / 错误条</b></td><td>主区顶部</td><td>AI 运行时显示进度；出错时显示原因与「重试」按钮</td></tr>
+      </table>
+      <p style="margin-top:10px">界面中所有下拉框都支持完整键盘操作：<span class="kbd">↑</span><span class="kbd">↓</span> 打开并移动、<span class="kbd">Enter</span>/<span class="kbd">Space</span> 选择、<span class="kbd">Home</span>/<span class="kbd">End</span> 跳首尾、直接输入字母数字可按前缀定位、<span class="kbd">Esc</span> 关闭、<span class="kbd">Tab</span> 关闭并离开。</p>
+    </div>
+
+    <h3>10 分钟练习：新项目最短路径</h3>
+    <div class="card">
+      <p class="lead" style="margin-bottom:6px">目标：不求质量，只求把流程完整走一遍。练习素材用仓库自带的示例线框稿 <code data-local-path>docs/user/examples/quick-start-wireframe.png</code>（侠客阵容编成页面，来源与授权说明见 <code data-local-path>docs/user/examples/README.md</code>）。</p>
+      <ol class="steps">
+        <li><b>建立项目</b> — 首次打开会自动弹出创建窗口（也可以点顶栏 <span class="kbd">＋ 新项目</span>）。项目名称建议填「快速上手示例」，项目类型选「新项目」，点「创建并进入工作台」。项目文件默认保存在 <code>~/Game UI Design Projects</code>。</li>
+        <li><b>00 输入</b> — 在右侧「UE WIREFRAME」卡片点 <span class="kbd">选择图片</span> 导入上面的练习线框稿；在设计意图里粘贴「设计一个角色编队页面，玩家可以查看成员、调整上阵顺序并确认阵容。」（也可以留空，点 <span class="kbd">AI 解读并预填写</span> 让 AI 先读图生成草稿），检查后点 <span class="kbd">确认意图并开始功能解读</span>。</li>
+        <li><b>01 功能解读</b> — 等 AI 生成功能契约，浏览四类信息（必需控件 / 必要信息 / 交互状态 / 边界情况），然后点 <span class="kbd">批准功能契约</span>。</li>
+        <li><b>沿界面按钮往下走</b> — 每个阶段底部都有下一步按钮（如「生成布局提案」「进入风格锁定」）。<b>按钮置灰不是故障</b>，旁边的灰字会说明缺什么。</li>
+        <li><b>随时看证据</b> — 点顶栏检查器图标，可以看到每个产物的版本、来源和 JSON。</li>
+        <li><b>导出成图</b> — 走到「04 视觉探索」生成 3 个方向，批准其中一个后即可在卡片上导出 PNG。练习到此完成；已有项目的严格继承链路见「2 路线选择」。</li>
+      </ol>
+    </div>
+    <div class="tip">核心原则：<b>只按界面提供的按钮从上到下操作</b>。不要手动改项目目录里的 JSON/PNG 文件（生成产物是只读证据，手改会被拒绝）；任何不确定的状态，从上游重新生成永远比手工修补安全。</div>
+  </section>
+
+  <!-- ============ 2 路线选择 ============ -->
+  <section class="panel" id="panel-routes" role="tabpanel" aria-labelledby="tab-routes">
+    <h2>先选路线：这个项目是「从零探索」还是「延续已有风格」？</h2>
+    <p class="lead">创建项目时的选择决定整条流水线的走法。<b>创建时选错也没关系</b>：已有项目可以随时在「00 输入」里切换继承强度（见下文），新项目则建议直接重建。</p>
+
+    <div class="card">
+      <table>
+        <tr><th>你的情况</th><th>创建时选择</th><th>走哪条路线</th></tr>
+        <tr><td>全新玩法/新界面，视觉风格可以自由探索</td><td>新项目</td><td><b>路线 A · 探索路线</b>：先布局，再锁风格，最后生成 3 个视觉方向供评审</td></tr>
+        <tr><td>游戏已有成型 UI，新界面必须「看起来像同一个游戏」，且要交付可用的最终成图</td><td>已有项目 → 严格继承（推荐）</td><td><b>路线 B · 严格继承路线</b>：先参考图锁风格，导入真实字体/组件并绑定，再出布局、底层图、合成、保真校验、批准与导出</td></tr>
+        <tr><td>有既有风格参考，只想快速生成结构底层图，不要求完整可交付页面</td><td>已有项目 → 引导继承（实验性）</td><td>见下方「引导继承的当前限制」——<b>当前版本不能完成正式交付</b>，正式生产请用严格继承</td></tr>
+      </table>
+    </div>
+
+    <h3>路线 A · 新项目探索路线</h3>
+    <div class="route-card">
+      <h4>流程总览</h4>
+      <div class="flow">
+        <span class="node">00 输入需求+线框</span><span class="arrow">→</span>
+        <span class="node">01 功能契约批准</span><span class="arrow">→</span>
+        <span class="node">02 布局三选一</span><span class="arrow">→</span>
+        <span class="node">03 风格生成并锁定</span><span class="arrow">→</span>
+        <span class="node hl">04 生成 3 个视觉方向</span><span class="arrow">→</span>
+        <span class="node">评审批准 · 导出 PNG</span>
+      </div>
+      <ol class="steps">
+        <li><b>00 输入</b>：导入 UE 线框稿 → AI 预填设计意图 → 检查/补充后「确认意图并开始功能解读」。美术大方向选填（如「克制东方奇幻」），会影响后续风格与视觉生成。</li>
+        <li><b>01 功能解读</b>：检查功能契约（四类关键信息），点「批准功能契约」→「生成布局提案」。</li>
+        <li><b>02 布局设计</b>：AI 给出 3 套布局提案，比较区域比例、焦点路径与信息承载，选一套批准。不满意可「重新生成」。</li>
+        <li><b>03 风格锁定</b>：点底部「进入风格锁定」，AI 依据布局与美术方向生成风格契约（语义色彩、字体规则、材质、几何、光影、构图）。可以导入参考图辅助，也可以不导入。核对可执行数值后点「批准并锁定」。</li>
+        <li><b>04 视觉探索</b>：点「生成 3 个方向」，AI 逐张产出 保守继承 / 表现强化 / 局部创新 三个方向。可全屏检查、多选组合、写评审批注、单张重试。</li>
+        <li><b>交付</b>：选 1 个方向点「批准所选方向」（选 2 个以上可「组合所选」）；点卡片上的导出按钮即可导出单张 PNG。</li>
+      </ol>
+    </div>
+
+    <h3>路线 B · 已有项目严格继承路线</h3>
+    <div class="route-card">
+      <h4>流程总览</h4>
+      <div class="flow">
+        <span class="node">00 输入</span><span class="arrow">→</span>
+        <span class="node">01 功能契约</span><span class="arrow">→</span>
+        <span class="node">03 参考图+风格锁定</span><span class="arrow">→</span>
+        <span class="node">字体+组件+绑定</span><span class="arrow">→</span>
+        <span class="node">02 组件感知布局</span><span class="arrow">→</span>
+        <span class="node">底层图生成+污染审查</span><span class="arrow">→</span>
+        <span class="node hl">合成+保真+批准+导出</span>
+      </div>
+      <p class="for">严格路线的推荐执行顺序是 <b>00 → 01 → 03 → 02 → 04</b>（先锁风格资产，再出布局）。不必记顺序——每一步完成后界面会给出下一步按钮。</p>
+      <p style="margin-bottom:8px"><b>开工前备好素材：</b></p>
+      <ul class="plain" style="margin-bottom:10px">
+        <li>≥1 张既有 UI 截图（PNG/JPG，越接近目标屏幕越好）</li>
+        <li>既有 UI 使用的 OTF/TTF 字体文件</li>
+        <li>组件切图：按钮/导航/页签等控件的各状态透明 PNG（按钮、导航、页签必须具备 Default、Disabled，以及 Pressed 或 Selected 状态）</li>
+      </ul>
+      <ol class="steps">
+        <li><b>创建项目</b>：选「已有项目」，继承强度保持「严格继承（推荐）」。创建后项目进入 strict 门禁体系。</li>
+        <li><b>00 输入</b>：与路线 A 相同——导入线框稿、确认设计意图。</li>
+        <li><b>01 功能解读</b>：校对并「批准功能契约」。注意：严格模式下所有「必需控件」后续都要绑定组件，清单要覆盖需求中的全部元素。</li>
+        <li><b>03 风格锁定 · 参考图</b>：导入既有 UI 截图，为每张设置角色与信息、逐张批准，然后「批准参考图清单」，最后「解析视觉风格」。完整操作见「4 资产与绑定 · 参考图清单」。</li>
+        <li><b>批准并锁定风格</b>：核对生成的风格契约（必须是 hex 颜色、具体字号等可执行值），点「批准并锁定」，下方出现「STRICT CONTINUATION · 严格继承资产与绑定」面板，顶部四个门禁：风格规范 / 字体清单 / 组件契约 / 控件绑定。</li>
+        <li><b>字体清单</b>：导入字体文件并为每个语义角色完成「确认」，最后「批准」。字段与规则见「4 资产与绑定 · 字体」。</li>
+        <li><b>组件契约</b>：逐状态导入真实切图，填齐复用策略、缩放与锁定属性，最后「批准」。字段与模板见「4 资产与绑定 · 组件」。</li>
+        <li><b>控件绑定</b>：为每个必需控件显式选择 组件 → 状态 → 字体角色。语义不兼容的选项会灰显并标注原因；<b>没有任何隐式默认</b>，必须全部显式选完才能「保存绑定」→「批准」。</li>
+        <li><b>生成组件感知布局</b>：四个门禁全部批准后按钮解锁，生成布局 → 到「02 布局设计」选择方案并批准。</li>
+        <li><b>底层图链路</b>：布局批准后点「建立底层规范」（自动生成底层图契约 + 结构 Guide），再点「生成底层图」产出 3 张底层图。</li>
+        <li><b>04 严格生产</b>：进入视觉探索阶段下方的「STRICT PRODUCTION」面板，按固定顺序执行：「自动污染审查」→ 必要时「修复并复审」→「合成预览」→「加载字体并生成最终 PNG」→「保真校验」→「最终批准」→「导出最终 PNG」。<b>导出必须先完成最终批准</b>，未批准时导出按钮不可用，直接调用也会被后端阻断。每步细节见「3 阶段详解 · 04」。</li>
+      </ol>
+    </div>
+
+    <h3>引导继承（实验性）的当前限制</h3>
+    <div class="card tight">
+      <p>引导继承当前仍采用底层图（underlay-only）生成方式，同样禁止共享按钮、共享页签、导航、图标和正式文字进入图片。它与严格继承的区别主要在于部分后端门禁更宽松，但当前同样没有最终合成入口（共享组件与正式文字不参与合成），因此不能作为正式交付路线。请注意当前版本的真实边界：</p>
+      <ul class="plain">
+        <li>当前只生成结构底层图（背景与页面专属装饰）；</li>
+        <li>字体、组件、控件绑定与最终合成面板<b>仅在严格继承/锁定继承下开放</b>，引导继承没有共享组件与正式文字的最终合成入口；</li>
+        <li>因此引导继承<b>不保证形成完整可交付页面</b>，适合早期看结构、探方向；正式生产请使用严格继承。</li>
+      </ul>
+      <p>两种强度可以在「00 输入」阶段的「继承强度」下拉里随时切换；切换会按依赖图让模式相关的下游批准失效，需要重新批准。<b>已锁定的项目（锁定继承）不可再切换。</b>引导继承的完整产品化是独立的后续任务。</p>
+    </div>
+
+    <h3>两条路线对比速查</h3>
+    <div class="card">
+      <table>
+        <tr><th></th><th>路线 A · 新项目探索</th><th>路线 B · 严格继承</th></tr>
+        <tr><td>参考图</td><td>可选</td><td>必须：逐张批准 + 批准参考图清单</td></tr>
+        <tr><td>字体 / 组件切图</td><td>不需要</td><td>必须导入并逐角色/逐状态确认</td></tr>
+        <tr><td>控件绑定</td><td>不需要</td><td>必需控件 100% 显式绑定 + 语义门禁</td></tr>
+        <tr><td>布局生成时机</td><td>功能契约批准后立即生成</td><td>风格、字体、组件、绑定全批准后生成（组件感知）</td></tr>
+        <tr><td>视觉产出</td><td>3 个 AI 生图方向（探索）</td><td>3 张结构底层图 + 确定性合成最终 PNG</td></tr>
+        <tr><td>交付门禁</td><td>人工评审批准方向</td><td>污染审查 + 保真校验 + 最终批准，导出复核哈希</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 3 阶段详解 ============ -->
+  <section class="panel" id="panel-stages" role="tabpanel" aria-labelledby="tab-stages">
+    <h2>五个阶段逐一拆解</h2>
+    <p class="lead">左侧「DESIGN FLOW」的 5 个节点就是这 5 个阶段。节点上的彩色状态点表示进度；阶段内所有操作都在主工作区完成，阶段底部始终有「下一步」按钮。术语首次出现时括注英文，后续只用中文。</p>
+
+    <div class="toc">
+      <a href="#stage-0">00 · 项目输入<small>线框稿、设计意图、继承强度</small></a>
+      <a href="#stage-1">01 · 功能解读<small>功能页面契约四类信息</small></a>
+      <a href="#stage-2">02 · 布局设计<small>布局提案比较与批准</small></a>
+      <a href="#stage-3">03 · 风格锁定<small>风格契约与严格继承四门禁</small></a>
+      <a href="#stage-4">04 · 视觉探索<small>视觉方向 / 底层图、合成、保真、导出</small></a>
+    </div>
+
+    <div class="stage-head" id="stage-0"><span class="num">00 · INPUT</span><h3>项目输入</h3></div>
+    <div class="card tight">
+      <p><b>目标：</b>让 AI 读懂 UE 线框稿，并由你确认设计意图。</p>
+      <h4>操作步骤</h4>
+      <ol class="steps">
+        <li><b>导入线框稿</b>：右侧「UE WIREFRAME」卡片点 <span class="kbd">选择图片</span>（导入后可点「放大对照」全屏查看，之后可用「替换」换图）。<i>没导入线框稿时，后面所有按钮都是置灰的。</i></li>
+        <li><b>设计意图</b>：可以留空。点 <span class="kbd">AI 解读并预填写</span>，AI 只推断画面中可见的页面目标与流程，生成一份可编辑草稿；隐藏玩法规则由你补充。检查后点 <span class="kbd">确认意图并开始功能解读</span>（确认后仍可修改再「重新生成功能契约」）。</li>
+        <li><b>美术大方向（选填）</b>：一句话风格基调，用于后续风格锁定与视觉探索，不影响功能识别。</li>
+        <li><b>继承强度（仅已有项目）</b>：严格继承（推荐）/ 引导继承（实验性）。切换会让模式相关的下游批准失效；锁定继承的项目不可切换。引导继承的限制见「2 路线选择」。</li>
+      </ol>
+      <h4>页面栏（多页面管理）</h4>
+      <p>顶栏下方的页面栏管理本项目的多个页面（Screen）：下拉切换当前页面、重命名、<span class="kbd">＋</span> 新建独立页面、复制当前页面（含全部产物）、归档其他页面。<b>每个页面独立拥有一套线框稿、需求、功能契约、布局与绑定</b>；而风格规范、字体、组件、参考图是项目级共享的。</p>
+    </div>
+
+    <div class="stage-head" id="stage-1"><span class="num">01 · UNDERSTAND</span><h3>功能解读</h3></div>
+    <div class="card tight">
+      <p><b>目标：</b>校对 AI 生成的功能页面契约（Screen Contract）并批准。</p>
+      <h4>界面结构</h4>
+      <ul class="plain">
+        <li><b>契约总览</b>：页面名称、页面目的、核心动作；「UE 来源覆盖校验」会确认线框稿里的功能没有遗漏。</li>
+        <li><b>四类关键信息卡片</b>：必需控件 / 必要信息 / 交互状态 / 边界情况，每张卡显示检查进度（x/y 已检查）。点卡片进入「专注检查」工作台。</li>
+      </ul>
+      <h4>专注检查里能做什么</h4>
+      <ul class="plain">
+        <li>对每一条标记：<b>已确认 / 有疑问</b>；也可以直接编辑或删除条目、新增条目；支持搜索与按状态筛选。</li>
+        <li>编辑「必需控件」时必须给出<b>稳定 ID</b>（小写字母+连字符，如 <code>confirm-purchase</code>）和<b>语义角色</b>（从受控词表中选择，不能是泛化的 action）。角色决定后面能绑定哪类组件。</li>
+        <li>所有修改先停留在本轮草稿里，点 <span class="kbd">保存本轮修改</span> 统一生成一个新版本；关闭时如有未保存修改会弹出确认。</li>
+      </ul>
+      <h4>底部按钮</h4>
+      <p><span class="kbd">重新解读</span>（输入变了会提示「输入已变化，重新解读」）· <span class="kbd">批准功能契约</span> · 批准后变为 <span class="kbd">生成布局提案</span>。</p>
+    </div>
+
+    <div class="stage-head" id="stage-2"><span class="num">02 · STRUCTURE</span><h3>布局设计</h3></div>
+    <div class="card tight">
+      <p><b>目标：</b>从布局提案中比较、调整并批准一套 Approved Layout。</p>
+      <h4>操作要点</h4>
+      <ul class="plain">
+        <li>AI 基于功能契约生成布局提案（新项目 3 套；严格路线生成「组件感知布局」）。在目标分辨率里检查区域比例、焦点路径、安全区与实际信息承载。</li>
+        <li>选择方案并批准；不满意点「重新生成」。</li>
+        <li>上游（画布/需求/契约）变化后布局会标记「需更新」，旧布局只能用于对照——按提示先更新功能契约。</li>
+        <li><b>批准后的下一步按钮随路线变化：</b>新项目显示「进入风格锁定」；严格路线且风格已批准时显示「建立底层规范」（自动生成底层图契约 + 结构 Guide），随后是「生成底层图」。</li>
+      </ul>
+    </div>
+
+    <div class="stage-head" id="stage-3"><span class="num">03 · STYLE LOCK</span><h3>风格锁定</h3></div>
+    <div class="card tight">
+      <p><b>目标：</b>把美术方向沉淀成<b>可复现</b>的视觉规范（风格契约，Style Contract）；严格路线还要在这里完成字体、组件与绑定三道门禁。</p>
+      <h4>① 参考图（已有项目必需）</h4>
+      <p>导入既有 UI 截图并逐张声明用途、逐张批准，最后「批准参考图清单」——完整字段与容量规则见「4 资产与绑定 · 参考图清单」。已有项目必须批准参考图清单且至少 1 张图已批准，才能解析风格。</p>
+      <h4>② 解析并锁定风格</h4>
+      <ul class="plain">
+        <li>点 <span class="kbd">解析视觉风格</span>（前置条件不满足时按钮旁的灰字会说明缺什么：严格路线需功能契约已批准；新项目需布局已批准）。</li>
+        <li>如果参考图总量超出生成服务的附件容量上限，底部按钮会变成 <span class="kbd">确认省略项并继续</span>——先在参考图区域的 Pack 面板核对哪些图被省略，确认后再点。</li>
+        <li>生成的规范展示：视觉识别、语义色彩系统（可复制的色块与 hex）、材质/几何/光影/组件/构图规则。点「编辑规范」可以直接改 JSON，保存生成新版本。</li>
+        <li>核对无误后点 <span class="kbd">批准并锁定</span>。</li>
+      </ul>
+      <h4>③ STRICT CONTINUATION 面板（仅严格路线，风格批准后出现）</h4>
+      <p>顶部四个门禁：风格规范 / 字体清单 / 组件契约 / 控件绑定。字体、组件、绑定的逐步操作见「4 资产与绑定」。四个门禁全绿后，点 <span class="kbd">生成组件感知布局</span>，转入 02 布局设计批准。</p>
+    </div>
+
+    <div class="stage-head" id="stage-4"><span class="num">04 · EXPLORE</span><h3>视觉探索</h3></div>
+    <div class="card tight">
+      <p><b>目标：</b>产出并评审视觉结果，完成交付。这个阶段的内容随路线不同：</p>
+      <h4>路线 A · 视觉方向评审</h4>
+      <ul class="plain">
+        <li>风格批准后点「生成 3 个方向」，产出 保守继承 / 表现强化 / 局部创新 三张方向图（逐张写入，可随时「停止剩余任务」，已完成的不丢）。</li>
+        <li>每张卡片可：全屏检查、勾选加入评审、「仅重试此方向」；下方可写评审批注（会成为下一轮生成的反馈）。</li>
+        <li>选 1 个 →「批准所选方向」；选 ≥2 个 →「组合所选」；都不满意 →「全部否决并重探」（批注会带进下一轮）。</li>
+        <li>批准后在卡片或全屏里导出 PNG。</li>
+      </ul>
+      <h4>路线 B · STRICT PRODUCTION 面板</h4>
+      <p style="margin-bottom:6px">底层图生成后，阶段下方出现严格生产面板，顶部四个门禁：污染审查 / 最终 PNG / 保真校验 / 最终批准。<b>严格按顺序操作</b>：</p>
+      <ol class="steps">
+        <li><span class="kbd">自动污染审查</span>：AI 审查底层图是否混入文字状、UI 状纹理等污染，输出证据与问题清单（可展开「审查证据与问题」查看）。</li>
+        <li>审查未通过时，点 <span class="kbd">修复并复审</span> 让 AI 自动修复（有次数上限）。达到上限仍不通过时，回上游调整（布局槽位、视觉提示词）并重新生成底层图。</li>
+        <li><span class="kbd">合成预览</span>：确定性合成预览，检查结构与文字位置。<i>若预览上有「TYPOGRAPHY PREVIEW」水印，说明存在未精确确认的文字图层，回 03 完成字体确认后重新合成。</i></li>
+        <li><span class="kbd">加载字体并生成最终 PNG</span>：实际加载字体文件渲染最终图。</li>
+        <li><span class="kbd">保真校验</span>：对最终 PNG 做多维保真检查（Fidelity），覆盖结构一致性、解码像素、资产哈希、安全区、文字溢出、控件覆盖、字体渲染证据、依赖新鲜度等维度（检查项随版本演进，以应用内报告为准）。问题按严重度分 blocker / critical / major，<b>任何一档存在时报告都不会是通过</b>；当前版本没有逐条豁免入口，须按报告指出的成因回上游修复后重新运行，直至通过。</li>
+        <li><span class="kbd">最终批准</span>：保真校验通过后点亮。批准的是本次合成清单（Composition Manifest）。</li>
+        <li><span class="kbd">导出最终 PNG</span>：仅在最终批准完成后开放。导出时后端会复核保真报告与当前合成结果的版本、哈希一致性；文件被外部改动会被阻断（FINAL_EXPORT_HASH_MISMATCH），未批准直接导出会被阻断（FINAL_APPROVAL_REQUIRED）。</li>
+      </ol>
+    </div>
+
+    <h3>其他常用入口</h3>
+    <div class="grid2">
+      <div class="card tight">
+        <h4>产物检查器（顶栏右侧图标）</h4>
+        <p>展开后可看到当前阶段的 AI 输入、产物摘要、来源血缘、机器可读 JSON 与历史版本（每次生成/批准/修改都留有记录）。排查「这一步到底发生了什么」时先看这里。</p>
+      </div>
+      <div class="card tight">
+        <h4>项目管理（顶栏「管理」）</h4>
+        <p>搜索、重命名、复制为独立项目、归档/恢复项目。归档项目在切换列表里显示〔归档〕标记。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4 资产与绑定 ============ -->
+  <section class="panel" id="panel-assets" role="tabpanel" aria-labelledby="tab-assets">
+    <h2>参考图、字体、组件与控件绑定</h2>
+    <p class="lead">这四个工作台是严格继承路线的核心门禁，全部位于「03 风格锁定」阶段。它们共同回答一个问题：<b>AI 可以复用哪些真实资产，以什么方式复用？</b></p>
+
+    <h3>参考图清单（REFERENCE INVENTORY / PACK）</h3>
+    <div class="card tight">
+      <p>生成服务只会收到 Pack（附件包）中按序列出的参考图，所以这里管理的不只是「有哪些图」，还有「每张图用来参考什么、以什么顺序发给模型」。</p>
+      <h4>操作步骤</h4>
+      <ol class="steps">
+        <li><b>批量添加</b>：点右上角 <span class="kbd">批量添加</span> 导入既有 UI 截图（可多张）。</li>
+        <li><b>设置每张图的角色</b>：主参考 / 组件 / 材质 / 构图 / 辅助。角色告诉模型这张图承担什么参考职责——例如「主参考」决定整体观感，「组件」用于提取控件样式，「材质」提供质感参照。</li>
+        <li><b>填写每张图的信息</b>：页面类型、包含内容（顿号或逗号分隔）、基线说明、备注。这些信息会进入给模型的附件描述，写得越具体，风格解析越准。</li>
+        <li><b>调整顺序</b>：卡片右下的前移/后移按钮调整附件顺序，Pack 按此顺序把图发给模型。</li>
+        <li><b>逐张批准</b>：点每张卡上的 ✓ 批准（再点一次撤销）。</li>
+        <li><b>批准参考图清单</b>：底部按钮，至少 1 张已批准才可用。这是解析风格的硬前提。</li>
+        <li><b>容量超限时处理省略项</b>：如果参考图总量超出生成服务的附件容量上限，Pack 面板会显示「附件容量 已用 / 上限」和橙色警示「附件容量已达上限，超出的参考图已被省略，生成前必须确认」，并列出被省略的图及原因。<b>被省略的图不会进入本次模型调用</b>——核对省略清单，可接受就继续（此时「解析视觉风格」按钮变为「确认省略项并继续」）；不可接受就减少参考图或调整顺序把关键图提前。</li>
+      </ol>
+    </div>
+
+    <h3>字体清单工作台</h3>
+    <div class="card tight">
+      <p>严格路线只用你提供的真实字体文件渲染文字。工作台仅接收 OTF/TTF，批准前会核验授权确认、精确角色、字形覆盖和实际加载证据。</p>
+      <h4>操作步骤</h4>
+      <ol class="steps">
+        <li><b>填写字体信息</b>：字体 ID（如 <code>ui-primary</code>）、语义角色（如 <code>button-label</code>）、必需字形覆盖（逗号分隔，如 <code>zh_cn、latin</code>）。</li>
+        <li><b>勾选两项确认</b>：「我确认有权在本项目中使用」——确认你有权在本项目中使用该字体，<b>是否允许再分发取决于字体许可证，本工具不替你判断</b>；「该角色必须精确使用此字体」——即精确确认（exact），承诺合成时该角色一字不差地用这个字体文件渲染。</li>
+        <li><b>选择字体</b>：导入 OTF/TTF 文件，工具记录文件哈希与字形覆盖。</li>
+        <li><b>确认</b>：为每个语义角色执行一次「确认」，把角色与字体绑定（两个勾选都勾上才能提交）。</li>
+        <li><b>批准</b>：全部角色确认完成后点「批准」锁定字体清单。</li>
+      </ol>
+      <h4>常见疑问</h4>
+      <ul class="plain">
+        <li><b>每个角色都要单独确认</b>，不只是标题/正文两类——按钮标签、页签标签、数字等角色同样走「确认」动作。</li>
+        <li><b>同一字体绑定多个角色不需要重新导入</b>：导入一次后，对每个角色各做一次「确认」即可。只有字体文件本身变化（哈希不一致）时才需要重新导入。</li>
+        <li><b>角色变更必须通过「确认」动作</b>，不能直接编辑清单文本。</li>
+        <li>身份关键角色缺少精确确认时，最终合成会被拦下，合成预览上会出现「TYPOGRAPHY PREVIEW」水印。</li>
+      </ul>
+    </div>
+
+    <h3>组件素材工作台</h3>
+    <div class="card tight">
+      <p>逐状态导入真实透明切图，构成组件契约（Component Contract）。按钮、导航、页签三类组件必须具备 Default、Disabled，以及 Pressed 或 Selected 状态——缺状态时工作台顶部会列出缺失清单。</p>
+      <h4>字段说明</h4>
+      <table>
+        <tr><th>字段</th><th>含义与填写要点</th></tr>
+        <tr><td><b>组件 ID</b></td><td>稳定标识，如 <code>button.primary</code>；同一组件的多个状态共用同一 ID。</td></tr>
+        <tr><td><b>类别</b></td><td>按钮 / 导航 / 页签 / 图标 / 资源条 / 状态徽章 / 列表行 / 内容面板 / 页面专属。类别决定控件绑定时的可选范围。</td></tr>
+        <tr><td><b>状态</b></td><td>Default / Pressed / Selected / Disabled。逐状态各导入一次切图。</td></tr>
+        <tr><td><b>复用策略</b></td><td><b>精确复用（exact）</b>：原样使用，只允许等比缩放；<b>九宫格伸缩（nine-slice）</b>：按边距切九格，边角不变、中心伸缩；<b>矢量 Token（vector-token）</b>：矢量资产，<b>必须是 SVG</b>；<b>参考锁定（reference-locked）</b>：以参考图为准锁定外观。</td></tr>
+        <tr><td><b>Source BBox</b></td><td>源图裁切框（x,y,w,h），只取切图中的有效区域；填 <code>0,0,0,0</code> 自动取整图。</td></tr>
+        <tr><td><b>文字策略</b></td><td><b>独立文字槽（text-slot）</b>：组件不含文字，文字由字体系统渲染叠加；<b>烘焙文字（baked）</b>：文字已画在切图里；<b>无文字（none）</b>：图标、无文字导航等选这个。</td></tr>
+        <tr><td><b>最小 / 最大缩放</b></td><td>允许缩放的倍率区间。除九宫格外其余策略只允许等比缩放。</td></tr>
+        <tr><td><b>锁定属性</b></td><td>逗号分隔的属性名单（如 <code>silhouette,corner-radius,border-layers,light-direction</code>），声明这些外观属性在复用时不可更改。</td></tr>
+        <tr><td><b>9-Slice 边距</b></td><td>仅九宫格策略显示，顺序为<b>左,右,上,下</b>（如 <code>12,12,12,12</code>），下方有九宫格可视化预览。左+右必须小于图宽、上+下必须小于图高，即<b>中心必须留有可伸缩区域</b>，否则校验报错。</td></tr>
+      </table>
+      <h4>常用配置模板</h4>
+      <table>
+        <tr><th>组件</th><th>推荐配置</th></tr>
+        <tr><td>图标</td><td>图标 + 精确复用 + 无文字</td></tr>
+        <tr><td>主按钮</td><td>按钮 + Default/Pressed/Disabled 三状态 + 独立文字槽</td></tr>
+        <tr><td>导航</td><td>导航 + Default/Selected/Disabled + 无文字（无文字导航）或独立文字槽</td></tr>
+        <tr><td>页签</td><td>页签 + Default/Selected/Disabled</td></tr>
+        <tr><td>可伸缩面板</td><td>内容面板 + 九宫格伸缩 + 合法边距（中心留可伸缩区）</td></tr>
+        <tr><td>矢量图标</td><td>图标 + 矢量 Token + SVG 文件</td></tr>
+      </table>
+      <p>也可以点 <span class="kbd">导入 Forge Manifest</span> 从 Game UI Forge 的清单批量导入。全部导入后点「批准」验证并锁定组件契约。</p>
+      <div class="tip">严格模式不会自动生成新的共享图标——需要新图标时，先准备透明 PNG/SVG 文件，再按上表导入组件契约。</div>
+    </div>
+
+    <h3>控件绑定</h3>
+    <div class="card tight">
+      <p>把功能契约里的每个必需控件，显式绑定到组件契约中的具体资产：<b>组件 → 状态 → 字体角色</b>（按控件角色必选或可选）。</p>
+      <ul class="plain">
+        <li>语义不兼容的选项会灰显并标注原因（例如导航类控件不能绑定按钮组件）；角色为泛化 action 的控件会提示先在功能契约中改为具体角色。</li>
+        <li><b>没有任何隐式默认绑定</b>：全部显式选完才能「保存绑定」→「批准」。</li>
+        <li>编辑绑定会自动清除旧批准，需要重新批准。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 5 概念与边界 ============ -->
+  <section class="panel" id="panel-concept" role="tabpanel" aria-labelledby="tab-concept">
+    <h2>看懂界面上的状态、边界与术语</h2>
+
+    <h3>状态标签对照表</h3>
+    <div class="card">
+      <table>
+        <tr><th>界面显示</th><th>内部状态</th><th>含义</th><th>你要做什么</th></tr>
+        <tr><td><span class="tag neutral">待开始</span></td><td>draft</td><td>阶段/产物尚未开始</td><td>按流程往下操作</td></tr>
+        <tr><td><span class="tag neutral">运行中</span></td><td>in_progress</td><td>AI 正在执行</td><td>等待进度条结束</td></tr>
+        <tr><td><span class="tag neutral">已生成</span></td><td>generated</td><td>AI 已产出，等你审阅</td><td>检查内容并批准/重新生成</td></tr>
+        <tr><td><span class="tag neutral">待确认</span></td><td>reviewed</td><td>已评审，等待批准动作</td><td>点批准</td></tr>
+        <tr><td><span class="tag ok">已批准</span></td><td>approved</td><td>人工批准，流入下游</td><td>无需操作</td></tr>
+        <tr><td><span class="tag warn">需更新</span></td><td>stale</td><td>上游变了，此结果已过期</td><td>按提示重新生成并重新批准</td></tr>
+        <tr><td><span class="tag bad">已否决</span></td><td>rejected</td><td>被否决</td><td>调整后重新生成</td></tr>
+        <tr><td><span class="tag ok">passed</span></td><td>passed</td><td>门禁校验通过（保真校验等）</td><td>无需操作</td></tr>
+        <tr><td><span class="tag bad">failed</span></td><td>failed</td><td>执行失败</td><td>看错误条提示，重试或回上游</td></tr>
+      </table>
+    </div>
+
+    <h3>编辑边界：什么能改、在哪里改</h3>
+    <div class="card tight">
+      <p><b>允许（推荐方式）：</b>通过应用内的工作台编辑——功能契约的专注检查、风格规范的「编辑规范」、绑定工作台的重新选择等。保存时会生成一个新版本，历史完整留痕。</p>
+      <p><b>禁止：</b>在文件管理器、编辑器或脚本中直接修改项目目录里的管线产物与证据文件，包括但不限于：</p>
+      <ul class="plain">
+        <li>合成输出（Composition Output）与最终 PNG；</li>
+        <li>污染审查（Critique）的原始响应；</li>
+        <li>保真报告（Fidelity Report）；</li>
+        <li>其他产物 JSON 与 <code>workflow/</code> 下的状态与历史。</li>
+      </ul>
+      <p>生成产物是只读证据，手改会被直接拒绝（GENERATED_EVIDENCE_READ_ONLY）或在导出复核时被哈希校验拦下。</p>
+    </div>
+
+    <h3>历史与恢复</h3>
+    <div class="card tight">
+      <p>产物检查器与 <code>workflow/artifact-history.json</code> 可以<b>回看</b>每个产物的全部历史版本。<b>当前版本没有一键恢复历史版本的按钮</b>——需要回到某个旧状态时，从对应上游重新生成；重大操作前，复制整个项目目录就是一份完整快照备份。</p>
+    </div>
+
+    <h3>产物（Artifact）与项目目录</h3>
+    <div class="card tight">
+      <p>流水线每一步的输出都是一个产物（如 <code>screen-contract.json</code>、<code>approved-layout.json</code>、<code>composition-manifest.json</code>），带有 <code>schema_version / id / version / status / source</code> 五项元信息，全程可追溯。项目默认保存在 <code>~/Game UI Design Projects</code>，结构为：</p>
+      <pre><code>项目目录/
+├── project.json          # 项目主文件
+├── screens/              # 每个页面一套：输入、契约、布局、绑定、底层图、合成…
+│   └── main/
+├── style/                # 项目级共享：风格契约、字体清单、组件契约、参考图、切图
+└── workflow/             # 流水线状态与产物历史（只读，勿手改）</code></pre>
+    </div>
+
+    <h3>Stale（需更新）传播机制</h3>
+    <div class="card tight">
+      <p>改了上游，所有受影响的下游产物会自动标记「需更新」，防止旧批准被误用。触发条件举例：改控件的 <b>id / role / required</b>、换参考图重新解析风格、重新生成布局、编辑绑定……</p>
+      <p><b>恢复方法：</b>从变更点开始，按依赖顺序重新生成、重新批准。例外：只改控件的显示名（label）<b>不会</b>触发 stale。</p>
+      <div class="danger-box">不要试图手工删除 stale 标记或编辑产物 JSON——生成产物只读，手改会直接报错（GENERATED_EVIDENCE_READ_ONLY），唯一解除方式是重新生成。</div>
+    </div>
+
+    <h3>门禁与证据链（严格路线）</h3>
+    <div class="card tight">
+      <p>strict 模式的每个批准都依赖<b>可复验的证据</b>而非模型自述：图像证据（底层图/审查标记图/组件板落盘并记 sha256）、语义证据（模型审查原始响应落盘）、像素证据（保真校验实时解码输出 PNG 计算摘要）、引用一致（合成清单 ↔ 合成输出 ↔ 保真报告三层互相引用，任何一层漂移都会被拦下）。</p>
+      <p>这就是为什么严格路线按钮置灰特别多——<b>每一个置灰都是缺某项证据</b>，照提示补齐即可，不存在「绕过」的入口。</p>
+    </div>
+
+    <h3>术语表</h3>
+    <div class="card">
+      <table>
+        <tr><th>中文</th><th>英文/原文</th><th>含义</th></tr>
+        <tr><td>产物</td><td>Artifact</td><td>流水线每一步的版本化输出（JSON/PNG），只读、可追溯</td></tr>
+        <tr><td>功能契约</td><td>Screen Contract</td><td>页面的功能清单：必需控件、必要信息、交互状态、边界情况</td></tr>
+        <tr><td>风格契约</td><td>Style Contract</td><td>可复现的视觉规范：色彩、字体、材质、几何、光影、构图</td></tr>
+        <tr><td>底层图</td><td>Underlay</td><td>不含共享组件与正式文字的结构底图</td></tr>
+        <tr><td>污染审查</td><td>Critique</td><td>对底层图的 AI 审查，识别文字状/UI 状污染</td></tr>
+        <tr><td>保真校验</td><td>Fidelity</td><td>对最终 PNG 的多维确定性检查</td></tr>
+        <tr><td>精确复用 / 精确确认</td><td>exact</td><td>资产原样使用（组件）/ 字体逐字渲染承诺（字体）</td></tr>
+        <tr><td>九宫格伸缩</td><td>nine-slice</td><td>边角不变、中心伸缩的切图复用方式</td></tr>
+        <tr><td>需更新</td><td>stale</td><td>上游变化导致下游结果过期，需重新生成</td></tr>
+      </table>
+    </div>
+
+    <h3>两条铁律</h3>
+    <div class="card">
+      <ul class="plain">
+        <li><b>生成产物只读</b>：手改产物 JSON/PNG 会直接报错，唯一恢复方式是重新生成。</li>
+        <li><b>重新生成 &gt; 手工修补</b>：任何不确定的状态，从最上游重新生成永远比手改安全；重大操作前先复制项目目录备份。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 6 常见问题 ============ -->
+  <section class="panel" id="panel-faq" role="tabpanel" aria-labelledby="tab-faq">
+    <h2>遇到问题先对号入座</h2>
+
+    <h3>流程与按钮</h3>
+    <div class="card">
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">流程</span>按钮置灰 / 提示「xxx is required」？</div>
+        <div class="a">不是故障，是流程顺序问题。按钮旁的灰字会说明缺什么，回上游工作台补齐对应批准即可。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag warn">stale</span>下游全变「需更新」了？</div>
+        <div class="a">说明你改了上游。从最上游变更点开始按依赖顺序重新生成、重新批准。若只改了控件显示名仍 stale，检查是否同时动了 id / role / required。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">流程</span>切换继承强度后很多批准失效？</div>
+        <div class="a">这是预期行为：严格 ↔ 引导切换会按依赖图使模式相关的下游批准失效，按提示重新批准即可。锁定继承的项目不可切换。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">流程</span>strict 下提示 UNDERLAY_SPEC_REQUIRED？</div>
+        <div class="a">缺布局 Guide 就生成底层图会被拦截——strict 无捷径。回 02 布局阶段点「建立底层规范」（底层图契约 + Guide），再生成底层图。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">流程</span>「解析视觉风格」变成了「确认省略项并继续」？</div>
+        <div class="a">参考图总量超出了生成服务的附件容量上限，部分图片已被省略、不会进入本次模型调用。先在参考图 Pack 面板核对省略清单：可接受就点该按钮继续；不可接受就减少参考图或把关键图顺序提前。</div>
+      </div>
+    </div>
+
+    <h3>资产与门禁</h3>
+    <div class="card">
+      <div class="faq-item">
+        <div class="q"><span class="tag bad">字体</span>字体导入后还要点什么？</div>
+        <div class="a">导入 ≠ 确认。必须勾选「我确认有权在本项目中使用」（是否允许再分发取决于字体许可证，本工具不替你判断）与「该角色必须精确使用此字体」，然后对每个语义角色点一次「确认」。同一字体绑定多个角色不用重复导入；字体文件变化时才需重新导入。身份关键角色缺精确确认，最终合成会被拦下。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag bad">合成</span>preview 合成图上有水印？</div>
+        <div class="a">存在未精确确认的文字图层。去 03 字体区完成各角色的「确认」后重新合成，水印即消失。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag bad">绑定</span>绑定批准报 BINDING_* 错误？</div>
+        <div class="a">按违规明细修正绑定（角色词表、状态匹配、文字策略）后重新校验批准。注意：编辑绑定会自动清除旧批准，需要重新批准。不兼容选项会灰显并标注原因，优先选非灰选项。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag warn">审查</span>底层图污染审查一直不通过？</div>
+        <div class="a">先「修复并复审」；达到修复次数上限（UNDERLAY_REPAIR_LIMIT）后，调整上游（布局槽位、视觉提示词）重新生成底层图。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag bad">保真</span>保真校验失败（FIDELITY_GATE_FAILED）？</div>
+        <div class="a">报告中的问题按严重度分为 blocker / critical / major，任何一档存在报告都不会是通过。当前版本没有逐条豁免入口：按报告指出的成因回上游修复（布局、组件、字体或重新合成），再重新运行保真校验，直至通过。若报 FIDELITY_EVIDENCE_STALE，通常是批准前项目文件被外部动过，重跑保真校验即可。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag bad">导出</span>导出按钮不可用 / 导出报错？</div>
+        <div class="a">严格路线的导出顺序固定为：最终 PNG → 保真校验通过 → 最终批准 → 导出最终 PNG。未最终批准时导出按钮不可用，绕过界面也会被后端阻断（FINAL_APPROVAL_REQUIRED）。FINAL_EXPORT_HASH_MISMATCH 表示输出文件被外部改动，重新合成后再导出。</div>
+      </div>
+    </div>
+
+    <h3>连接与运行</h3>
+    <div class="card">
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">启动</span>双击 .command 提示「项目依赖不完整」？</div>
+        <div class="a">启动脚本不会自动安装依赖。在项目根目录运行 <code>pnpm install</code> 后再启动；也可用 <code>pnpm quick-start:check</code> 一次性检查依赖与 5174 端口占用。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">连接</span>顶栏显示「Kunpo 未配置」？</div>
+        <div class="a">检查项目根目录 <code>.env</code> 的 <code>KUNPO_GATEWAY_BASE_URL</code>（推荐 <code>http://127.0.0.1:9020/v1</code>），保存后重启工具。配置查找顺序：<code>DESIGN_COPILOT_ENV_FILE</code> 指定的文件 → 项目 <code>.env</code>。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">连接</span>AI 生成超时 / 鉴权失败？</div>
+        <div class="a">检查 <code>.env</code> 与设置里的模型名（模型名必须受服务端支持）。临时失败不会丢已完成的证据链，点错误条上的「重试」即可。详见 <code>docs/dev/PROVIDER-TROUBLESHOOTING.md</code>。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">运行</span>生图进行中想停？</div>
+        <div class="a">视觉探索生成时可以点「停止剩余任务」；已写入的图片不会丢，之后可「补全缺失方向」。</div>
+      </div>
+      <div class="faq-item">
+        <div class="q"><span class="tag neutral">运行</span>想看完整错误码含义？</div>
+        <div class="a">全部错误码见 <code>docs/dev/ERROR-CATALOG.md</code>（与代码注册表双向校验）；失败恢复路径见 <code>docs/user/FAILURE-RECOVERY.md</code>。</div>
+      </div>
+    </div>
+
+    <h3>兜底三原则</h3>
+    <div class="card">
+      <ol style="padding-left:20px">
+        <li>重大操作前复制整个项目目录 = 完整快照备份；</li>
+        <li>任何不确定的状态，从最上游重新生成永远比手工修补安全；</li>
+        <li>证据都在：产物检查器 + <code>workflow/</code> 历史可以回答「这一步到底发生了什么」。</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer class="page-footer">Game UI Design Copilot 使用说明书（当前开发版）· 进阶阅读：docs/user/（SOP 与恢复指南）· docs/contracts/（产物契约）· docs/dev/ERROR-CATALOG.md（错误码）</footer>
+</main>
+
+<script>
+  const tabs = Array.from(document.querySelectorAll('nav.tabs button'));
+  const panels = document.querySelectorAll('section.panel');
+  function activate(tab, focus) {
+    tabs.forEach((t) => {
+      t.setAttribute('aria-selected', String(t === tab));
+      t.tabIndex = t === tab ? 0 : -1;
+    });
+    panels.forEach((p) => p.classList.toggle('active', p.id === 'panel-' + tab.dataset.tab));
+    if (focus) tab.focus();
+    window.scrollTo({ top: 0 });
+  }
+  tabs.forEach((tab) => tab.addEventListener('click', () => activate(tab)));
+  // 页签键盘模型：方向键/Home/End 在页签间移动并激活（roving tabindex）
+  document.querySelector('nav.tabs .wrap').addEventListener('keydown', (event) => {
+    const index = tabs.indexOf(document.activeElement);
+    if (index < 0) return;
+    let next = null;
+    if (event.key === 'ArrowRight') next = tabs[(index + 1) % tabs.length];
+    else if (event.key === 'ArrowLeft') next = tabs[(index - 1 + tabs.length) % tabs.length];
+    else if (event.key === 'Home') next = tabs[0];
+    else if (event.key === 'End') next = tabs[tabs.length - 1];
+    if (next) { event.preventDefault(); activate(next, true); }
+  });
+  // 页签内锚点（分阶段详解的目录）：先激活对应页签再滚动
+  document.querySelectorAll('.toc a[href^="#stage-"]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>

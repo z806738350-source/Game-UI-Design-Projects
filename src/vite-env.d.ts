@@ -37,6 +37,7 @@ interface DesignCopilotApi {
   composeVisual(projectId: string, input: { variationId?: string; mode: 'preview' | 'final'; screenId: string }): Promise<DesignProject>;
   runFidelity(projectId: string, screenId: string): Promise<DesignProject>;
   exportVisual(projectId: string, variationId: string): Promise<{ ok: boolean; filePath?: string }>;
+  openUserGuide(): Promise<{ ok: boolean }>;
   logout?(): Promise<{ ok: boolean }>;
 }
 

@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { FixtureProvider } from './fixtureProvider';
 import {
-  approveContract, approveStrictLayout, createStrictProject, generateUnderlays, getProject,
+  approveContract, approveStrictLayout, chooseDropdown, createStrictProject, generateUnderlays, getProject,
   importComponents, importFonts, importReferencesAndGenerateStyle, importWireframeAndIntent,
   launchApp, queueSaveFile, selectAndApproveBindings, clickRun,
   BINDING_FAMILY_BY_CONTROL
@@ -64,15 +64,22 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     // required control has an explicit component choice.
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     // Semantic incompatibility is surfaced in the dropdown itself.
-    const primarySelect = page.getByTestId('binding-component-select-primary-action').locator('select').first();
-    await expect(primarySelect.locator('option[value="bottom-navigation"]')).toHaveAttribute('disabled', '');
-    await expect(primarySelect.locator('option[value="primary-button"]')).not.toHaveAttribute('disabled', '');
+    // PR#25 收口：绑定行三个 combobox 以「字段名 + 控件图例」的独立名称区分定位
+    await expect(page.getByRole('combobox', { name: /^组件 .+（角色：primary-action）$/ })).toBeVisible();
+    const primarySelect = page.getByTestId('binding-component-select-primary-action');
+    await primarySelect.locator('.dropdown-button').click();
+    // PR#25 审核 Major-01 收口：弹出 listbox 必须继承 combobox 的字段上下文名称
+    await expect(page.getByRole('listbox', { name: /^组件 .+（角色：primary-action）$/ })).toBeVisible();
+    await expect(primarySelect.locator('.dropdown-option[data-value="bottom-navigation"]')).toHaveClass(/is-disabled/);
+    await expect(primarySelect.locator('.dropdown-option[data-value="primary-button"]')).not.toHaveClass(/is-disabled/);
     // F-01: choosing a family alone never confirms state or font role.
-    await primarySelect.selectOption('primary-button');
-    await expect(page.getByTestId('binding-state-select-primary-action')).toHaveValue('');
+    await primarySelect.locator('.dropdown-option[data-value="primary-button"]').click();
+    await expect(page.getByTestId('binding-state-select-primary-action').locator('.dropdown-button > span')).toContainText('必选');
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     // An explicit state alone is still incomplete for text-slot families.
-    await page.getByTestId('binding-state-select-primary-action').selectOption('default');
+    await chooseDropdown(page.getByTestId('binding-state-select-primary-action'), 'default');
+    await expect(page.getByRole('combobox', { name: /^状态 .+（角色：primary-action）$/ })).toBeVisible();
+    await expect(page.getByRole('combobox', { name: /^字体角色 .+（角色：primary-action）$/ })).toBeVisible();
     await expect(page.getByTestId('binding-save')).toBeDisabled();
     await selectAndApproveBindings(page);
     const project = await getProject(page);
@@ -99,7 +106,7 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
 
   test('UIE2E-05 underlay critique blocks contamination and repair passes', async () => {
     provider.armCritiqueSequence(['contaminated', 'repaired']);
-    const critiqueGate = page.locator('.strict-production header i', { hasText: 'Critique' });
+    const critiqueGate = page.getByTestId('strict-gate-critique');
     await clickRun(page, 'underlay-critique');
     await expect(critiqueGate).not.toHaveClass(/is-ready/);
     await expect(page.getByTestId('underlay-repair')).toBeEnabled();
@@ -110,13 +117,21 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     expect(['passed', 'passed-with-waiver']).toContain(project.artifacts.underlayCritique?.result);
   });
 
-  test('UIE2E-06 final composition, fidelity gate, export hash, final approval', async () => {
-    const finalGate = page.locator('.strict-production header i', { hasText: 'Final PNG' });
-    const fidelityGate = page.locator('.strict-production header i', { hasText: 'Fidelity' });
+  test('UIE2E-06 final composition, fidelity gate, final approval, export hash', async () => {
+    const finalGate = page.getByTestId('strict-gate-final-png');
+    const fidelityGate = page.getByTestId('strict-gate-fidelity');
     await clickRun(page, 'composition-final');
     await expect(finalGate).toHaveClass(/is-ready/);
     await clickRun(page, 'fidelity-run');
     await expect(fidelityGate).toHaveClass(/is-ready/);
+
+    // FINAL_APPROVAL_REQUIRED: 最终批准前导出按钮在 UI 层即被禁用，
+    // 交付顺序固定为 Final PNG → Fidelity passed → Final Approval → Export。
+    await expect(page.getByTestId('final-export')).toBeDisabled();
+    await clickRun(page, 'final-approve');
+    const approved = await getProject(page);
+    expect(approved.artifacts.compositionManifest?.status).toBe('approved');
+    expect(approved.artifacts.fidelityReport?.status).toBe('passed');
 
     const exportPath = path.join(launched.exportDir, 'final-export.png');
     await queueSaveFile(launched.app, exportPath);
@@ -128,10 +143,5 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     expect(output.mode).toBe('final');
     const exportedHash = crypto.createHash('sha256').update(fs.readFileSync(exportPath)).digest('hex');
     expect(`sha256:${exportedHash}`).toBe(output.hash);
-
-    await clickRun(page, 'final-approve');
-    const approved = await getProject(page);
-    expect(approved.artifacts.compositionManifest?.status).toBe('approved');
-    expect(approved.artifacts.fidelityReport?.status).toBe('passed');
   });
 });

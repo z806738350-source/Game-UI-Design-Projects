@@ -14,7 +14,7 @@ describe('UnderlayWorkbench（Repair 状态）', () => {
       }
     });
     render(<UnderlayWorkbench project={project} />);
-    expect(screen.getByTestId('underlay-evidence-critique').textContent).toContain('passed · 0 项问题');
+    expect(screen.getByTestId('underlay-evidence-critique').textContent).toContain('已通过 · 0 项问题');
     expect(screen.getByTestId('underlay-evidence-repair').textContent).toContain('尚未生成');
   });
 
@@ -26,9 +26,9 @@ describe('UnderlayWorkbench（Repair 状态）', () => {
       }
     });
     render(<UnderlayWorkbench project={project} />);
-    expect(screen.getByTestId('underlay-evidence-critique').textContent).toContain('failed · 2 项问题');
+    expect(screen.getByTestId('underlay-evidence-critique').textContent).toContain('未通过 · 2 项问题');
     const repair = screen.getByTestId('underlay-evidence-repair');
-    expect(repair.textContent).toContain('第 2 次 · failed');
+    expect(repair.textContent).toContain('第 2 次 · 未通过');
     expect(repair.querySelector('small')!.className).toContain('is-failed');
   });
 });

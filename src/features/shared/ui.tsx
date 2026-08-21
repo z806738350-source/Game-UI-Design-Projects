@@ -1,6 +1,7 @@
 import {
-  Check, Clock3, FileJson, Layers3, LockKeyhole, Maximize2, ScanSearch, Upload, WandSparkles, X
+  Check, ChevronDown, Clock3, FileJson, Layers3, LockKeyhole, Maximize2, ScanSearch, Upload, WandSparkles, X
 } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Artifact, DesignProject, ScreenControl } from '../../types';
 
 export const stages = [
@@ -55,7 +56,7 @@ export function JsonSummary({ artifact, history = [] }: { artifact: Artifact; hi
   return <div className="json-summary">
     <div className="artifact-meta"><div><code>{String(artifact.id)}</code><small>版本 V{String(artifact.version || 1)}</small></div><StatusPill status={String(artifact.status)} /></div>
     {Boolean(artifact.designer_summary) && <p className="artifact-summary">{String(artifact.designer_summary)}</p>}
-    <div className="lineage"><b>来源</b>{Object.entries((artifact.source || {}) as Record<string, unknown>).map(([key, value]) => <span key={key}>{key.replaceAll('_', ' ')}<code>{String(value)}</code></span>)}</div>
+    <div className="lineage"><b>来源</b>{Object.entries((artifact.source || {}) as Record<string, unknown>).map(([key, value]) => <span key={key}>{key.replaceAll('_', ' ')}<code>{value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—')}</code></span>)}</div>
     {entries.slice(0, 10).map(([key, value]) => <div className="summary-row" key={key}><span>{key.replaceAll('_', ' ')}</span><b>{Array.isArray(value) ? `${value.length} 项` : typeof value === 'object' ? `${Object.keys((value as object) || {}).length} 条结构化规则` : String(value)}</b></div>)}
     <details className="raw-artifact"><summary>查看机器可读 JSON</summary><pre>{JSON.stringify(artifact, null, 2)}</pre></details>
     {history?.length ? <details className="artifact-history"><summary>历史版本（{history.length}）</summary>{history.slice(0, 8).map((item) => <div key={item.snapshot}><Clock3 size={13} /><span>{item.kind} · V{item.version} · {statusLabel(item.status || '')}</span><small>{new Date(item.saved_at).toLocaleString()}</small></div>)}</details> : null}
@@ -103,6 +104,157 @@ export function preserveProjectPreviews(next: DesignProject, current: DesignProj
 }
 
 export const strictContinuation = (project: DesignProject) => project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
+
+export type DropdownOption = { value: string; label: string; disabled?: boolean };
+
+// 自绘下拉框：macOS 下原生 <select> 的展开列表是系统菜单，无法套用设计令牌，
+// 故统一用 DOM 列表框替代，展开态完全遵循 Darkroom Precision 风格。
+// 语义模型遵循 WAI-ARIA select-only combobox + listbox 模式：触发元素是
+// role=combobox 的可聚焦容器（不再是普通 button），焦点始终停留在其上，
+// 通过 aria-activedescendant 指向活动选项；禁用项不可被键盘或鼠标选中。
+// Accessible Name 由 aria-labelledby（优先）或 aria-label 提供，
+// 占位文本不构成名称；开发态两者都缺失时输出一次警告。
+export function Dropdown({ value, options, onChange, disabled = false, testId, ariaLabel, ariaLabelledBy, placeholder }: {
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  testId?: string;
+  ariaLabel?: string;
+  ariaLabelledBy?: string;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [dropUp, setDropUp] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const comboboxRef = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
+  const menuId = useId();
+  const typedRef = useRef({ prefix: '', at: 0 });
+  const nameWarnedRef = useRef(false);
+  const enabledCount = options.filter((option) => !option.disabled).length;
+  const currentIndex = options.findIndex((option) => option.value === value && !option.disabled);
+  const firstEnabled = options.findIndex((option) => !option.disabled);
+  let lastEnabled = -1;
+  options.forEach((option, index) => { if (!option.disabled) lastEnabled = index; });
+
+  const openAt = (index: number) => { setActiveIndex(index); setOpen(true); };
+  // 关闭时重置 typeahead 缓冲，避免上一轮输入污染关闭后的下一次前缀搜索
+  const close = () => { setOpen(false); typedRef.current.prefix = ''; };
+  const closeAndFocusCombobox = () => { close(); comboboxRef.current?.focus(); };
+  const selectAt = (index: number) => {
+    const option = options[index];
+    if (!option || option.disabled) return;
+    onChange(option.value);
+    closeAndFocusCombobox();
+  };
+  const moveActive = (direction: 1 | -1) => {
+    if (enabledCount === 0) return;
+    let next = activeIndex;
+    for (let step = 0; step < options.length; step += 1) {
+      next = (next + direction + options.length) % options.length;
+      if (!options[next].disabled) break;
+    }
+    setActiveIndex(next);
+  };
+
+  useEffect(() => {
+    if (import.meta.env.DEV && !ariaLabel && !ariaLabelledBy && !nameWarnedRef.current) {
+      nameWarnedRef.current = true;
+      console.warn('Dropdown requires ariaLabel or ariaLabelledBy');
+    }
+  }, [ariaLabel, ariaLabelledBy]);
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => { if (rootRef.current && !rootRef.current.contains(event.target as Node)) close(); };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [open]);
+  // 活动项滚入视野 + 菜单贴近视口底部时向上翻转，避免被裁切
+  useEffect(() => { if (open && activeIndex >= 0) optionRefs.current[activeIndex]?.scrollIntoView?.({ block: 'nearest' }); }, [open, activeIndex]);
+  useEffect(() => {
+    if (!open || !rootRef.current) return;
+    const rect = rootRef.current.getBoundingClientRect();
+    const menuHeight = Math.min(Math.max(options.length, 1), 8) * 34 + 14;
+    setDropUp(window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight);
+  }, [open]);
+
+  const onComboboxKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        if (!open) openAt(currentIndex >= 0 ? currentIndex : firstEnabled);
+        else moveActive(1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        if (!open) openAt(currentIndex >= 0 ? currentIndex : lastEnabled);
+        else moveActive(-1);
+        break;
+      case 'Home':
+        if (open && firstEnabled >= 0) { event.preventDefault(); setActiveIndex(firstEnabled); }
+        break;
+      case 'End':
+        if (open && lastEnabled >= 0) { event.preventDefault(); setActiveIndex(lastEnabled); }
+        break;
+      case 'Enter':
+      case ' ':
+        // div combobox 没有原生激活行为，Enter/Space 的开合只由这里驱动
+        event.preventDefault();
+        if (!open) openAt(currentIndex >= 0 ? currentIndex : firstEnabled);
+        else if (activeIndex >= 0) selectAt(activeIndex);
+        else close();
+        break;
+      case 'Escape':
+        if (open) { event.preventDefault(); closeAndFocusCombobox(); }
+        break;
+      case 'Tab':
+        // 不拦截：菜单随焦点离开关闭，焦点按正常顺序前进
+        if (open) close();
+        break;
+      default:
+        if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey && !event.nativeEvent.isComposing) {
+          const now = Date.now();
+          const typed = typedRef.current;
+          typed.prefix = now - typed.at < 600 ? typed.prefix + event.key.toLocaleLowerCase() : event.key.toLocaleLowerCase();
+          typed.at = now;
+          const match = options.findIndex((option) => !option.disabled && option.label.toLocaleLowerCase().startsWith(typed.prefix));
+          if (match >= 0) {
+            event.preventDefault();
+            if (open) setActiveIndex(match);
+            else openAt(match);
+          }
+        }
+    }
+  };
+
+  const current = options.find((option) => option.value === value);
+  return (
+    <div className="dropdown" ref={rootRef} data-testid={testId}>
+      <div ref={comboboxRef} role="combobox" tabIndex={disabled ? -1 : 0} className="dropdown-button" aria-haspopup="listbox" aria-expanded={open} aria-controls={menuId} aria-activedescendant={open && activeIndex >= 0 ? `${menuId}-option-${activeIndex}` : undefined} aria-disabled={disabled || undefined} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} onClick={() => { if (disabled) return; if (open) close(); else openAt(currentIndex >= 0 ? currentIndex : firstEnabled); }} onKeyDown={onComboboxKeyDown}>
+        <span className={current ? undefined : 'is-placeholder'}>{current ? current.label : placeholder}</span>
+        <ChevronDown size={13} />
+      </div>
+      {open && <ul className={`dropdown-menu${dropUp ? ' is-up' : ''}`} id={menuId} role="listbox" aria-label={ariaLabel} aria-labelledby={ariaLabelledBy}>
+        {options.map((option, index) => (
+          <li key={option.value} id={`${menuId}-option-${index}`} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} data-value={option.value}
+            ref={(node) => { optionRefs.current[index] = node; }}
+            className={`dropdown-option${option.value === value ? ' is-selected' : ''}${option.disabled ? ' is-disabled' : ''}${index === activeIndex ? ' is-active' : ''}`}
+            // 触发元素是 div[role=combobox]，不属于 labelable element，外围 <label>
+            // 的激活行为不会转发到它；此 preventDefault 仅为防御性保留。
+            onClick={(event) => { event.preventDefault(); selectAt(index); }}
+            onMouseEnter={() => { if (!option.disabled) setActiveIndex(index); }}>
+            <Check size={12} className="dropdown-check" />
+            <span title={option.label}>{option.label}</span>
+          </li>
+        ))}
+        {options.length === 0 && <li className="dropdown-option is-disabled" role="option" aria-selected={false} aria-disabled><span>无可选项</span></li>}
+      </ul>}
+    </div>
+  );
+}
 
 // Legacy check icon re-export keeps strict gate lists readable in workbenches.
 export { Check };

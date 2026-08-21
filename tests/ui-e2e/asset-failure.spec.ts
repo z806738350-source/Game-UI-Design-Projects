@@ -48,7 +48,7 @@ test.describe.serial('asset failure paths (UIE2E-07B/07C/07D)', () => {
     await clickRun(page, 'underlay-critique');
     provider.armRepair();
     await clickRun(page, 'underlay-repair');
-    await expect(page.locator('.strict-production header i', { hasText: 'Critique' })).toHaveClass(/is-ready/);
+    await expect(page.getByTestId('strict-gate-critique')).toHaveClass(/is-ready/);
     await clickRun(page, 'composition-final');
     await clickRun(page, 'fidelity-run');
     const project = await getProject(page);
@@ -92,10 +92,9 @@ test.describe.serial('asset failure paths (UIE2E-07B/07C/07D)', () => {
     expect(project.artifacts.fidelityReport?.status).not.toBe('passed');
     await expect(page.getByTestId('final-approve')).toBeDisabled();
 
-    // Export is blocked by the failed fidelity gate and surfaces the block.
-    await clickRun(page, 'final-export', { allowError: true });
-    await expectErrorBanner(page, /FINAL_EXPORT_BLOCKED|无法导出最终成图/);
-    await closeErrorBanner(page);
+    // 保真未通过时最终批准不可用，导出按钮随之在 UI 层禁用（FINAL_APPROVAL_REQUIRED）；
+    // 后端 FINAL_EXPORT_BLOCKED 负路径由 failure-paths spec 覆盖。
+    await expect(page.getByTestId('final-export')).toBeDisabled();
 
     // Restore the approved asset bytes for the next scenario.
     fs.copyFileSync(GOLDEN_ASSETS.componentAsset('primary-button', 'default'), componentPath);
@@ -121,8 +120,6 @@ test.describe.serial('asset failure paths (UIE2E-07B/07C/07D)', () => {
     // Final approval and export are unavailable while the chain is stale.
     await page.getByTestId('stage-visual_exploration').click();
     await expect(page.getByTestId('final-approve')).toBeDisabled();
-    await clickRun(page, 'final-export', { allowError: true });
-    await expectErrorBanner(page, /FINAL_EXPORT_BLOCKED|无法导出最终成图/);
-    await closeErrorBanner(page);
+    await expect(page.getByTestId('final-export')).toBeDisabled();
   });
 });
