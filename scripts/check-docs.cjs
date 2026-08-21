@@ -5,12 +5,13 @@
  * and referenced repo paths. Read-only: never mutates files. The full
  * docs gate is `pnpm test:docs`, which additionally runs check-error-docs,
  * check-doc-commands, and check-project-tree.
+ *
+ * checkDocs(root) is exported so docsFactSources.test.cjs can build
+ * synthetic workspaces under os.tmpdir() and prove the gate fails on
+ * drifted facts (negative fixtures), with the real repo as positive control.
  */
 const fs = require('node:fs');
 const path = require('node:path');
-
-const root = path.resolve(__dirname, '..');
-const errors = [];
 
 const CONTRACT_DOCS = [
   'STYLE-CONTRACT-2.0', 'FONT-MANIFEST', 'COMPONENT-CONTRACT',
@@ -45,15 +46,6 @@ const CONTRACT_HEADINGS = [
   '测试指针', '验收清单', '版本与变更记录'
 ];
 
-function fail(message) {
-  errors.push(message);
-}
-
-// 1. Required files exist.
-for (const rel of REQUIRED_FILES) {
-  if (!fs.existsSync(path.join(root, rel))) fail(`missing required doc: ${rel}`);
-}
-
 // 2. Contract template headings present (exact match after stripping
 // numbering and trailing parenthetical qualifiers).
 function normalizeHeading(line) {
@@ -63,20 +55,9 @@ function normalizeHeading(line) {
     .replace(/（[^）]*）/g, '')
     .trim();
 }
-for (const name of CONTRACT_DOCS) {
-  const file = path.join(root, `docs/contracts/${name}.md`);
-  if (!fs.existsSync(file)) continue;
-  const text = fs.readFileSync(file, 'utf8');
-  const headingTitles = text.split('\n')
-    .filter((line) => /^## /.test(line))
-    .map(normalizeHeading);
-  for (const heading of CONTRACT_HEADINGS) {
-    if (!headingTitles.includes(heading)) fail(`docs/contracts/${name}.md: missing heading "${heading}"`);
-  }
-}
 
 // 3. ```json fences parse.
-function checkJsonFences(rel) {
+function checkJsonFences(root, rel, fail) {
   const file = path.join(root, rel);
   if (!fs.existsSync(file)) return;
   const text = fs.readFileSync(file, 'utf8');
@@ -92,11 +73,10 @@ function checkJsonFences(rel) {
     }
   }
 }
-for (const rel of REQUIRED_FILES) if (rel.endsWith('.md')) checkJsonFences(rel);
 
 // 4. Backticked repo paths resolve (repo-root-relative, no globs/templates).
 const PATH_PREFIXES = ['electron/', 'src/', 'scripts/', 'tests/', 'server/', 'docs/'];
-function checkRepoPaths(rel) {
+function checkRepoPaths(root, rel, fail) {
   const file = path.join(root, rel);
   if (!fs.existsSync(file)) return;
   const text = fs.readFileSync(file, 'utf8');
@@ -110,46 +90,78 @@ function checkRepoPaths(rel) {
     if (!fs.existsSync(path.join(root, bare))) fail(`${rel}: referenced path not found: ${bare}`);
   }
 }
-for (const rel of REQUIRED_FILES) if (rel.endsWith('.md')) checkRepoPaths(rel);
 
-// 5. README index consistency: every required doc listed on its own line.
-const readmePath = path.join(root, 'README.md');
-if (fs.existsSync(readmePath)) {
-  const readmeLines = fs.readFileSync(readmePath, 'utf8').split('\n');
-  for (const name of [...CONTRACT_DOCS, ...USER_DOCS, ...DEV_DOCS]) {
-    const entry = `${name}.md`;
-    if (!readmeLines.some((line) => line.includes(entry))) fail(`README.md: missing doc index entry for ${entry}`);
+function checkDocs(root) {
+  const errors = [];
+  const fail = (message) => errors.push(message);
+
+  // 1. Required files exist.
+  for (const rel of REQUIRED_FILES) {
+    if (!fs.existsSync(path.join(root, rel))) fail(`missing required doc: ${rel}`);
   }
-  if (!readmeLines.some((line) => line.includes('quick-start-guide.html'))) fail('README.md: missing doc index entry for quick-start-guide.html');
+
+  for (const name of CONTRACT_DOCS) {
+    const file = path.join(root, `docs/contracts/${name}.md`);
+    if (!fs.existsSync(file)) continue;
+    const text = fs.readFileSync(file, 'utf8');
+    const headingTitles = text.split('\n')
+      .filter((line) => /^## /.test(line))
+      .map(normalizeHeading);
+    for (const heading of CONTRACT_HEADINGS) {
+      if (!headingTitles.includes(heading)) fail(`docs/contracts/${name}.md: missing heading "${heading}"`);
+    }
+  }
+
+  for (const rel of REQUIRED_FILES) if (rel.endsWith('.md')) checkJsonFences(root, rel, fail);
+
+  for (const rel of REQUIRED_FILES) if (rel.endsWith('.md')) checkRepoPaths(root, rel, fail);
+
+  // 5. README index consistency: every required doc listed on its own line.
+  const readmePath = path.join(root, 'README.md');
+  if (fs.existsSync(readmePath)) {
+    const readmeLines = fs.readFileSync(readmePath, 'utf8').split('\n');
+    for (const name of [...CONTRACT_DOCS, ...USER_DOCS, ...DEV_DOCS]) {
+      const entry = `${name}.md`;
+      if (!readmeLines.some((line) => line.includes(entry))) fail(`README.md: missing doc index entry for ${entry}`);
+    }
+    if (!readmeLines.some((line) => line.includes('quick-start-guide.html'))) fail('README.md: missing doc index entry for quick-start-guide.html');
+  }
+
+  // 6. quick-start-guide.html fact gates (PR#25 final review).
+  // 6a. guided-mode wording must match pipeline facts: visualTask() in
+  // electron/services/prompts.cjs is underlay-only for every continuation mode
+  // and always excludes shared UI and formal text from generated images.
+  const guideRel = 'docs/user/quick-start-guide.html';
+  const guideFile = path.join(root, guideRel);
+  if (fs.existsSync(guideFile)) {
+    const guideText = fs.readFileSync(guideFile, 'utf8');
+    for (const fact of ['引导继承当前仍采用底层图', '禁止共享按钮', '没有最终合成入口']) {
+      if (!guideText.includes(fact)) fail(`${guideRel}: missing required guided-mode fact "${fact}"`);
+    }
+    for (const claim of ['不阻止共享组件与正式文字进入图片']) {
+      if (guideText.includes(claim)) fail(`${guideRel}: contains outdated guided-mode claim "${claim}"`);
+    }
+    // 6b. <code data-local-path>…</code> tokens promise repo-local files;
+    // fresh-clone users must be able to open every one of them.
+    const localPathPattern = /<code data-local-path>([^<]+)<\/code>/g;
+    let match;
+    while ((match = localPathPattern.exec(guideText)) !== null) {
+      const localRel = match[1].trim();
+      if (!fs.existsSync(path.join(root, localRel))) fail(`${guideRel}: data-local-path not found in repo: ${localRel}`);
+    }
+  }
+
+  return errors;
 }
 
-// 6. quick-start-guide.html fact gates (PR#25 final review).
-// 6a. guided-mode wording must match pipeline facts: visualTask() in
-// electron/services/prompts.cjs is underlay-only for every continuation mode
-// and always excludes shared UI and formal text from generated images.
-const guideRel = 'docs/user/quick-start-guide.html';
-const guideFile = path.join(root, guideRel);
-if (fs.existsSync(guideFile)) {
-  const guideText = fs.readFileSync(guideFile, 'utf8');
-  for (const fact of ['引导继承当前仍采用底层图', '禁止共享按钮', '没有最终合成入口']) {
-    if (!guideText.includes(fact)) fail(`${guideRel}: missing required guided-mode fact "${fact}"`);
+if (require.main === module) {
+  const errors = checkDocs(path.resolve(__dirname, '..'));
+  if (errors.length > 0) {
+    console.error(`check-docs: ${errors.length} problem(s) found`);
+    for (const message of errors) console.error(`  - ${message}`);
+    process.exit(1);
   }
-  for (const claim of ['不阻止共享组件与正式文字进入图片']) {
-    if (guideText.includes(claim)) fail(`${guideRel}: contains outdated guided-mode claim "${claim}"`);
-  }
-  // 6b. <code data-local-path>…</code> tokens promise repo-local files;
-  // fresh-clone users must be able to open every one of them.
-  const localPathPattern = /<code data-local-path>([^<]+)<\/code>/g;
-  let match;
-  while ((match = localPathPattern.exec(guideText)) !== null) {
-    const rel = match[1].trim();
-    if (!fs.existsSync(path.join(root, rel))) fail(`${guideRel}: data-local-path not found in repo: ${rel}`);
-  }
+  console.log(`OK (${REQUIRED_FILES.length} docs validated: ${CONTRACT_DOCS.length} contracts, ${USER_DOCS.length} user, ${DEV_DOCS.length} dev)`);
 }
 
-if (errors.length > 0) {
-  console.error(`check-docs: ${errors.length} problem(s) found`);
-  for (const message of errors) console.error(`  - ${message}`);
-  process.exit(1);
-}
-console.log(`OK (${REQUIRED_FILES.length} docs validated: ${CONTRACT_DOCS.length} contracts, ${USER_DOCS.length} user, ${DEV_DOCS.length} dev)`);
+module.exports = { checkDocs, CONTRACT_DOCS, USER_DOCS, DEV_DOCS, REQUIRED_FILES, CONTRACT_HEADINGS };

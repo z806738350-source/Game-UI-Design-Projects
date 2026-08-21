@@ -1,11 +1,13 @@
 'use strict';
 
-// Negative fixtures for the docs fact-source gate (F-02): the three validators
+// Negative fixtures for the docs fact-source gate (F-02): the four validators
 // must FAIL when the documentation drifts from truth — a wrong pnpm command,
-// an error code missing from (or unregistered in) ERROR-CATALOG, or a README
-// tree that drops a key artifact. Each check function accepts an injectable
-// root so synthetic workspaces can be built under os.tmpdir(). The real
-// repository must stay green as the positive control.
+// an error code missing from (or unregistered in) ERROR-CATALOG, a README
+// tree that drops a key artifact, or a quick-start guide that resurrects an
+// outdated guided-mode claim / points data-local-path at a missing file.
+// Each check function accepts an injectable root so synthetic workspaces can
+// be built under os.tmpdir(). The real repository must stay green as the
+// positive control.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -18,6 +20,9 @@ const repoRoot = path.resolve(__dirname, '..');
 const { checkErrorDocs } = require('./check-error-docs.cjs');
 const { checkDocCommands } = require('./check-doc-commands.cjs');
 const { checkProjectTree } = require('./check-project-tree.cjs');
+const {
+  checkDocs, CONTRACT_DOCS, USER_DOCS, DEV_DOCS, REQUIRED_FILES, CONTRACT_HEADINGS
+} = require('./check-docs.cjs');
 
 function makeTempRoot(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-fact-'));
@@ -321,12 +326,54 @@ test('check-project-tree: undocumented registry artifact fails', (t) => {
   assert.ok(problems.some((p) => p.includes("'ghost-artifact'") && p.includes('ghost.json')), problems.join('\n'));
 });
 
+// --- check-docs ----------------------------------------------------------------
+
+// 满足全部前置条件的最小 guide：三条 guided 事实齐全、无禁止旧表述，
+// data-local-path 指向 fixture 内存在的文件
+const GUIDE_FIXTURE = '<html><body><p>引导继承当前仍采用底层图，禁止共享按钮进入图片，也没有最终合成入口。</p><code data-local-path>README.md</code></body></html>';
+
+function buildDocsFixture(t, guideText = GUIDE_FIXTURE) {
+  const root = makeTempRoot(t);
+  for (const rel of REQUIRED_FILES) {
+    if (rel === 'README.md' || rel === 'CHANGELOG.md' || rel === 'docs/user/quick-start-guide.html') continue;
+    // 契约文档需携带全部模板标题；其余文档只需存在
+    if (rel.startsWith('docs/contracts/')) {
+      write(root, rel, CONTRACT_HEADINGS.map((heading) => `## ${heading}`).join('\n') + '\n');
+    } else {
+      write(root, rel, `# ${path.basename(rel)}\n`);
+    }
+  }
+  write(root, 'CHANGELOG.md', '# CHANGELOG\n');
+  write(root, 'docs/user/quick-start-guide.html', guideText);
+  const indexLines = [...CONTRACT_DOCS, ...USER_DOCS, ...DEV_DOCS].map((name) => `- ${name}.md`);
+  write(root, 'README.md', `# T\n\n${indexLines.join('\n')}\n- quick-start-guide.html\n`);
+  return root;
+}
+
+test('check-docs: consistent synthetic workspace passes', (t) => {
+  const root = buildDocsFixture(t);
+  assert.deepEqual(checkDocs(root), []);
+});
+
+test('check-docs: resurrecting the outdated guided-mode claim fails', (t) => {
+  const root = buildDocsFixture(t, GUIDE_FIXTURE + '<p>旧表述：不阻止共享组件与正式文字进入图片。</p>');
+  const problems = checkDocs(root);
+  assert.ok(problems.some((p) => p.includes('outdated guided-mode claim')), problems.join('\n'));
+});
+
+test('check-docs: data-local-path pointing at a missing file fails', (t) => {
+  const root = buildDocsFixture(t, GUIDE_FIXTURE + '<code data-local-path>docs/dev/NOT-THERE.md</code>');
+  const problems = checkDocs(root);
+  assert.ok(problems.some((p) => p.includes('data-local-path not found in repo: docs/dev/NOT-THERE.md')), problems.join('\n'));
+});
+
 // --- real repository positive control + CLI wiring -----------------------------
 
-test('real repository: all three fact-source checks pass', () => {
+test('real repository: all four fact-source checks pass', () => {
   assert.deepEqual(checkErrorDocs(repoRoot), []);
   assert.deepEqual(checkDocCommands(repoRoot), []);
   assert.deepEqual(checkProjectTree(repoRoot), []);
+  assert.deepEqual(checkDocs(repoRoot), []);
 });
 
 test('real repository: four docs gate CLIs exit 0', () => {
