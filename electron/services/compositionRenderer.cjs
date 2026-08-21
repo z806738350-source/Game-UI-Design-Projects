@@ -5,6 +5,7 @@ const path = require('node:path');
 const sharp = require('sharp');
 const { ensureDir } = require('./jsonStore.cjs');
 const { renderTextLayer } = require('./typographyRenderer.cjs');
+const { visualBindingMismatch } = require('./compositor.cjs');
 
 const RENDERER_VERSION = `composition-v1/sharp-${sharp.versions.sharp}/libvips-${sharp.versions.vips}`;
 
@@ -279,8 +280,15 @@ async function verifyCompositionOutput(projectPath, output, { requireFinal = fal
 // Composition Manifest carries an explicit human approval, otherwise an
 // unreviewed composition could leave the tool as if it were signed off.
 function assertFinalApprovalForExport(project) {
-  if (project?.artifacts?.compositionManifest?.status !== 'approved') {
+  const manifest = project?.artifacts?.compositionManifest;
+  if (manifest?.status !== 'approved') {
     throw Object.assign(new Error('无法导出最终成图：请先完成最终批准，再导出正式交付文件。'), { code: ERROR_CODES.FINAL_APPROVAL_REQUIRED });
+  }
+  // P0-05：交付边界重验：已批准的 Manifest 必须仍对应当前 Visual
+  // Results 评审；视觉结果或评审变化后，旧交付链不得导出为正式交付。
+  const mismatch = visualBindingMismatch(manifest, project?.artifacts?.visualResults);
+  if (mismatch) {
+    throw Object.assign(new Error(`无法导出最终成图：${mismatch}，请重新合成并完成最终批准。`), { code: ERROR_CODES.VISUAL_RESULTS_BINDING_STALE });
   }
 }
 

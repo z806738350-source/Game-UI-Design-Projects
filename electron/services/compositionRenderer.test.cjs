@@ -167,7 +167,7 @@ test('strict pipeline persists final output and final approval fails when its PN
     const fontPath = path.join(project.workspacePath, 'style', 'fonts', 'ui.ttf'); await fs.mkdir(path.dirname(fontPath), { recursive: true }); await fs.copyFile(systemFont, fontPath); const font = await inspectFont(fontPath);
     await projectStore.saveArtifact(project.id, 'font-manifest', { ...base, id: 'fonts', fonts: [{ id: 'ui', family_name: font.family_name, postscript_name: font.postscript_name, format: 'ttf', local_path: 'style/fonts/ui.ttf', file_hash: font.file_hash, license_status: 'confirmed', license_confirmation: { confirmed: true }, coverage: font.coverage }], roles: {} });
     await projectStore.saveArtifact(project.id, 'underlay-contract', { ...base, id: 'underlay-contract' });
-    await projectStore.saveArtifact(project.id, 'underlay-critique', { ...base, id: 'critique', result: 'passed', issues: [], manual_waivers: [] });
+    await projectStore.saveArtifact(project.id, 'underlay-critique', { ...base, id: 'critique', source: { underlay: 'underlay-v1' }, result: 'passed', issues: [], manual_waivers: [] });
     await projectStore.saveArtifact(project.id, 'visual-results', { ...base, id: 'visuals', variations: [{ id: 'underlay-v1', image_path: relativeUnderlay }] });
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
     project = await pipeline.composeVisual(project.id, { screenId: 'main', variationId: 'underlay-v1', mode: 'final' });
@@ -217,7 +217,7 @@ test('a failed composition regeneration leaves the evidence chain stale (UIE2E-0
     const fontPath = path.join(project.workspacePath, 'style', 'fonts', 'ui.ttf'); await fs.mkdir(path.dirname(fontPath), { recursive: true }); await fs.copyFile(systemFont, fontPath); const font = await inspectFont(fontPath);
     await projectStore.saveArtifact(project.id, 'font-manifest', { ...base, id: 'fonts', fonts: [{ id: 'ui', family_name: font.family_name, postscript_name: font.postscript_name, format: 'ttf', local_path: 'style/fonts/ui.ttf', file_hash: font.file_hash, license_status: 'confirmed', license_confirmation: { confirmed: true }, coverage: font.coverage }], roles: {} });
     await projectStore.saveArtifact(project.id, 'underlay-contract', { ...base, id: 'underlay-contract' });
-    await projectStore.saveArtifact(project.id, 'underlay-critique', { ...base, id: 'critique', result: 'passed', issues: [], manual_waivers: [] });
+    await projectStore.saveArtifact(project.id, 'underlay-critique', { ...base, id: 'critique', source: { underlay: 'underlay-v1' }, result: 'passed', issues: [], manual_waivers: [] });
     await projectStore.saveArtifact(project.id, 'visual-results', { ...base, id: 'visuals', variations: [{ id: 'underlay-v1', image_path: relativeUnderlay }] });
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
     project = await pipeline.composeVisual(project.id, { screenId: 'main', variationId: 'underlay-v1', mode: 'final' });

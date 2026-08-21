@@ -17,6 +17,10 @@ Global Style, Font, and Component changes also fan out to every non-archived Scr
 
 Each stale write records `stale_at` and `stale_reason`, updates the corresponding workflow stage, and reports affected Screen IDs. Archived Screens are excluded. A stale Fidelity Report cannot satisfy Final Approval because approval requires report status `passed` and current evidence.
 
+## Visual evidence supersession
+
+Strict-route Visual Results changes supersede old evidence at the moment the change starts, not after it succeeds: underlay regeneration (`visual_results_regenerated`), a new review decision (`visual_review_changed`), and repair additions (`visual_results_repaired`) all invalidate `visual-results` roots immediately, so the Critique/Composition/Fidelity chain can never keep trusting replaced evidence even when the follow-up generation fails. Composition Manifests additionally record the Visual Results version, selected variation IDs, and review hash at composition time; Final Approval and export reverify that binding and reject drifted delivery chains with `VISUAL_RESULTS_BINDING_STALE`.
+
 ## Regression matrix
 
-Automated tests cover all six input-to-root mappings, page isolation, global fan-out, archived-Screen exclusion, continuation-mode invalidation through Visual/Underlay/Composition/Fidelity, duplicate-free transitive traversal, and stale Final Approval rejection.
+Automated tests cover all six input-to-root mappings, page isolation, global fan-out, archived-Screen exclusion, continuation-mode invalidation through Visual/Underlay/Composition/Fidelity, duplicate-free transitive traversal, stale Final Approval rejection, and the three visual supersession events staling the strict Critique/Composition/Fidelity chain.
