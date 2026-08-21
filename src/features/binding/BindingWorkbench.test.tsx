@@ -83,6 +83,21 @@ describe('BindingWorkbench（REM-01 / F-01 显式选择）', () => {
     expect(bindings[1].font_role).toBeUndefined();
   });
 
+  it('展开后的弹出 listbox 继承绑定行的字段+控件名称（PR#25 审核 Major-01 收口）', async () => {
+    const user = userEvent.setup();
+    render(<BindingWorkbench project={projectWithControls()} busy={false} />);
+    // 展开「组件」下拉，弹出 listbox 与 combobox 共享同一字段上下文名称
+    await user.click(screen.getByRole('combobox', { name: '组件 保存（角色：primary-action）' }));
+    expect(screen.getByRole('listbox', { name: '组件 保存（角色：primary-action）' })).toBeTruthy();
+    // 选中组件后状态/字体角色才出现，它们的弹出 listbox 同样继承字段+控件名称
+    await user.click(screen.getByRole('option', { name: '主按钮' }));
+    await user.click(screen.getByRole('combobox', { name: '状态 保存（角色：primary-action）' }));
+    expect(screen.getByRole('listbox', { name: '状态 保存（角色：primary-action）' })).toBeTruthy();
+    await user.click(screen.getByRole('combobox', { name: '状态 保存（角色：primary-action）' }));
+    await user.click(screen.getByRole('combobox', { name: '字体角色 保存（角色：primary-action）' }));
+    expect(screen.getByRole('listbox', { name: '字体角色 保存（角色：primary-action）' })).toBeTruthy();
+  });
+
   it('选择组件后状态与字体角色保持空值，仅显示推荐提示', async () => {
     const user = userEvent.setup();
     render(<BindingWorkbench project={projectWithControls()} busy={false} />);

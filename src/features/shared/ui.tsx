@@ -237,7 +237,7 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
         <span className={current ? undefined : 'is-placeholder'}>{current ? current.label : placeholder}</span>
         <ChevronDown size={13} />
       </div>
-      {open && <ul className={`dropdown-menu${dropUp ? ' is-up' : ''}`} id={menuId} role="listbox" aria-label={ariaLabel}>
+      {open && <ul className={`dropdown-menu${dropUp ? ' is-up' : ''}`} id={menuId} role="listbox" aria-label={ariaLabel} aria-labelledby={ariaLabelledBy}>
         {options.map((option, index) => (
           <li key={option.value} id={`${menuId}-option-${index}`} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} data-value={option.value}
             ref={(node) => { optionRefs.current[index] = node; }}

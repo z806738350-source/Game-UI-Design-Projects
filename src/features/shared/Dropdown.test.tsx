@@ -34,6 +34,7 @@ describe('Dropdown 键盘与 ARIA（WAI-ARIA select-only combobox 模式）', ()
     expect(combobox.getAttribute('aria-expanded')).toBe('true');
     const menu = screen.getByRole('listbox');
     expect(menu.id).toBe(combobox.getAttribute('aria-controls'));
+    expect(screen.getByRole('listbox', { name: '选择面板' })).toBeTruthy();
     expect(screen.getAllByRole('option')).toHaveLength(4);
   });
 
@@ -59,6 +60,26 @@ describe('Dropdown 键盘与 ARIA（WAI-ARIA select-only combobox 模式）', ()
     expect(screen.getByRole('combobox', { name: '选择面板' })).toBeTruthy();
   });
 
+  it('展开后弹出 listbox 继承同一 Accessible Name（ariaLabel 路径）', async () => {
+    const user = userEvent.setup();
+    const { combobox } = setup({ ariaLabel: '选择面板' });
+    await user.click(combobox);
+    expect(screen.getByRole('listbox', { name: '选择面板' })).toBeTruthy();
+  });
+
+  it('展开后弹出 listbox 继承字段上下文标签（ariaLabelledBy 路径，优先于 aria-label）', async () => {
+    const user = userEvent.setup();
+    render(
+      <div>
+        <span id="listbox-field-label">继承强度字段</span>
+        <Dropdown value="alpha" options={baseOptions} onChange={vi.fn()} ariaLabel="被覆盖的名称" ariaLabelledBy="listbox-field-label" />
+      </div>
+    );
+    await user.click(screen.getByRole('combobox'));
+    expect(screen.getByRole('listbox', { name: '继承强度字段' })).toBeTruthy();
+    expect(screen.queryByRole('listbox', { name: '被覆盖的名称' })).toBeNull();
+  });
+
   it('ariaLabelledBy 成为 Accessible Name，且优先于 aria-label', () => {
     render(
       <div>
@@ -70,7 +91,7 @@ describe('Dropdown 键盘与 ARIA（WAI-ARIA select-only combobox 模式）', ()
     expect(screen.queryByRole('combobox', { name: '被覆盖的名称' })).toBeNull();
   });
 
-  it('aria-labelledby 支持多引用拼接（字段名 + 控件名），Binding 行三个 combobox 名称互不相同', () => {
+  it('aria-labelledby 支持多引用拼接（字段名 + 控件名），Binding 行三个 combobox 名称互不相同', async () => {
     render(
       <fieldset>
         <legend id="legend-confirm">确认按钮（角色：primary-action）</legend>
@@ -86,6 +107,16 @@ describe('Dropdown 键盘与 ARIA（WAI-ARIA select-only combobox 模式）', ()
     expect(screen.getByRole('combobox', { name: '状态 确认按钮（角色：primary-action）' })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: '字体角色 确认按钮（角色：primary-action）' })).toBeTruthy();
     expect(screen.getAllByRole('combobox')).toHaveLength(3);
+    // 展开后弹出 listbox 必须继承同一字段上下文名称（PR#25 审核 Major-01 收口）
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: '组件 确认按钮（角色：primary-action）' }));
+    expect(screen.getByRole('listbox', { name: '组件 确认按钮（角色：primary-action）' })).toBeTruthy();
+    await user.click(screen.getByRole('combobox', { name: '组件 确认按钮（角色：primary-action）' }));
+    await user.click(screen.getByRole('combobox', { name: '状态 确认按钮（角色：primary-action）' }));
+    expect(screen.getByRole('listbox', { name: '状态 确认按钮（角色：primary-action）' })).toBeTruthy();
+    await user.click(screen.getByRole('combobox', { name: '状态 确认按钮（角色：primary-action）' }));
+    await user.click(screen.getByRole('combobox', { name: '字体角色 确认按钮（角色：primary-action）' }));
+    expect(screen.getByRole('listbox', { name: '字体角色 确认按钮（角色：primary-action）' })).toBeTruthy();
   });
 
   it('开发态缺少 ariaLabel/ariaLabelledBy 时输出一次警告（占位文本不构成名称）', () => {

@@ -68,6 +68,8 @@ test.describe.serial('strict continuation happy path (UIE2E-01/03/04/05/06)', ()
     await expect(page.getByRole('combobox', { name: /^组件 .+（角色：primary-action）$/ })).toBeVisible();
     const primarySelect = page.getByTestId('binding-component-select-primary-action');
     await primarySelect.locator('.dropdown-button').click();
+    // PR#25 审核 Major-01 收口：弹出 listbox 必须继承 combobox 的字段上下文名称
+    await expect(page.getByRole('listbox', { name: /^组件 .+（角色：primary-action）$/ })).toBeVisible();
     await expect(primarySelect.locator('.dropdown-option[data-value="bottom-navigation"]')).toHaveClass(/is-disabled/);
     await expect(primarySelect.locator('.dropdown-option[data-value="primary-button"]')).not.toHaveClass(/is-disabled/);
     // F-01: choosing a family alone never confirms state or font role.
