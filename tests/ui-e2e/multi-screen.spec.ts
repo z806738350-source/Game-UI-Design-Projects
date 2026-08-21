@@ -111,7 +111,13 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
   test('Screen B is renamed through the UI', async () => {
     const dock = page.getByTestId('screen-manager');
     await switchScreen(page, 'battle');
-    await dock.locator('input[aria-label="当前页面名称"]').fill('激战');
+    const renameInput = dock.locator('input[aria-label="当前页面名称"]');
+    // 切屏后 ScreenManager 的受控输入会被 effect 同步为新屏名称；等值
+    // 稳定后再填写，否则 CI 上 React re-render 可能在 fill 中间把旧值
+    // 写回输入框，产生拼接脏值（曾导致 ui-e2e 在 CI 偶发失败）。
+    await expect(renameInput).toHaveValue('battle', { timeout: 10_000 });
+    await renameInput.fill('激战');
+    await expect(renameInput).toHaveValue('激战');
     await dock.locator('button[title="重命名当前页面"]').click();
     await expect(dock.locator('b', { hasText: '激战' })).toBeVisible();
     const project = await getProject(page);
