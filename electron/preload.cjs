@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('designCopilot', {
   draftRequirement: (projectId, screenId) => ipcRenderer.invoke('copilot:input:draft-requirement', projectId, { screenId }),
   cancelStage: (projectId, stage, screenId) => ipcRenderer.invoke('copilot:pipeline:cancel', projectId, stage, { screenId }),
   approveArtifact: (projectId, kind, input) => ipcRenderer.invoke('copilot:pipeline:approve', projectId, kind, input),
+  repairRouteCycle: (projectId, input) => ipcRenderer.invoke('copilot:pipeline:repair-route-cycle', projectId, input),
   updateArtifact: (projectId, kind, patch) => ipcRenderer.invoke('copilot:pipeline:update', projectId, kind, patch),
   generateUnderlayContract: (projectId, screenId) => ipcRenderer.invoke('copilot:underlay:contract', projectId, { screenId }),
   generateLayoutGuide: (projectId, screenId) => ipcRenderer.invoke('copilot:underlay:guide', projectId, { screenId }),

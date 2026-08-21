@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Check, CheckSquare } from 'lucide-react';
+import { Check, CheckSquare, Wrench } from 'lucide-react';
 import { copilotApi } from '../../api';
 import type { DesignProject, LayoutProposal } from '../../types';
+import { pipelineProfileOf } from '../shared/pipelineRoute';
+import { layoutStaleGuidance } from '../shared/staleReason';
 import { friendlyError } from '../shared/ui';
 import type { RunTask } from '../shared/ui';
 
@@ -59,6 +61,27 @@ export function LayoutWorkbench({ project, busy, run }: { project: DesignProject
   const notesDirty = approvedId === selected && notes.trim() !== approvedNotes.trim();
   const needsApproval = approvedId !== selectedProposalId || project.artifacts.approvedLayout?.status !== 'approved' || notesDirty;
   const stale = project.artifacts.layouts?.status === 'stale';
+  // stale 指引按失效原因与路线区分（fix-plan P0-06），不再统一显示
+  // “画布或需求已变化”；旧版风格循环造成的错误失效提供一次性修复。
+  const staleGuidance = stale ? layoutStaleGuidance(project.artifacts.layouts?.stale_reason, pipelineProfileOf(project)) : null;
+  const [repairing, setRepairing] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const repairRouteCycle = async () => {
+    const repair = () => copilotApi.repairRouteCycle(project.id);
+    if (run) { await run(repair, { label: '执行路线循环一次性修复', stage: 'layout_design' }); return; }
+    setRepairing(true); setError('');
+    try { await repair(); }
+    catch (cause) { setError(friendlyError(cause)); }
+    finally { setRepairing(false); }
+  };
+  const regenerateLayout = async () => {
+    const generate = () => copilotApi.runStage(project.id, 'layout_design');
+    if (run) { await run(generate, { label: '重新生成布局提案', stage: 'layout_design' }); return; }
+    setRegenerating(true); setError('');
+    try { await generate(); }
+    catch (cause) { setError(friendlyError(cause)); }
+    finally { setRegenerating(false); }
+  };
   const approveSelected = async () => {
     const approve = () => copilotApi.approveArtifact(project.id, 'approved-layout', { proposalId: selectedProposalId, manualAdjustments: notes.trim() ? notes.split('\n').map((item) => item.trim()).filter(Boolean) : [] });
     if (run) { await run(approve, { label: notesDirty ? '更新布局批准备注' : '批准所选布局', stage: 'layout_design' }); return; }
@@ -75,6 +98,6 @@ export function LayoutWorkbench({ project, busy, run }: { project: DesignProject
   return <>
     <div className="proposal-tabs">{proposals.map((proposal, index) => <button key={proposal.id} className={selected === proposal.id ? 'is-selected' : ''} onClick={() => setSelected(proposal.id)}><span>方案 {String.fromCharCode(65 + index)}</span><b>{proposal.name}</b><small>{proposal.designer_fit || proposal.strategy}</small>{approvedId === proposal.id && <em><Check size={12} />当前批准</em>}</button>)}</div>
     <div className="layout-review"><LayoutCanvas proposal={selectedProposal} safeArea={safeArea} project={project} /><aside className="layout-notes"><h3>{selectedProposal?.name}</h3><p>{selectedProposal?.strategy}</p><div className="review-checks"><label><input type="checkbox" checked={safeArea} onChange={(event) => setSafeArea(event.target.checked)} />显示边缘预留（5% 示意）</label><label><input type="checkbox" defaultChecked />校验焦点顺序</label><label><input type="checkbox" defaultChecked />校验长文本空间</label><label><input type="checkbox" defaultChecked />覆盖加载/禁用状态</label></div><ol>{interactionFlow.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol><label className="notes-field"><span>人工调整与批准备注</span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={project.canvas_spec?.orientation === 'portrait' ? '例如：保持竖屏，上方阵容区、下方侠客抽屉，底部固定保存与全局导航。' : '例如：右侧属性区缩小 4%，主按钮保持在首屏焦点链末端。'} /></label></aside></div>
-    {stale ? <div className="layout-workbench-actions"><span className="stale-guidance">画布或需求已变化，旧布局只能用于对照，不能再次批准。</span></div> : needsApproval && <div className="layout-workbench-actions">{error && <span className="inline-error" role="alert">{error}</span>}<button className="button button--primary" data-testid="layout-approve" disabled={busy || approving || !selectedProposalId} onClick={approveSelected}><CheckSquare size={16} />{notesDirty ? '更新批准备注' : '批准此布局'}</button></div>}
+    {stale ? <div className="layout-workbench-actions">{error && <span className="inline-error" role="alert">{error}</span>}<span className="stale-guidance">{staleGuidance?.message}</span>{staleGuidance?.action === 'legacy-repair' && <button className="button" data-testid="layout-repair" disabled={busy || repairing} onClick={repairRouteCycle}><Wrench size={16} />执行一次性修复</button>}<button className="button button--primary" data-testid="layout-generate" disabled={busy || regenerating} onClick={regenerateLayout}><CheckSquare size={16} />重新生成布局</button></div> : needsApproval && <div className="layout-workbench-actions">{error && <span className="inline-error" role="alert">{error}</span>}<button className="button button--primary" data-testid="layout-approve" disabled={busy || approving || !selectedProposalId} onClick={approveSelected}><CheckSquare size={16} />{notesDirty ? '更新批准备注' : '批准此布局'}</button></div>}
   </>;
 }

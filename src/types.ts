@@ -31,6 +31,8 @@ export type Artifact = {
   status: ArtifactStatus;
   source: Record<string, unknown>;
   designer_summary?: string;
+  stale_at?: string;
+  stale_reason?: string;
   [key: string]: unknown;
 };
 
