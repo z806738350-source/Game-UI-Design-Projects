@@ -6,6 +6,7 @@ const { loadKunpoConfig, saveModelConfig } = require('./services/env.cjs');
 const kunpoClient = require('./services/kunpoClient.cjs');
 const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
+const { createFlowStateRepair } = require('./services/flowStateRepair.cjs');
 const { assertFinalApprovalForExport, exportCompositionOutput, hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('./services/compositionRenderer.cjs');
 
 // UI E2E runs the packaged renderer (dist/) from an unpackaged checkout via
@@ -64,6 +65,7 @@ function registerIpc() {
   const kunpoConfig = loadKunpoConfig(projectRoot, process.env, { modelConfigPath });
   const projectStore = createProjectStore();
   const pipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig });
+  const flowStateRepair = createFlowStateRepair({ projectStore });
 
   ipcMain.handle('copilot:config', async () => ({
     kunpo: kunpoClient.safeConfig(kunpoConfig),
@@ -167,6 +169,11 @@ function registerIpc() {
   ipcMain.handle('copilot:input:draft-requirement', (_event, projectId, input) => pipeline.draftRequirement(projectId, input));
   ipcMain.handle('copilot:pipeline:cancel', (_event, projectId, stage, input) => pipeline.cancelStage(projectId, stage, input));
   ipcMain.handle('copilot:pipeline:approve', (_event, projectId, kind, input) => pipeline.approveArtifact(projectId, kind, input));
+  ipcMain.handle('copilot:pipeline:repair-route-cycle', async (_event, projectId, input) => {
+    // 修复返回统一为刷新后的项目；审计细节写入项目内修复台账。
+    await flowStateRepair.repairRouteCycle(projectId, input);
+    return projectStore.open(projectId, { includePreviews: false, screenId: input?.screenId });
+  });
   ipcMain.handle('copilot:pipeline:update', (_event, projectId, kind, patch) => pipeline.updateArtifact(projectId, kind, patch));
   ipcMain.handle('copilot:underlay:contract', (_event, projectId, input) => pipeline.createUnderlayContract(projectId, input));
   ipcMain.handle('copilot:underlay:guide', (_event, projectId, input) => pipeline.createLayoutGuide(projectId, input));

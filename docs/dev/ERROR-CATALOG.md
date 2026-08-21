@@ -7,9 +7,9 @@
 错误码分三组：
 
 - **管线错误码（`ERROR_CODES`）**：由后端以 `Error.code` 抛出，或被 IPC/导出门禁引用，
-  共 47 个。
+  共 50 个。
 - **Fidelity 检查码（`FIDELITY_ISSUE_CODES`）**：写入 Fidelity Report `issues[].code`
-  或 Underlay Critique 门禁的结构化检查码，共 26 个。
+  或 Underlay Critique 门禁的结构化检查码，共 27 个。
 - **Binding 校验码（`BINDING_VALIDATION_CODES`）**：`validateBindings` 返回的
   结构化错误/警告前缀码，作为 `BINDING_COVERAGE_INCOMPLETE` 的明细出现，共 10 个。
 
@@ -17,7 +17,7 @@
 `COMPOSITION_OUTPUT_UNREADABLE` 既是管线错误码，也被像素检查器作为 issue code 使用；
 它们只定义在 `ERROR_CODES` 中，检查器直接引用 `ERROR_CODES.*`。
 
-## 一、管线错误码（ERROR_CODES，47 个）
+## 一、管线错误码（ERROR_CODES，50 个）
 
 ### Screen 上下文
 
@@ -37,6 +37,13 @@
 | `LAYOUT_CONSTRAINT_VIOLATION` | `electron/services/designPipeline.cjs` | `validateLayout` 报出 slot/缩放/9-slice 违规 | 修正布局 slot 或组件缩放策略 |
 | `STYLE_CONTRACT_INVALID` | `electron/services/designPipeline.cjs` | 批准时 Style Contract 校验未通过 | 重新生成或编辑 Style Contract |
 | `UNDERLAY_SPEC_REQUIRED` | `electron/services/designPipeline.cjs` | strict 视觉生成缺少已批准 Underlay Contract 或 Layout Guide | 先生成并批准 Underlay Contract、生成 Layout Guide |
+
+### 批准新鲜度与路线修复
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `STALE_REAPPROVAL_BLOCKED` | `electron/services/designPipeline.cjs` | 批准已因上游变化失效（stale）的 Artifact、风格基线已变化，或批准布局时提案已失效 | 重新生成对应阶段（或重批允许确定性重验的字体/组件/绑定）后再批准 |
+| `ROUTE_CYCLE_REPAIR_INELIGIBLE` | `electron/services/flowStateRepair.cjs` | 项目不满足旧版风格循环一次性修复的识别条件（strict 路线、失效原因不符、输入变化、校验失败等） | 按 stale 原因指引重新生成对应阶段 |
 
 ### 参考与输入
 

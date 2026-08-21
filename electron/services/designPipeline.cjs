@@ -193,11 +193,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const intentConfirmed = project.requirement_confirmed ?? Boolean(project.requirement.trim());
       if (!project.requirement.trim() || !intentConfirmed) throw new Error('请先在项目输入中确认 AI 预填的设计意图，或填写自己的补充说明。');
       await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, { keepCurrentStage: Boolean(input.stayOnInputUntilComplete) });
-      await invalidateArtifacts(projectId, 'screen-contract', 'screen_contract_regenerated', { screenId: project.screen_id });
+      // 事务安全：先调模型、成功后才失效下游；失败的尝试不得让
+      // 现有可用链路变 stale。
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
         kind: 'screen-contract', prompt: screenContractPrompt(project), imagePaths: [project.wireframe_path],
         id: `${project.screen_id}-screen-contract`, source: { requirement: 'inputs/requirement.md', wireframe: 'inputs/wireframe', ...inputSource(project) }
       });
+      await invalidateArtifacts(projectId, 'screen-contract', 'screen_contract_regenerated', { screenId: project.screen_id });
       await projectStore.saveArtifact(projectId, 'screen-contract', artifact);
       await projectStore.updateWorkflow(projectId, stage, 'reviewed', `screens/${project.screen_id}/screen-contract.json`);
       return openProject(projectId);
@@ -213,11 +215,12 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         if (project.artifacts.bindings?.status !== 'approved' || bindingResult.errors.length) throw Object.assign(new Error(`Strict layout requires complete approved bindings: ${bindingResult.errors.join('; ')}`), { code: ERROR_CODES.BINDING_COVERAGE_INCOMPLETE });
       }
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
-      await invalidateArtifacts(projectId, 'layout-proposals', 'layout_proposals_regenerated', { screenId: project.screen_id });
+      // 事务安全：模型成功返回后才失效下游。
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
         kind: 'layout-proposals', prompt: layoutPrompt(project, screen, { fontManifest: project.artifacts.fontManifest, componentContract: project.artifacts.componentContract, bindings: project.artifacts.bindings }), imagePaths: [project.wireframe_path],
         id: `${project.screen_id}-layout-proposals`, source: { screen_contract: screen.id, wireframe: 'inputs/wireframe', ...inputSource(project) }
       });
+      await invalidateArtifacts(projectId, 'layout-proposals', 'layout_proposals_regenerated', { screenId: project.screen_id });
       await projectStore.saveArtifact(projectId, 'layout-proposals', artifact);
       await projectStore.updateWorkflow(projectId, stage, 'reviewed', `screens/${project.screen_id}/layout-proposals.json`);
       return openProject(projectId);
@@ -232,17 +235,22 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!styleBasis || styleBasis.status !== 'approved') throw new Error(profile === 'strict' ? '请先批准 Functional Screen Contract。' : '请先选择并批准布局方案。');
       if (project.project_type === 'existing' && !(project.reference_paths || []).length) throw new Error('旧项目风格重建至少需要一张已批准参考页。');
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
-      await invalidateArtifacts(projectId, 'style-contract', 'style_contract_regenerated');
       const capabilities = providerCapabilities(stageConfig.providerCapabilities);
       const referencePack = buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'style-resolution', omissionsConfirmed: input.confirmReferenceOmissions === true });
-      await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
-      if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请在 Reference Workbench 确认省略项后重试。`), { code: ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED });
+      if (referencePack.requires_omission_confirmation) {
+        await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
+        throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请在 Reference Workbench 确认省略项后重试。`), { code: ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED });
+      }
+      // 事务安全：先调模型并附加质量检查，成功后才写 Pack、失效下游、
+      // 落盘新规范；失败重试不会丢失当前可用链路。
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
         kind: 'style-contract', prompt: stylePrompt(project, styleBasis, referencePack), imagePaths: referencePack.selected.map((asset) => asset.path),
         id: `${project.id}-style-contract`,
         source: { style_basis: { kind: profile === 'strict' ? 'screen-contract' : 'approved-layout', id: styleBasis.id, screen_id: project.screen_id }, references: (project.reference_assets || []).map(({ id, name, role }) => ({ id, name, role })), ...inputSource(project) }
       });
       artifact.quality_checks = styleQualityChecks(project, artifact);
+      await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
+      await invalidateArtifacts(projectId, 'style-contract', 'style_contract_regenerated');
       await projectStore.saveArtifact(projectId, 'style-contract', artifact);
       await projectStore.updateWorkflow(projectId, stage, 'reviewed', 'style/style-contract.json');
       return openProject(projectId);
@@ -376,12 +384,25 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
+  // 批准新鲜度门禁：内容无法对着新上游做确定性重验的 Artifact，stale
+  // 后必须重新生成才能批准；普通编辑不会清除 stale（见 updateArtifact）。
+  // 字体/组件/绑定/参考清单四类资产的恢复路径就是重新批准：批准时重跑
+  // 完整确定性校验（批准动作本身即 deterministic revalidation），且不存在
+  // 独立的“重新生成”步骤；因此允许从 stale 直接重批。
+  const REVALIDATABLE_ON_APPROVAL = new Set(['font-manifest', 'component-contract', 'component-bindings', 'reference-inventory']);
+  function assertApprovableFreshness(kind, current) {
+    if (current?.status === 'stale' && !REVALIDATABLE_ON_APPROVAL.has(kind)) {
+      throw Object.assign(new Error(`${kind} 已因上游变化失效（${current.stale_reason || '未知原因'}），必须重新生成后才能批准。`), { code: ERROR_CODES.STALE_REAPPROVAL_BLOCKED });
+    }
+  }
+
   async function approveArtifact(projectId, kind, input = {}) {
     const project = ['reference-inventory', 'style-contract', 'font-manifest', 'component-contract'].includes(kind)
       ? await openProject(projectId) : await openScreen(projectId, input.screenId);
     if (kind === 'reference-inventory') {
       const current = project.artifacts.referenceInventory;
       if (!current) throw new Error('Reference Inventory does not exist.');
+      assertApprovableFreshness(kind, current);
       const approved = (current.assets || []).filter((asset) => asset.approved === true);
       if (!approved.length) throw Object.assign(new Error('Reference Inventory requires at least one approved image.'), { code: ERROR_CODES.REFERENCE_INVENTORY_EMPTY });
       await invalidateArtifacts(projectId, 'reference-inventory');
@@ -390,6 +411,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     } else if (kind === 'screen-contract') {
       const current = project.artifacts.screenContract;
       if (!current) throw new Error('Screen Contract does not exist.');
+      assertApprovableFreshness(kind, current);
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'wireframe_interpretation', 'approved', `screens/${project.screen_id}/screen-contract.json`);
     } else if (kind === 'component-bindings') {
@@ -412,6 +434,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     } else if (kind === 'underlay-contract') {
       const current = project.artifacts.underlayContract;
       if (!current) throw new Error('Underlay Contract does not exist.');
+      assertApprovableFreshness(kind, current);
       await invalidateArtifacts(projectId, 'underlay-contract');
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'underlay_specification', 'approved', `screens/${project.screen_id}/underlay-contract.json`);
@@ -437,6 +460,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       await projectStore.saveArtifact(projectId, 'composition-manifest', { ...manifest, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'fidelity_review', 'approved', `screens/${project.screen_id}/composition-manifest.json`);
     } else if (kind === 'approved-layout') {
+      // stale 提案不能再次批准（fix-plan 2.5）：必须先重新生成。
+      if (project.artifacts.layouts?.status === 'stale') {
+        throw Object.assign(new Error('布局提案已失效，请先重新生成布局提案。'), { code: ERROR_CODES.STALE_REAPPROVAL_BLOCKED });
+      }
       const proposals = project.artifacts.layouts?.proposals || [];
       const selected = proposals.find((proposal) => proposal.id === input.proposalId);
       if (!selected) throw new Error('请选择一个有效的布局方案。');
@@ -462,6 +489,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     } else if (kind === 'style-contract') {
       const current = project.artifacts.styleContract;
       if (!current) throw new Error('Style Contract does not exist.');
+      assertApprovableFreshness(kind, current);
+      // 风格基线新鲜度：锁定的规范必须建立在当前已批准的路线基线之上。
+      const basis = profileOf(project) === 'strict' ? project.artifacts.screenContract : project.artifacts.approvedLayout;
+      const recordedBasis = current.source?.style_basis;
+      if (!basis || basis.status !== 'approved' || (recordedBasis?.id && recordedBasis.id !== basis.id)) {
+        throw Object.assign(new Error('风格基线已变化，请重新解析风格后再锁定。'), { code: ERROR_CODES.STALE_REAPPROVAL_BLOCKED });
+      }
       const approved = { ...current, status: 'approved', locked_at: new Date().toISOString() };
       const errors = validateArtifact(kind, approved);
       if (errors.length) throw Object.assign(new Error(`Style Contract 尚不可执行，不能锁定：${errors.join('; ')}`), { code: ERROR_CODES.STYLE_CONTRACT_INVALID });
@@ -548,11 +582,14 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       return JSON.stringify(artifactPatch[key]) !== JSON.stringify(definition.artifact[key]);
     });
     if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
+    // 编辑不是洗回路径：stale Artifact 被编辑后仍保持 stale，必须通过
+    // 重新生成（或允许重验的资产重批）恢复；否则 stale 会被普通编辑
+    // 静默清除，绕过新鲜度门禁。
     const nextStatus = artifactPatch.status === 'rejected'
       ? 'rejected'
       : kind === 'screen-contract' && !screenContractContentChanged
         ? definition.artifact.status
-        : 'reviewed';
+        : definition.artifact.status === 'stale' ? 'stale' : 'reviewed';
     let next = {
       ...definition.artifact,
       ...artifactPatch,
@@ -561,6 +598,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       source: { ...(definition.artifact.source || {}), edited_by: 'ui-designer' },
       edited_at: new Date().toISOString()
     };
+    if (next.status !== 'stale') {
+      delete next.stale_at;
+      delete next.stale_reason;
+    }
     if (kind === 'component-bindings') {
       // Editing demotes the artifact to reviewed; drop any stale approval
       // stamp from the previous version so approval remains a current fact.
