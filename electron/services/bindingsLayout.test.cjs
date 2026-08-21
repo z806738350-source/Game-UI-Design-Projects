@@ -24,7 +24,7 @@ test('strict layout validates normalized slots and underlay policy', () => {
 });
 
 test('component contract invalidates bindings through fidelity', () => {
-  const downstream = downstreamArtifacts('component-contract');
+  const downstream = downstreamArtifacts('component-contract', { profile: 'strict' });
   assert.ok(downstream.includes('component-bindings'));
   assert.ok(downstream.includes('underlay-contract'));
   assert.ok(downstream.includes('fidelity-report'));

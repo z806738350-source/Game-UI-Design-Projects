@@ -139,13 +139,16 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     expect(project.artifacts.bindings?.status).toBe('approved');
     expect(project.artifacts.approvedLayout?.status).toBe('approved');
 
-    // Switching back to guided invalidates the mode-dependent approvals.
+    // Switching back to guided invalidates mode-dependent approvals: the
+    // style contract was built on the strict basis and becomes stale, but on
+    // the layout-first guided route the approved layout never depends on
+    // style, so it stays approved (the Layout—Style cycle fix).
     await switchContinuationModeViaUi(page, 'existing-guided');
     project = await getProject(page, 'E2E Guided Switch');
     expect(project.continuation_mode).toBe('existing-guided');
     expect(project.artifacts.styleContract?.status).toBe('stale');
-    expect(project.artifacts.approvedLayout?.status).toBe('stale');
+    expect(project.artifacts.approvedLayout?.status).toBe('approved');
     await page.getByTestId('stage-layout_design').click();
-    await expect(page.locator('.stale-guidance').first()).toBeVisible();
+    await expect(page.getByTestId('style-enter')).toBeVisible();
   });
 });

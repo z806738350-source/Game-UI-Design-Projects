@@ -12,7 +12,8 @@ const { validateBindings, withCoverage } = require('./componentBindings.cjs');
 const { BINDING_POLICY_VERSION } = require('./controlRolePolicy.cjs');
 const { normalizeControls } = require('./screenControls.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
-const { changedKindsForInput, downstreamArtifacts, isGlobalChange } = require('./artifactDependencies.cjs');
+const { changedKindsForInput, dependencyGraphFor, isGlobalChange } = require('./artifactDependencies.cjs');
+const { profileOf } = require('./pipelineProfile.cjs');
 const { GLOBAL_ARTIFACTS } = require('./artifactRegistry.cjs');
 const { generateUnderlayContract } = require('./underlayContract.cjs');
 const { writeLayoutGuide } = require('./layoutGuideRenderer.cjs');
@@ -115,31 +116,56 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   };
 
   async function invalidateArtifacts(projectId, changedKind, reason = `${changedKind}_changed`, options = {}) {
-    const downstream = downstreamArtifacts(changedKind);
-    if (!downstream.length) return { changed_kind: changedKind, affected_screens: [], stale_artifacts: [] };
     const root = await openProject(projectId);
-    const screenIds = isGlobalChange(changedKind)
-      ? (root.screens || [{ id: root.screen_id }]).filter((screen) => screen.status !== 'archived').map((screen) => screen.id)
-      : [options.screenId || root.screen_id];
-    const processed = new Set();
+    // 依赖图按路线计算：exploration/guided 中 Style 变化绝不回指 Layout，
+    // strict 中 Layout 变化不回指 Style，从根上消除 Layout—Style 循环。
+    const profile = profileOf(root);
+    const graph = dependencyGraphFor(profile);
+    if (!(graph[changedKind] || []).length) return { changed_kind: changedKind, profile, affected_screens: [], stale_artifacts: [] };
+    const screenIds = (root.screens || [{ id: root.screen_id }]).filter((screen) => screen.status !== 'archived').map((screen) => screen.id);
+    // 节点级 Scope 感知 BFS：Global→Screen 展开到所有未归档 Screen；
+    // Screen→Global 只处理一次；Screen→Screen 保持同一 Screen；
+    // Screen→Global→Screen 之后再 fan-out 回所有未归档 Screen。
+    // 去重键：global:<kind> / screen:<screenId>:<kind>。
+    const seed = isGlobalChange(changedKind)
+      ? { kind: changedKind, scope: 'global' }
+      : { kind: changedKind, scope: 'screen', screenId: options.screenId || root.screen_id };
+    const nodeKey = (node) => node.scope === 'global' ? `global:${node.kind}` : `screen:${node.screenId}:${node.kind}`;
+    const expanded = new Set([nodeKey(seed)]);
+    const queue = [seed];
+    const screenCache = new Map();
+    const screenProjectFor = async (screenId) => {
+      if (!screenCache.has(screenId)) screenCache.set(screenId, await projectStore.open(projectId, { includePreviews: false, screenId }));
+      return screenCache.get(screenId);
+    };
     const staleArtifacts = [];
-    for (const screenId of screenIds) {
-      const screenProject = await projectStore.open(projectId, { includePreviews: false, screenId });
-      for (const kind of downstream) {
-        const global = Boolean(GLOBAL_ARTIFACTS[kind]);
-        const key = `${kind}:${global ? 'global' : screenId}`;
-        if (processed.has(key)) continue;
-        processed.add(key);
-        const artifact = artifactValue(screenProject, kind);
-        if (artifact && artifact.status !== 'stale') {
-          await projectStore.saveArtifact(projectId, kind, { ...artifact, status: 'stale', stale_at: new Date().toISOString(), stale_reason: reason }, { screenId });
-          const stage = artifactStages[kind];
-          if (stage) await projectStore.updateWorkflow(projectId, stage, 'stale', undefined, { screenId, progress: undefined });
-          staleArtifacts.push({ kind, scope: global ? 'global' : 'screen', ...(global ? {} : { screen_id: screenId }) });
+    const affectedScreens = new Set();
+    while (queue.length) {
+      const node = queue.shift();
+      for (const nextKind of graph[node.kind] || []) {
+        const targets = [];
+        if (GLOBAL_ARTIFACTS[nextKind]) targets.push({ kind: nextKind, scope: 'global' });
+        else if (node.scope === 'global') for (const screenId of screenIds) targets.push({ kind: nextKind, scope: 'screen', screenId });
+        else targets.push({ kind: nextKind, scope: 'screen', screenId: node.screenId });
+        for (const target of targets) {
+          const key = nodeKey(target);
+          if (expanded.has(key)) continue;
+          expanded.add(key);
+          queue.push(target);
+          const global = target.scope === 'global';
+          const snapshot = global ? root : await screenProjectFor(target.screenId);
+          const artifact = artifactValue(snapshot, target.kind);
+          if (artifact && artifact.status !== 'stale') {
+            await projectStore.saveArtifact(projectId, target.kind, { ...artifact, status: 'stale', stale_at: new Date().toISOString(), stale_reason: reason }, global ? {} : { screenId: target.screenId });
+            const stage = artifactStages[target.kind];
+            if (stage) await projectStore.updateWorkflow(projectId, stage, 'stale', undefined, { screenId: global ? options.screenId || root.screen_id : target.screenId, progress: undefined });
+            staleArtifacts.push({ kind: target.kind, scope: global ? 'global' : 'screen', ...(global ? {} : { screen_id: target.screenId }) });
+            if (!global) affectedScreens.add(target.screenId);
+          }
         }
       }
     }
-    return { changed_kind: changedKind, affected_screens: screenIds, stale_artifacts: staleArtifacts };
+    return { changed_kind: changedKind, profile, affected_screens: [...affectedScreens], stale_artifacts: staleArtifacts };
   }
 
   async function invalidateFromInputChange(projectId, changes = {}) {
@@ -197,9 +223,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       return openProject(projectId);
     }
     if (stage === 'style_resolution') {
-      const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
-      const approved = strict ? (project.artifacts.approvedLayout?.status === 'approved' ? project.artifacts.approvedLayout : project.artifacts.screenContract) : project.artifacts.approvedLayout;
-      if (!approved || approved.status !== 'approved') throw new Error(strict ? '请先批准 Functional Screen Contract。' : '请先选择并批准布局方案。');
+      // Style basis is route-specific and never falls back to a downstream
+      // artifact: strict locks from the approved Functional Screen Contract,
+      // exploration/guided lock from the approved layout. Reading an approved
+      // layout as strict style input recreates the Layout—Style cycle.
+      const profile = profileOf(project);
+      const styleBasis = profile === 'strict' ? project.artifacts.screenContract : project.artifacts.approvedLayout;
+      if (!styleBasis || styleBasis.status !== 'approved') throw new Error(profile === 'strict' ? '请先批准 Functional Screen Contract。' : '请先选择并批准布局方案。');
       if (project.project_type === 'existing' && !(project.reference_paths || []).length) throw new Error('旧项目风格重建至少需要一张已批准参考页。');
       await projectStore.updateWorkflow(projectId, stage, 'in_progress');
       await invalidateArtifacts(projectId, 'style-contract', 'style_contract_regenerated');
@@ -208,8 +238,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
       if (referencePack.requires_omission_confirmation) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${referencePack.selected.length} 张，省略 ${referencePack.omitted.length} 张。请在 Reference Workbench 确认省略项后重试。`), { code: ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED });
       const artifact = await kunpoClient.requestArtifact(stageConfig, {
-        kind: 'style-contract', prompt: stylePrompt(project, approved, referencePack), imagePaths: referencePack.selected.map((asset) => asset.path),
-        id: `${project.id}-style-contract`, source: { approved_layout: approved.id, references: (project.reference_assets || []).map(({ id, name, role }) => ({ id, name, role })), ...inputSource(project) }
+        kind: 'style-contract', prompt: stylePrompt(project, styleBasis, referencePack), imagePaths: referencePack.selected.map((asset) => asset.path),
+        id: `${project.id}-style-contract`,
+        source: { style_basis: { kind: profile === 'strict' ? 'screen-contract' : 'approved-layout', id: styleBasis.id, screen_id: project.screen_id }, references: (project.reference_assets || []).map(({ id, name, role }) => ({ id, name, role })), ...inputSource(project) }
       });
       artifact.quality_checks = styleQualityChecks(project, artifact);
       await projectStore.saveArtifact(projectId, 'style-contract', artifact);

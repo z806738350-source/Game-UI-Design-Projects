@@ -79,11 +79,34 @@ composition-manifest、composition-output、fidelity-report 的
 
 ## 5. Stale 传播机制
 
-`invalidateArtifacts(kind)` 沿 `DIRECT_DEPENDENCIES`（见
-ARTIFACT-DEPENDENCY-GRAPH.md）做传递闭包，把所有下游置为 stale 并
-同步 workflow 阶段。批准时发现依赖 stale 抛 `STALE_DEPENDENCY`。
+`invalidateArtifacts(kind)` 按项目路线 Profile（`profileOf(project)`）
+选择依赖图（见 ARTIFACT-DEPENDENCY-GRAPH.md），做 scope-aware BFS：
+Global 变化 fan-out 到所有未归档 Screen，Screen 变化只影响本屏并向
+Global 传播一次；把所有下游置为 stale 并同步 workflow 阶段，返回
+`{ changed_kind, profile, affected_screens, stale_artifacts }`。
+批准时发现依赖 stale 抛 `STALE_DEPENDENCY`。
 
-## 6. 失败处理
+## 6. 路线顺序与导航/执行分离
+
+阶段推进顺序由路线决定（事实来源 `pipelineProfile.cjs` /
+前端镜像 `pipelineRoute.ts`）：
+
+| Profile | 顺序 |
+| --- | --- |
+| exploration（新项目） | Contract → Layout → Style → Visual |
+| guided（引导继承） | Contract → Layout → Style → Visual（underlay-only 方向） |
+| strict（严格继承 / locked） | Contract → Style → Font/Component/Binding → Layout → Underlay → Composition |
+
+风格基线（style_basis）：strict 恒为已批准 screen-contract；
+exploration/guided 恒为已批准 approved-layout，记录于 style-contract
+的 `source.style_basis`。
+
+**导航与执行分离**：阶段切换按钮（如「进入风格锁定」）只调用
+`onNavigate(stage)`，绝不触发模型；每个阶段的模型执行只能由该阶段
+页面内的显式按钮（如 `style-generate`）发起。进入风格锁定页面不会
+自动开始风格分析。
+
+## 7. 失败处理
 
 `runStage` 捕获异常后 `updateWorkflow(stage, 'failed')` 再抛出，保证
 前端看到一致状态；重试即重新触发同一 IPC。
@@ -92,4 +115,5 @@ ARTIFACT-DEPENDENCY-GRAPH.md）做传递闭包，把所有下游置为 stale 并
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.0 | 2026-08-21 | PR-26 三路线顺序、scope-aware stale 传播、导航/执行分离 |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
