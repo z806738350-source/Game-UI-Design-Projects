@@ -92,6 +92,7 @@ function previewApi(): DesignCopilotApi {
     runUnderlayCritique: async (id) => find(id),
     repairUnderlay: async (id) => find(id),
     approveUnderlayWaiver: async (id) => find(id),
+    approveUnderlayManualReview: async (id) => find(id),
     composeVisual: async (id) => find(id),
     runFidelity: async (id) => find(id),
     exportVisual: async () => ({ ok: true })
@@ -201,6 +202,7 @@ function webApi(): DesignCopilotApi {
     runUnderlayCritique: (id, input) => request(`${projectPath(id)}/underlay/critique`, { method: 'POST', body: JSON.stringify(input) }),
     repairUnderlay: (id, input) => request(`${projectPath(id)}/underlay/repair`, { method: 'POST', body: JSON.stringify(input) }),
     approveUnderlayWaiver: (id, input) => request(`${projectPath(id)}/underlay/waiver`, { method: 'POST', body: JSON.stringify(input) }),
+    approveUnderlayManualReview: (id, input) => request(`${projectPath(id)}/underlay/manual-review`, { method: 'POST', body: JSON.stringify(input) }),
     composeVisual: (id, input) => request(`${projectPath(id)}/composition`, { method: 'POST', body: JSON.stringify(input) }),
     runFidelity: (id, screenId) => request(`${projectPath(id)}/fidelity`, { method: 'POST', body: JSON.stringify({ screenId }) }),
     exportVisual: async (id, variationId) => {
@@ -267,6 +269,7 @@ export const copilotApi = {
   runUnderlayCritique: async (id: string, input: Record<string, unknown>) => rememberScreen(await api().runUnderlayCritique(id, withScreen(id, input))),
   repairUnderlay: async (id: string, input: Record<string, unknown>) => rememberScreen(await api().repairUnderlay(id, withScreen(id, input))),
   approveUnderlayWaiver: async (id: string, input: { issueId: string; reason: string }) => rememberScreen(await api().approveUnderlayWaiver(id, withScreen(id, input))),
+  approveUnderlayManualReview: async (id: string, input: { conclusion: string; reason: string }) => rememberScreen(await api().approveUnderlayManualReview(id, withScreen(id, input))),
   composeVisual: async (id: string, input: { variationId?: string; mode: 'preview' | 'final' }) => rememberScreen(await api().composeVisual(id, withScreen(id, input))),
   runFidelity: async (id: string, screenId?: string) => rememberScreen(await api().runFidelity(id, screenIdFor(id, screenId))),
   exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId),

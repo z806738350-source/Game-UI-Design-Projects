@@ -35,6 +35,7 @@ interface DesignCopilotApi {
   runUnderlayCritique(projectId: string, input: Record<string, unknown>): Promise<DesignProject>;
   repairUnderlay(projectId: string, input: Record<string, unknown>): Promise<DesignProject>;
   approveUnderlayWaiver(projectId: string, input: { issueId: string; reason: string; screenId: string }): Promise<DesignProject>;
+  approveUnderlayManualReview(projectId: string, input: { conclusion: string; reason: string; screenId: string }): Promise<DesignProject>;
   composeVisual(projectId: string, input: { variationId?: string; mode: 'preview' | 'final'; screenId: string }): Promise<DesignProject>;
   runFidelity(projectId: string, screenId: string): Promise<DesignProject>;
   exportVisual(projectId: string, variationId: string): Promise<{ ok: boolean; filePath?: string }>;

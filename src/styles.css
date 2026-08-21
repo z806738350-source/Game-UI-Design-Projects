@@ -516,6 +516,15 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .quality-warning svg { flex: 0 0 auto; color: var(--warning); }
 .quality-warning b { font-size: var(--type-small); color: #f0cf9a; }
 .quality-warning p { margin: 3px 0 0; color: var(--muted); font-size: var(--type-small); line-height: 1.5; }
+.manual-review-panel > div { flex: 1; min-width: 0; display: grid; gap: 8px; align-content: start; }
+.manual-review-panel label { display: grid; gap: 4px; }
+.manual-review-panel label span { color: var(--muted); font-size: var(--type-caption); font-weight: 700; letter-spacing: .04em; }
+.manual-review-panel input, .manual-review-panel textarea { padding: 8px 10px; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 7px; outline: 0; background: #0b0c10; font: 400 var(--type-small)/1.5 var(--sans); }
+.manual-review-panel input:focus, .manual-review-panel textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(227, 166, 61, .1); }
+.manual-review-panel input::placeholder, .manual-review-panel textarea::placeholder { color: var(--faint); }
+.manual-review-panel textarea { min-height: 56px; resize: vertical; }
+.manual-review-panel button { justify-self: start; margin-top: 2px; }
+.manual-review-panel .button svg { color: inherit; }
 .json-editor { flex: 1; display: grid; grid-template-rows: auto minmax(300px, 1fr) auto auto; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
 .json-editor > div b { font-size: var(--type-body); }
 .json-editor > div p { margin: 4px 0 0; color: var(--muted); font-size: var(--type-small); }
