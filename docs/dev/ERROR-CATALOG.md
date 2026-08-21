@@ -7,7 +7,7 @@
 错误码分三组：
 
 - **管线错误码（`ERROR_CODES`）**：由后端以 `Error.code` 抛出，或被 IPC/导出门禁引用，
-  共 50 个。
+  共 51 个。
 - **Fidelity 检查码（`FIDELITY_ISSUE_CODES`）**：写入 Fidelity Report `issues[].code`
   或 Underlay Critique 门禁的结构化检查码，共 27 个。
 - **Binding 校验码（`BINDING_VALIDATION_CODES`）**：`validateBindings` 返回的
@@ -17,7 +17,7 @@
 `COMPOSITION_OUTPUT_UNREADABLE` 既是管线错误码，也被像素检查器作为 issue code 使用；
 它们只定义在 `ERROR_CODES` 中，检查器直接引用 `ERROR_CODES.*`。
 
-## 一、管线错误码（ERROR_CODES，50 个）
+## 一、管线错误码（ERROR_CODES，51 个）
 
 ### Screen 上下文
 
@@ -49,7 +49,7 @@
 
 | 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
 | --- | --- | --- | --- |
-| `REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED` | `electron/services/designPipeline.cjs` | 参考图超过服务容量，存在被省略项 | 在 Reference Workbench 确认省略项后重试 |
+| `REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED` | `electron/services/designPipeline.cjs` | 参考图超过服务容量，存在被省略项 | 风格阶段在 Reference Workbench 确认；视觉阶段在视觉探索页核对省略清单（确认绑定当前 Pack hash）后点击“确认省略项并生成” |
 | `REFERENCE_INVENTORY_EMPTY` | `electron/services/designPipeline.cjs` | 批准 Reference Inventory 时无任何已批准图片 | 至少批准一张参考图 |
 | `REFERENCE_CAPACITY_EXCEEDED` | `electron/services/kunpoClient.cjs` | 参考图数量超过 provider 上限 | 精简参考图或构建显式 reference pack |
 
@@ -98,11 +98,12 @@
 | `FIDELITY_EVIDENCE_STALE` | `electron/services/fidelity.cjs` | 批准时像素证据摘要与报告不一致 | 重跑 Fidelity（文件已变化） |
 | `FIDELITY_CURRENT_EVIDENCE_FAILED` | `electron/services/designPipeline.cjs` | 批准时实时像素检查失败 | 按 issues 修复资产/输出 |
 
-### Underlay 修复
+### Underlay 修复与人工复核
 
 | 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
 | --- | --- | --- | --- |
 | `UNDERLAY_REPAIR_LIMIT` | `electron/services/underlayRepair.cjs` | 自动修复次数达到上限 | 转入人工评审（写入 blocked repair task） |
+| `UNDERLAY_MANUAL_REVIEW_NOT_REQUIRED` | `electron/services/designPipeline.cjs` | 对未要求人工复核（或已完成人工复核）的 Critique 调用 `approveUnderlayManualReview` | 仅在 Critique 要求人工复核时使用该动作；其他阻断走修复复审或 issue 豁免 |
 | `INPAINT_NOT_AVAILABLE` | `electron/services/underlayRepair.cjs` | 服务不支持 inpaint 修复模式 | 改用重生成模式或升级服务能力 |
 | `REPAIR_OUTPUT_MISSING` | `electron/services/underlayRepair.cjs` | 修复任务没有返回图片结果 | 重试修复或检查 provider |
 | `REPAIR_EVIDENCE_INCOMPLETE` | `electron/services/underlayRepair.cjs` | 修复所需证据（overlay/mask 等）缺失 | 重跑 critique 后再修复 |

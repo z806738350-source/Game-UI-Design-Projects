@@ -180,6 +180,7 @@ function registerIpc() {
   ipcMain.handle('copilot:underlay:critique', (_event, projectId, input) => pipeline.critiqueUnderlay(projectId, input));
   ipcMain.handle('copilot:underlay:repair', (_event, projectId, input) => pipeline.repairUnderlay(projectId, input));
   ipcMain.handle('copilot:underlay:waiver', (_event, projectId, input) => pipeline.waiveUnderlayIssue(projectId, input));
+  ipcMain.handle('copilot:underlay:manual-review', (_event, projectId, input) => pipeline.approveUnderlayManualReview(projectId, input));
   ipcMain.handle('copilot:composition:create', (_event, projectId, input) => pipeline.composeVisual(projectId, input));
   ipcMain.handle('copilot:fidelity:run', (_event, projectId, input) => pipeline.runFidelity(projectId, input));
   ipcMain.handle('copilot:visual:export', async (_event, projectId, variationId) => {

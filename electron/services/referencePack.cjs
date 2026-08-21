@@ -1,3 +1,5 @@
+const { createHash } = require('node:crypto');
+
 const ROLE_PRIORITY = Object.freeze({ component: 1, primary: 2, material: 3, composition: 4, supporting: 5 });
 
 function rank(asset) {
@@ -39,6 +41,13 @@ function buildReferencePack({ assets = [], capabilities, purpose, structureGuide
     reason: `provider-capacity:${limit}`
   }));
   const group = (role) => approved.filter((asset) => asset.role === role).map((asset) => asset.id);
+  // 省略确认事实必须绑定当前 Pack 内容：参考图集合、角色优先级或
+  // Provider 容量任一变化都会改变该 hash，旧确认自动失效。
+  const pack_hash = createHash('sha256').update(JSON.stringify({
+    purpose: purpose || 'underlay-generation', limit,
+    selected: selected.map((asset) => asset.id),
+    omitted: omitted.map((asset) => asset.id)
+  })).digest('hex');
   return {
     schema_version: '2.0',
     id: `${purpose || 'generation'}-reference-pack`,
@@ -47,6 +56,7 @@ function buildReferencePack({ assets = [], capabilities, purpose, structureGuide
     source: { provider_capabilities: { ...capabilities } },
     purpose: purpose || 'underlay-generation',
     provider_limit: limit,
+    pack_hash,
     groups: {
       structure_guides: guides.map((asset) => asset.id),
       component_references: group('component'),
