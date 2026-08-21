@@ -83,6 +83,9 @@ composition-manifest、composition-output、fidelity-report 的
   （批准即重跑完整确定性校验）外一律抛 `STALE_REAPPROVAL_BLOCKED`；
   style-contract 额外校验风格基线新鲜（basis 必须仍是当前已批准的
   路线基线）；approved-layout 批准拦截 stale 布局提案；
+  `validateLayout` 的组件绑定门禁仅在严格继承路线执行，探索/引导
+  路线没有 bindings 资产，布局批准与 route-cycle 修复不得被缺失
+  绑定误拦截；
 - **旧版风格循环一次性修复**：布局先行路线上被旧版缺陷错误标为
   stale（`stale_reason = style_contract_regenerated`）且输入未变的
   布局链路，可由 `flowStateRepair` 在备份后恢复：重跑
@@ -159,7 +162,7 @@ exploration/guided 恒为已批准 approved-layout，记录于 style-contract
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
-| 2.3 | 2026-08-21 | PR-29 证据链匹配门禁、交付链绑定重验、来源修订重验与视觉取代型失效 |
+| 2.3 | 2026-08-21 | PR-29 证据链匹配门禁、交付链绑定重验、来源修订重验、视觉取代型失效与布局校验绑定门禁限 strict 路线 |
 | 2.2 | 2026-08-21 | PR-28 三条死路解除：严格底层规范状态机、视觉省略确认绑定 Pack hash、Underlay 人工复核入口 |
 | 2.1 | 2026-08-21 | PR-27 批准新鲜度门禁、编辑保留 stale、事务安全与旧版循环一次性修复 |
 | 2.0 | 2026-08-21 | PR-26 三路线顺序、scope-aware stale 传播、导航/执行分离 |

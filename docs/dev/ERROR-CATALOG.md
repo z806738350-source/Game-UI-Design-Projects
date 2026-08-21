@@ -34,7 +34,7 @@
 | `FONT_MANIFEST_REQUIRED` | `electron/services/designPipeline.cjs` | strict 布局要求 Font Manifest 已批准 | 先完成字体导入与确认并批准 |
 | `COMPONENT_CONTRACT_REQUIRED` | `electron/services/designPipeline.cjs` | strict 布局要求 Component Contract 已批准 | 先导入组件资产并批准 |
 | `BINDING_COVERAGE_INCOMPLETE` | `electron/services/designPipeline.cjs` | 绑定未覆盖全部必要控件或语义校验失败 | 按 `BINDING_*` 错误提示补全显式选择 |
-| `LAYOUT_CONSTRAINT_VIOLATION` | `electron/services/designPipeline.cjs` | `validateLayout` 报出 slot/缩放/9-slice 违规 | 修正布局 slot 或组件缩放策略 |
+| `LAYOUT_CONSTRAINT_VIOLATION` | `electron/services/designPipeline.cjs` | `validateLayout` 报出 slot/缩放/9-slice 违规；组件绑定门禁仅限严格继承路线 | 修正布局 slot 或组件缩放策略 |
 | `STYLE_CONTRACT_INVALID` | `electron/services/designPipeline.cjs` | 批准时 Style Contract 校验未通过 | 重新生成或编辑 Style Contract |
 | `UNDERLAY_SPEC_REQUIRED` | `electron/services/designPipeline.cjs` | strict 视觉生成缺少已批准 Underlay Contract 或 Layout Guide | 先生成并批准 Underlay Contract、生成 Layout Guide |
 
