@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { copilotApi } from '../../api';
@@ -87,5 +87,37 @@ describe('StyleWorkspace（风格分析只由用户显式触发）', () => {
     await user.click(screen.getByTestId('visual-generate'));
     expect(runStage).toHaveBeenCalledTimes(1);
     expect(runStage).toHaveBeenCalledWith('project-1', 'visual_exploration', expect.anything());
+  });
+});
+
+// AUD-03：保存失败不得把失败当成功。run 失败返回 undefined 时，
+// 编辑器保持打开，不得退出编辑模式。
+describe('StyleWorkspace（AUD-03 保存失败语义）', () => {
+  const approvedStyleProject = () => readyExplorationProject({
+    artifacts: {
+      approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'approved', source_proposal: 'layout-a', manual_adjustments: [] }),
+      styleContract: makeArtifact({ id: 'style-contract-1', status: 'approved', visual_identity: { theme: '深色精密' } })
+    }
+  });
+  // 模拟 App.run 的失败语义：失败返回 undefined 而不是 resolve 为成功
+  const failingRun: RunTask = async (task) => { try { return await task(); } catch { return undefined; } };
+
+  it('保存失败时编辑器保持打开', async () => {
+    const user = userEvent.setup();
+    vi.mocked(copilotApi.updateArtifact).mockRejectedValueOnce(new Error('风格保存失败'));
+    render(<StyleWorkspace project={approvedStyleProject()} busy={false} run={failingRun} />);
+    await user.click(screen.getByText('编辑规范'));
+    await user.click(screen.getByText('保存为新版本'));
+    await waitFor(() => expect(copilotApi.updateArtifact).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('保存为新版本')).toBeTruthy();
+  });
+
+  it('保存成功后退出编辑模式', async () => {
+    const user = userEvent.setup();
+    vi.mocked(copilotApi.updateArtifact).mockResolvedValueOnce(makeProject());
+    render(<StyleWorkspace project={approvedStyleProject()} busy={false} run={failingRun} />);
+    await user.click(screen.getByText('编辑规范'));
+    await user.click(screen.getByText('保存为新版本'));
+    await waitFor(() => expect(screen.queryByText('保存为新版本')).toBeNull());
   });
 });

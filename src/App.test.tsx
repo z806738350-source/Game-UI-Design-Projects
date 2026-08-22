@@ -6,6 +6,7 @@ import type { AppConfig } from './types';
 // App 顶栏帮助入口测试：点击打开应用内说明书弹窗（iframe 嵌入 guide HTML）；
 // 弹窗内「在系统浏览器中打开」失败时必须在错误条反馈，不允许静默无反应（PR#25 收口 P1）。
 const openUserGuide = vi.fn();
+const createProject = vi.fn();
 vi.mock('./api', () => ({
   copilotApi: {
     getConfig: vi.fn(async (): Promise<AppConfig> => ({
@@ -14,6 +15,7 @@ vi.mock('./api', () => ({
       kunpo: { configured: true, mode: 'gateway', modelSource: 'models.json', envSource: '.env' }
     } as AppConfig)),
     listProjects: vi.fn(async () => []),
+    createProject: (...args: unknown[]) => createProject(...args),
     openUserGuide: (...args: unknown[]) => openUserGuide(...args)
   }
 }));
@@ -26,6 +28,7 @@ if (!Element.prototype.scrollTo) Element.prototype.scrollTo = () => {};
 afterEach(() => {
   cleanup();
   openUserGuide.mockReset();
+  createProject.mockReset();
 });
 
 describe('App 顶栏帮助入口', () => {
@@ -81,5 +84,21 @@ describe('App 顶栏帮助入口', () => {
     await user.click(await screen.findByTitle('使用说明书'));
     await user.click(screen.getByRole('button', { name: '在系统浏览器中打开' }));
     await screen.findByText(/IPC_GUIDE_OPEN_FAILED/);
+  });
+});
+
+// AUD-03：run() 失败不得被调用方当作成功。创建项目失败时对话框必须保持
+// 打开，让用户看到错误并重试，而不是静默关闭。
+describe('App 创建项目失败语义（AUD-03）', () => {
+  it('创建失败时对话框保持打开并显示错误条', async () => {
+    const user = userEvent.setup();
+    createProject.mockRejectedValueOnce(new Error('项目创建失败：工作区不可写'));
+    render(<App />);
+    await user.click(await screen.findByText('建立第一个项目'));
+    await user.type(screen.getByPlaceholderText(/云境计划/), '测试项目');
+    await user.click(screen.getByTestId('create-project'));
+    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId('create-project-dialog')).toBeTruthy();
+    await screen.findByText(/工作区不可写/);
   });
 });
