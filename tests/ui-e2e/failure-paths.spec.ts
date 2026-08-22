@@ -60,11 +60,15 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     await editContractPurposeViaUi(page, 'E2E failure-path semantic edit of the page purpose.');
     const project = await getProject(page);
     expect(project.artifacts.bindings?.status).toBe('stale');
-    // The edit went through the run() boundary, so the shell already holds
-    // fresh state; the layout gate must reflect the staleness immediately.
+    // AUD-01：strict 的 Style Basis 是功能契约，契约语义编辑必须同时使
+    // 已批准的 Style stale；因此风格页不再显示门禁面板（仅 approved 时
+    // 渲染），而是回到“重新解析风格”入口。
+    expect(project.artifacts.styleContract?.status).toBe('stale');
     await page.getByTestId('stage-style_resolution').click();
-    await expect(page.locator('.strict-gates i', { hasText: '控件绑定' })).not.toHaveClass(/is-ready/);
-    await expect(page.getByTestId('strict-layout-generate')).toBeDisabled();
+    await expect(page.locator('.strict-gates')).toHaveCount(0);
+    await expect(page.getByText('参考已变化，重新解析风格')).toBeVisible();
+    // 组件感知布局入口随门禁面板一起隐藏，严格链必须先重建 Style。
+    await expect(page.getByTestId('strict-layout-generate')).toHaveCount(0);
   });
 
   test('re-approve contract, bindings, reach final, then missing final PNG blocks export', async () => {
@@ -139,16 +143,19 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     expect(project.artifacts.bindings?.status).toBe('approved');
     expect(project.artifacts.approvedLayout?.status).toBe('approved');
 
-    // Switching back to guided invalidates mode-dependent approvals: the
-    // style contract was built on the strict basis and becomes stale, but on
-    // the layout-first guided route the approved layout never depends on
-    // style, so it stays approved (the Layout—Style cycle fix).
+    // AUD-02：切换回 guided 按旧∪新路线清理——整条生产链（含已批准布局）
+    // 全部 stale，只保留 Screen Contract 与参考资产；旧语义里“引导路线
+    // 布局不依赖风格所以保留 approved”不再成立。
     await switchContinuationModeViaUi(page, 'existing-guided');
     project = await getProject(page, 'E2E Guided Switch');
     expect(project.continuation_mode).toBe('existing-guided');
     expect(project.artifacts.styleContract?.status).toBe('stale');
-    expect(project.artifacts.approvedLayout?.status).toBe('approved');
+    expect(project.artifacts.approvedLayout?.status).toBe('stale');
+    expect(project.artifacts.approvedLayout?.stale_reason).toBe('route_profile_changed');
+    // 布局页仍可达：提案本体保留但已失效，页脚进入 stale 引导分支——
+    // 「进入风格锁定」随批准动作一起隐藏，必须先重建布局/契约链。
     await page.getByTestId('stage-layout_design').click();
-    await expect(page.getByTestId('style-enter')).toBeVisible();
+    await expect(page.getByText('布局提案已失效，请重新生成布局。')).toBeVisible();
+    await expect(page.getByTestId('style-enter')).toHaveCount(0);
   });
 });

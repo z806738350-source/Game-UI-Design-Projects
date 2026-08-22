@@ -168,11 +168,57 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return { changed_kind: changedKind, profile, affected_screens: [...affectedScreens], stale_artifacts: staleArtifacts };
   }
 
+  // AUD-02：路线切换重置集合。模式切换时新模式图不含旧路线专属资产，只按
+  // 新图失效会残留旧严格链的 approved 事实（切回时复活）；因此模式变化
+  // 无条件把两条路线的全部生产链资产置 stale，并以 route_profile_changed
+  // 记录原因。Screen Contract / 输入 / 参考资产跨路线仍有效，不重置。
+  const ROUTE_SWITCH_RESET_KINDS = Object.freeze([
+    'style-contract', 'font-manifest', 'component-contract', 'component-bindings',
+    'layout-proposals', 'approved-layout', 'underlay-contract', 'visual-task',
+    'visual-results', 'underlay-critique', 'composition-manifest', 'composition-output', 'fidelity-report'
+  ]);
+
+  async function invalidateForRouteSwitch(projectId, options = {}) {
+    const root = await openProject(projectId);
+    const screenIds = (root.screens || [{ id: root.screen_id }]).filter((screen) => screen.status !== 'archived').map((screen) => screen.id);
+    const staleArtifacts = [];
+    const affectedScreens = new Set();
+    for (const kind of ROUTE_SWITCH_RESET_KINDS) {
+      const targets = GLOBAL_ARTIFACTS[kind]
+        ? [{ kind, global: true }]
+        : screenIds.map((screenId) => ({ kind, global: false, screenId }));
+      for (const target of targets) {
+        const snapshot = target.global ? root : await projectStore.open(projectId, { includePreviews: false, screenId: target.screenId });
+        const artifact = artifactValue(snapshot, target.kind);
+        if (artifact && artifact.status !== 'stale') {
+          await projectStore.saveArtifact(projectId, target.kind, { ...artifact, status: 'stale', stale_at: new Date().toISOString(), stale_reason: 'route_profile_changed' }, target.global ? {} : { screenId: target.screenId });
+          const stage = artifactStages[target.kind];
+          if (stage) await projectStore.updateWorkflow(projectId, stage, 'stale', undefined, { screenId: target.global ? options.screenId || root.screen_id : target.screenId, progress: undefined });
+          staleArtifacts.push({ kind: target.kind, scope: target.global ? 'global' : 'screen', ...(target.global ? {} : { screen_id: target.screenId }) });
+          if (!target.global) affectedScreens.add(target.screenId);
+        }
+      }
+    }
+    return {
+      changed_kind: 'input-continuation-mode',
+      profile: profileOf(root),
+      ...(options.previousMode ? { previous_profile: options.previousMode } : {}),
+      affected_screens: [...affectedScreens],
+      stale_artifacts: staleArtifacts
+    };
+  }
+
   async function invalidateFromInputChange(projectId, changes = {}) {
     const project = await openProject(projectId);
     const changedKinds = changedKindsForInput(changes);
     const effects = [];
     for (const changedKind of changedKinds) {
+      // AUD-02：模式切换不走普通下游失效（此时模式已落盘，只会算出新图），
+      // 改用旧∪新路线的固定重置集合，确保旧路线事实不残留。
+      if (changedKind === 'input-continuation-mode') {
+        effects.push(await invalidateForRouteSwitch(projectId, { screenId: changes.screenId || project.screen_id, previousMode: changes.previousContinuationMode }));
+        continue;
+      }
       effects.push(await invalidateArtifacts(projectId, changedKind, `${changedKind}_changed`, { screenId: changes.screenId || project.screen_id }));
     }
     if (changes.requirement || changes.wireframe) {

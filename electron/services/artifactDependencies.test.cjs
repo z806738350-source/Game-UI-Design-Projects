@@ -53,6 +53,17 @@ test('strict route keeps style upstream of layout without a layout→style back 
   assert.equal(layoutDownstream.includes('style-contract'), false, 'strict: approved layout must never stale style');
 });
 
+// AUD-01：Strict 的 Style Basis 是 Screen Contract，功能契约变化必须使
+// Style 与全部严格下游 stale，旧 Style 不得继续建立在旧契约之上。
+test('AUD-01: strict screen-contract change stales style and the whole strict chain', () => {
+  const graph = dependencyGraphFor('strict');
+  assert.equal(graph['screen-contract'].includes('style-contract'), true, 'strict: screen-contract must sit upstream of style-contract');
+  const downstream = downstreamArtifacts('screen-contract', { profile: 'strict' });
+  for (const kind of ['style-contract', 'font-manifest', 'component-contract', 'component-bindings', 'layout-proposals', 'approved-layout', 'underlay-contract', 'visual-task', 'composition-manifest', 'composition-output', 'fidelity-report']) {
+    assert.equal(downstream.includes(kind), true, `strict: screen-contract change must stale ${kind}`);
+  }
+});
+
 // 任何路线出现依赖环都会让 stale 传播形成死循环（本次事故根因），
 // 用 DFS 三色标记对所有 Profile 强制做环检测。
 test('every profile dependency graph is acyclic, duplicate-free, and terminates correctly', () => {

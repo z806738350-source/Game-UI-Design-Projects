@@ -224,16 +224,22 @@ test('stale propagation isolates page inputs and fans global inputs across non-a
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
     const pageResult = await pipeline.invalidateFromInputChange(project.id, { requirement: true, screenId: 'inventory' });
     assert.deepEqual(pageResult.invalidation.changed_kinds, ['input-requirement']);
-    assert.deepEqual(pageResult.invalidation.effects[0].affected_screens, ['inventory']);
+    // AUD-01 后 strict 图中 screen-contract 是 style/layout 的上游：页面级
+    // 输入变化除了失效本页契约，还会沿严格链传播到全局 Style 与全部 Screen
+    // 的下游；这正是“契约变化 → 全链 stale”的期望行为。
+    assert.deepEqual(new Set(pageResult.invalidation.effects[0].affected_screens), new Set(['inventory', 'main']));
     const mainAfterPage = await projectStore.open(project.id, { screenId: 'main' });
     const inventoryAfterPage = await projectStore.open(project.id, { screenId: 'inventory' });
     const archiveAfterPage = await projectStore.open(project.id, { screenId: 'archive' });
+    // 主屏契约本身不受其他页输入变化影响（screen-scoped 种子只在 inventory）。
     assert.equal(mainAfterPage.artifacts.screenContract.status, 'approved');
-    assert.equal(mainAfterPage.artifacts.fidelityReport.status, 'approved');
+    // 但主屏的严格链下游因契约→Style→全链传播而 stale。
+    assert.equal(mainAfterPage.artifacts.fidelityReport.status, 'stale');
     assert.equal(inventoryAfterPage.artifacts.screenContract.status, 'stale');
     assert.equal(inventoryAfterPage.artifacts.fidelityReport.status, 'stale');
+    // 归档屏不参与任何 fan-out。
     assert.equal(archiveAfterPage.artifacts.fidelityReport.status, 'approved');
-    assert.equal(mainAfterPage.artifacts.styleContract.status, 'approved');
+    assert.equal(mainAfterPage.artifacts.styleContract.status, 'stale');
 
     const globalResult = await pipeline.invalidateFromInputChange(project.id, { references: true, screenId: 'inventory' });
     assert.deepEqual(new Set(globalResult.invalidation.effects[0].affected_screens), new Set(['main', 'inventory']));
@@ -251,7 +257,10 @@ test('stale propagation isolates page inputs and fans global inputs across non-a
   }
 });
 
-test('continuation mode changes stale incompatible production artifacts on every active screen', async () => {
+// AUD-02：模式切换必须按旧∪新路线清理。只按新图失效会残留旧严格链
+// 专属资产（font/component/bindings/underlay）的 approved 事实；切换后
+// 全部生产链资产必须 stale，Screen Contract 与参考资产跨路线保留。
+test('AUD-02: route switch stales the old and new route production chains on every active screen', async () => {
   const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-mode-stale-'));
   const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
   process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
@@ -259,25 +268,84 @@ test('continuation mode changes stale incompatible production artifacts on every
     const projectStore = createProjectStore();
     const project = await projectStore.create({ name: 'Mode Matrix', projectType: 'existing', requirement: 'Main.' });
     await projectStore.createScreen(project.id, { id: 'shop', name: 'Shop' });
-    await projectStore.saveArtifact(project.id, 'style-contract', { schema_version: '2.0', id: 'style', version: 1, status: 'approved', source: {} });
+    // 模拟 Strict 完整生产链已 approved：全局风格/字体/组件 + 每屏生产链。
+    for (const [kind, id] of [['style-contract', 'style'], ['font-manifest', 'font'], ['component-contract', 'component'], ['reference-inventory', 'refs']]) {
+      await projectStore.saveArtifact(project.id, kind, { schema_version: '2.0', id, version: 1, status: 'approved', source: {} });
+    }
     for (const screenId of ['main', 'shop']) {
-      for (const kind of ['visual-task', 'visual-results', 'underlay-critique', 'composition-manifest', 'composition-output', 'fidelity-report']) {
+      for (const kind of ['screen-contract', 'component-bindings', 'layout-proposals', 'approved-layout', 'underlay-contract', 'visual-task', 'visual-results', 'underlay-critique', 'composition-manifest', 'composition-output', 'fidelity-report']) {
         await projectStore.saveArtifact(project.id, kind, {
           schema_version: '2.0', id: `${screenId}-${kind}`, version: 1, status: 'approved', source: {},
-          ...(kind === 'visual-results' ? { variations: [{ id: `${screenId}-v1` }] } : {})
+          ...(kind === 'visual-results' ? { variations: [{ id: `${screenId}-v1` }] } : {}),
+          ...(kind === 'layout-proposals' ? { proposals: [] } : {})
         }, { screenId });
       }
     }
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
-    const result = await pipeline.invalidateFromInputChange(project.id, { continuationMode: true, screenId: 'main' });
+    const result = await pipeline.invalidateFromInputChange(project.id, { continuationMode: true, previousContinuationMode: 'existing-strict', screenId: 'main' });
     assert.deepEqual(result.invalidation.changed_kinds, ['input-continuation-mode']);
+    assert.equal(result.invalidation.effects[0].changed_kind, 'input-continuation-mode');
+    assert.equal(result.invalidation.effects[0].previous_profile, 'existing-strict');
     for (const screenId of ['main', 'shop']) {
       const screen = await projectStore.open(project.id, { screenId });
+      // 旧严格链专属资产必须被重置，不得残留 approved。
+      assert.equal(screen.artifacts.bindings.status, 'stale', `${screenId}: bindings must stale on route switch`);
+      assert.equal(screen.artifacts.layouts.status, 'stale', `${screenId}: layouts must stale on route switch`);
+      assert.equal(screen.artifacts.approvedLayout.status, 'stale', `${screenId}: approved layout must stale on route switch`);
+      assert.equal(screen.artifacts.underlayContract.status, 'stale', `${screenId}: underlay must stale on route switch`);
       assert.equal(screen.artifacts.visualResults.status, 'stale');
       assert.equal(screen.artifacts.underlayCritique.status, 'stale');
       assert.equal(screen.artifacts.compositionOutput.status, 'stale');
       assert.equal(screen.artifacts.fidelityReport.status, 'stale');
+      assert.equal(screen.artifacts.fidelityReport.stale_reason, 'route_profile_changed');
+      // Screen Contract 跨路线仍有效，不属于重置集合。
+      assert.equal(screen.artifacts.screenContract.status, 'approved');
     }
+    const refreshed = await projectStore.open(project.id);
+    assert.equal(refreshed.artifacts.styleContract.status, 'stale');
+    assert.equal(refreshed.artifacts.fontManifest.status, 'stale', 'strict-only font manifest must not survive a route switch');
+    assert.equal(refreshed.artifacts.componentContract.status, 'stale', 'strict-only component contract must not survive a route switch');
+    assert.equal(refreshed.artifacts.referenceInventory.status, 'approved');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+// AUD-01 集成场景：Strict 中 Style 已批准，功能契约语义修改必须使
+// Style、Font、Component、Binding、Layout、Underlay、Composition、Fidelity
+// 全部 stale，旧 Style 不得继续建立在旧契约之上。
+test('AUD-01: strict contract semantic edit stales approved style and the full strict chain', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-aud01-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const projectStore = createProjectStore();
+    const project = await projectStore.create({ name: 'Strict Style Stale', projectType: 'existing', requirement: 'Main.' });
+    for (const [kind, id] of [['style-contract', 'style'], ['font-manifest', 'font'], ['component-contract', 'component']]) {
+      await projectStore.saveArtifact(project.id, kind, { schema_version: '2.0', id, version: 1, status: 'approved', source: {} });
+    }
+    for (const kind of ['screen-contract', 'component-bindings', 'layout-proposals', 'approved-layout', 'underlay-contract', 'visual-task', 'visual-results', 'underlay-critique', 'composition-manifest', 'composition-output', 'fidelity-report']) {
+      await projectStore.saveArtifact(project.id, kind, {
+        schema_version: '2.0', id: `main-${kind}`, version: 1, status: 'approved', source: {},
+        ...(kind === 'screen-contract' ? { purpose: 'Old purpose.', required_controls: [] } : {}),
+        ...(kind === 'visual-results' ? { variations: [{ id: 'main-v1' }] } : {}),
+        ...(kind === 'layout-proposals' ? { proposals: [] } : {})
+      }, { screenId: 'main' });
+    }
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    await pipeline.updateArtifact(project.id, 'screen-contract', { screenId: 'main', purpose: 'Changed purpose.' });
+    const after = await projectStore.open(project.id, { screenId: 'main' });
+    assert.equal(after.artifacts.styleContract.status, 'stale', 'approved style must stale when its strict basis changes');
+    assert.equal(after.artifacts.fontManifest.status, 'stale');
+    assert.equal(after.artifacts.componentContract.status, 'stale');
+    assert.equal(after.artifacts.bindings.status, 'stale');
+    assert.equal(after.artifacts.layouts.status, 'stale');
+    assert.equal(after.artifacts.underlayContract.status, 'stale');
+    assert.equal(after.artifacts.visualResults.status, 'stale');
+    assert.equal(after.artifacts.compositionManifest.status, 'stale');
+    assert.equal(after.artifacts.fidelityReport.status, 'stale');
   } finally {
     if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
     else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
