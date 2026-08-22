@@ -143,6 +143,8 @@ input[type='checkbox'] { accent-color: var(--accent); }
   border-top: 1px solid var(--line); background: rgba(10, 11, 14, .88); backdrop-filter: blur(14px);
 }
 .workspace-footer > span { color: var(--muted); font-size: var(--type-small); }
+/* 底栏右侧动作组：批准与下一步按钮并排，保持舒适间距，避免被 space-between 拆散到两端。 */
+.footer-actions { display: flex; align-items: center; gap: 12px; }
 .ready-copy { color: var(--ink) !important; font-weight: 600; }
 
 /* ---- 按钮 ---- */
