@@ -34,12 +34,24 @@ test('project store preserves upload metadata and duplicates projects independen
     project = await store.importFile(project.id, referenceTwo, 'reference');
     assert.equal(project.reference_assets.length, 2);
     assert.equal(project.reference_assets[0].role, 'primary');
-    project = await store.manageReference(project.id, { id: project.reference_assets[1].id, action: 'role', role: 'primary' });
+    ({ project } = await store.manageReference(project.id, { id: project.reference_assets[1].id, action: 'role', role: 'primary' }));
     assert.equal(project.reference_assets[1].role, 'primary');
     assert.equal(project.reference_assets[0].role, 'supporting');
-    project = await store.manageReference(project.id, { id: project.reference_assets[1].id, action: 'move', direction: 'up' });
+    ({ project } = await store.manageReference(project.id, { id: project.reference_assets[1].id, action: 'move', direction: 'up' }));
     assert.equal(project.reference_assets[0].role, 'primary');
-    project = await store.manageReference(project.id, { id: project.reference_assets[1].id, action: 'remove' });
+    // AUD-07：无变化的操作必须是 no-op——重复设置同角色、移动到原位置、
+    // 重复批准同状态、blur 未改内容都不得 bump input_revisions。
+    const revisionBefore = project.input_revisions?.references;
+    let noop = await store.manageReference(project.id, { id: project.reference_assets[0].id, action: 'role', role: 'primary' });
+    assert.equal(noop.changed, false);
+    noop = await store.manageReference(project.id, { id: project.reference_assets[0].id, action: 'move', direction: 'up' });
+    assert.equal(noop.changed, false);
+    noop = await store.manageReference(project.id, { id: project.reference_assets[0].id, action: 'details', screenType: '', contains: [], baseline: '', notes: '' });
+    assert.equal(noop.changed, false);
+    noop = await store.manageReference(project.id, { id: project.reference_assets[0].id, action: 'approval', approved: false });
+    assert.equal(noop.changed, false);
+    assert.equal(noop.project.input_revisions?.references, revisionBefore);
+    ({ project } = await store.manageReference(project.id, { id: project.reference_assets[1].id, action: 'remove' }));
     assert.equal(project.reference_assets.length, 1);
     const duplicate = await store.duplicate(project.id);
     assert.notEqual(duplicate.id, project.id);

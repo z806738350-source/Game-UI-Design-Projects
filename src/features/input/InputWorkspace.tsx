@@ -10,7 +10,7 @@ export function InputWorkspace({ project, busy, run }: WorkspaceProps) {
   const [requirement, setRequirement] = useState(project.requirement);
   const [artDirection, setArtDirection] = useState(project.art_direction);
   const [wireframeOpen, setWireframeOpen] = useState(false);
-  useEffect(() => { setRequirement(project.requirement); setArtDirection(project.art_direction); }, [project.id, project.requirement, project.art_direction]);
+  useEffect(() => { setRequirement(project.requirement); setArtDirection(project.art_direction); }, [project.id, project.screen_id, project.requirement, project.art_direction]);
   const ready = Boolean(project.wireframe_path);
   const dirty = requirement !== project.requirement || artDirection !== project.art_direction;
   const hasIntent = Boolean(requirement.trim());
@@ -21,7 +21,9 @@ export function InputWorkspace({ project, busy, run }: WorkspaceProps) {
     requirement,
     artDirection,
     requirementSource: requirement.trim() === project.requirement.trim() && project.requirement_source === 'ai' ? 'ai' : requirement.trim() ? 'user' : 'none',
-    requirementConfirmed: confirm
+    // AUD-08：普通保存不传确认位，交给后端“仅需求文本变化才重置确认”
+    // 的语义；只改 Art Direction 不得取消已确认的设计意图。
+    ...(confirm ? { requirementConfirmed: true } : {})
   });
   return <>
     <div className="workspace-content input-workspace">

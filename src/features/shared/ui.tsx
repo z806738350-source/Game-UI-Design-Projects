@@ -34,7 +34,15 @@ export function statusOf(project: DesignProject | null, stageId: StageId) {
     const status = workflow?.global_stages?.style_resolution?.status || workflow?.stages?.style_resolution?.status || 'draft';
     const screenId = project?.screen_id || 'main';
     const screen = workflow?.screen_stages?.[screenId] || {};
-    const strictStale = [screen.typography_resolution, screen.component_resolution, screen.component_binding].some((entry) => entry?.status === 'stale');
+    // AUD-12：typography/component resolution 由 updateWorkflow 写入
+    // global_stages 而非 screen_stages，聚合状态必须读全局作用域；只有
+    // component_binding 是 Screen 作用域。任一 stale/blocked 时 Style Rail
+    // 不得继续显示已批准。
+    const strictStale = [
+      workflow?.global_stages?.typography_resolution,
+      workflow?.global_stages?.component_resolution,
+      screen.component_binding
+    ].some((entry) => entry?.status === 'stale' || entry?.status === 'blocked');
     return strictStale && status === 'approved' ? 'stale' : status;
   }
   const globalStage = ['reference_analysis', 'typography_resolution', 'component_resolution'].includes(stageId);

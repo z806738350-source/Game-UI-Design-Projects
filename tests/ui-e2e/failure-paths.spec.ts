@@ -155,7 +155,8 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     // 布局页仍可达：提案本体保留但已失效，页脚进入 stale 引导分支——
     // 「进入风格锁定」随批准动作一起隐藏，必须先重建布局/契约链。
     await page.getByTestId('stage-layout_design').click();
-    await expect(page.getByText('布局提案已失效，请重新生成布局。')).toBeVisible();
+    // AUD-14：工作台内部与页脚都显示同一 stale 指引文案，取首个可见即可。
+    await expect(page.getByText('布局提案已失效，请重新生成布局。').first()).toBeVisible();
     await expect(page.getByTestId('style-enter')).toHaveCount(0);
   });
 });

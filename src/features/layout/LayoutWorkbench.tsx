@@ -50,7 +50,7 @@ export function LayoutWorkbench({ project, busy, run, selected, onSelect, notes,
     : '';
   const [safeArea, setSafeArea] = useState(true);
   const [error, setError] = useState('');
-  useEffect(() => { setError(''); }, [project.id, project.artifacts.layouts?.version]);
+  useEffect(() => { setError(''); }, [project.id, project.screen_id, project.artifacts.layouts?.version]);
   const selectedProposal = proposals.find((proposal) => proposal.id === selected) || proposals[0];
   const stale = project.artifacts.layouts?.status === 'stale';
   // stale 指引按失效原因与路线区分（fix-plan P0-06），不再统一显示

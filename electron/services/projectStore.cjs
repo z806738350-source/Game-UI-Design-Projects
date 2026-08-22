@@ -353,6 +353,9 @@ function createProjectStore(options = {}) {
     return hydrate(project.workspacePath, { screenId });
   }
 
+  // AUD-07：参考图管理必须先检测真实变化——聚焦后离开输入框、移动到原位置、
+  // 重复设置同角色、重复批准相同状态都是 no-op：不写 project.json、不 bump
+  // input_revisions、不写 Reference Inventory，调用方据此决定是否失效下游。
   async function manageReference(projectId, input = {}) {
     const project = await resolveProject(projectId);
     const nextProject = await readJson(path.join(project.workspacePath, 'project.json'), {});
@@ -363,6 +366,29 @@ function createProjectStore(options = {}) {
         }));
     const index = assets.findIndex((asset) => asset.id === input.id);
     if (index < 0) throw new Error('未找到该参考图。');
+    const current = assets[index];
+    let changed = true;
+    if (input.action === 'remove') changed = true;
+    else if (input.action === 'move') {
+      const target = Math.max(0, Math.min(assets.length - 1, index + (input.direction === 'up' ? -1 : 1)));
+      changed = target !== index;
+    } else if (input.action === 'role') {
+      const role = ['primary', 'component', 'material', 'composition', 'supporting'].includes(input.role) ? input.role : 'supporting';
+      const nextAssets = role === 'primary' ? assets.map((asset) => ({ ...asset, role: asset.id === input.id ? 'primary' : asset.role === 'primary' ? 'supporting' : asset.role })) : assets.map((asset, position) => position === index ? { ...asset, role } : asset);
+      changed = nextAssets.some((asset, position) => asset.role !== assets[position].role);
+    } else if (input.action === 'details') {
+      const nextScreenType = typeof input.screenType === 'string' ? (input.screenType.trim() || 'unspecified') : (current.screen_type || 'unspecified');
+      const nextContains = Array.isArray(input.contains) ? input.contains.map(String).map((item) => item.trim()).filter(Boolean) : (current.contains || []);
+      const nextBaseline = typeof input.baseline === 'string' ? input.baseline.trim() : (current.baseline || '');
+      const nextNotes = typeof input.notes === 'string' ? input.notes.trim() : (current.notes || '');
+      changed = nextScreenType !== (current.screen_type || 'unspecified')
+        || JSON.stringify(nextContains) !== JSON.stringify(current.contains || [])
+        || nextBaseline !== (current.baseline || '')
+        || nextNotes !== (current.notes || '');
+    } else if (input.action === 'approval') {
+      changed = Boolean(current.approved) !== (input.approved === true);
+    } else throw new Error('未知的参考图操作。');
+    if (!changed) return { project: await hydrate(project.workspacePath), changed: false };
     if (input.action === 'remove') assets.splice(index, 1);
     else if (input.action === 'move') {
       const target = Math.max(0, Math.min(assets.length - 1, index + (input.direction === 'up' ? -1 : 1)));
@@ -381,7 +407,7 @@ function createProjectStore(options = {}) {
       };
     } else if (input.action === 'approval') {
       assets[index] = { ...assets[index], approved: input.approved === true };
-    } else throw new Error('未知的参考图操作。');
+    }
     nextProject.reference_assets = assets;
     nextProject.reference_paths = assets.map((asset) => asset.path);
     nextProject.input_revisions = nextRevisions(nextProject, ['references']);
@@ -389,7 +415,7 @@ function createProjectStore(options = {}) {
     await writeJson(path.join(project.workspacePath, 'project.json'), nextProject);
     const previous = await readJson(path.join(project.workspacePath, 'style', 'reference-inventory.json'), null);
     await saveArtifact(projectId, 'reference-inventory', inventoryFromAssets(assets, previous));
-    return hydrate(project.workspacePath);
+    return { project: await hydrate(project.workspacePath), changed: true };
   }
 
   async function saveArtifact(projectId, kind, artifact, options = {}) {
@@ -535,16 +561,27 @@ function createProjectStore(options = {}) {
   // lineage 指错、历史混在一起。这里逐文件重写身份：
   // - screen_id 字段重写为新 Screen；
   // - 以原 Screen id 为前缀的 Artifact id / source 引用重写为新前缀；
+  // - 引用数组（如 selected_variation_ids）内的字符串元素同样重写；
   // - 路径中的 screens/<原 id>/ 重写为新目录；
   // - 已批准事实不继承：副本中 approved Artifact 降级为 reviewed，
   //   需用户重新确认（产品策略）。
-  const CLONE_SOURCE_REF_KEYS = new Set(['underlay', 'variation_id', 'critique_id', 'layout', 'style', 'composition_manifest', 'composition_output', 'screen_contract', 'component_bindings', 'underlay_contract', 'visual_results', 'visual_task', 'reference_pack', 'approved_layout', 'layout_proposals', 'fidelity_report']);
-  function rewriteScreenClone(node, sourceId, targetId) {
-    if (Array.isArray(node)) return node.map((item) => rewriteScreenClone(item, sourceId, targetId));
+  const CLONE_SOURCE_REF_KEYS = new Set(['underlay', 'variation_id', 'critique_id', 'layout', 'style', 'composition_manifest', 'composition_output', 'screen_contract', 'component_bindings', 'underlay_contract', 'visual_results', 'visual_task', 'reference_pack', 'approved_layout', 'layout_proposals', 'fidelity_report', 'source_proposal', 'selected_variation_ids']);
+  function rewriteScreenClone(node, sourceId, targetId, parentKey = '') {
+    if (Array.isArray(node)) {
+      // AUD-13：进入数组后 key 上下文会丢失；引用类数组（如
+      // selected_variation_ids）内的字符串元素也是 ID，必须同样重写。
+      return node.map((item) => {
+        const rewritten = rewriteScreenClone(item, sourceId, targetId, parentKey);
+        if (typeof rewritten === 'string' && CLONE_SOURCE_REF_KEYS.has(parentKey) && rewritten.startsWith(`${sourceId}-`)) {
+          return `${targetId}-${rewritten.slice(sourceId.length + 1)}`;
+        }
+        return rewritten;
+      });
+    }
     if (node && typeof node === 'object') {
       const next = {};
       for (const [key, value] of Object.entries(node)) {
-        let rewritten = rewriteScreenClone(value, sourceId, targetId);
+        let rewritten = rewriteScreenClone(value, sourceId, targetId, key);
         if (typeof rewritten === 'string') {
           if (key === 'screen_id' && rewritten === sourceId) rewritten = targetId;
           else if (rewritten.startsWith(`${sourceId}-`) && (key === 'id' || CLONE_SOURCE_REF_KEYS.has(key))) rewritten = `${targetId}-${rewritten.slice(sourceId.length + 1)}`;
@@ -590,7 +627,14 @@ function createProjectStore(options = {}) {
     const state = await readJson(statePath, defaultWorkflow(projectId));
     // P1-09：副本 workflow 继承原 Screen 进度，但 approved 阶段同步降级为
     // reviewed，与 Artifact 降级策略保持一致。
-    const clonedStages = Object.fromEntries(Object.entries(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main).map(([stage, entry]) => [stage, entry && entry.status === 'approved' ? { ...entry, status: 'reviewed' } : entry]));
+    // AUD-13：stage 的 output 等路径字段直接从原 Screen 复制会指向原目录，
+    // 必须与 Artifact 同一套 rewriter 统一改写。
+    const clonedStages = Object.fromEntries(Object.entries(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main).map(([stage, stageEntry]) => {
+      if (!stageEntry) return [stage, stageEntry];
+      let rewritten = rewriteScreenClone(stageEntry, screenId, id);
+      if (rewritten.status === 'approved') rewritten = { ...rewritten, status: 'reviewed' };
+      return [stage, rewritten];
+    }));
     await writeJson(statePath, { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: clonedStages }, updated_at: now });
     return entry;
   }

@@ -134,8 +134,9 @@ function registerIpc() {
     return projectStore.open(projectId, { screenId });
   });
   ipcMain.handle('copilot:projects:reference', async (_event, projectId, input) => {
-    await projectStore.manageReference(projectId, input);
-    await pipeline.invalidateFromInputChange(projectId, { references: true });
+    // AUD-07：无变化的 blur/重复操作是 no-op，不得失效 Style/Visual 下游链。
+    const { changed } = await projectStore.manageReference(projectId, input);
+    if (changed) await pipeline.invalidateFromInputChange(projectId, { references: true });
     return projectStore.open(projectId);
   });
   ipcMain.handle('copilot:fonts:import', async (_event, projectId, input) => {
