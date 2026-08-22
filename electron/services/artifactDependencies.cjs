@@ -30,12 +30,15 @@ const NON_STRICT_DEPENDENCIES = Object.freeze({
 });
 
 // 风格先行：严格生产链（字体/组件/绑定/底层/合成）全部挂在 Style 下游。
+// AUD-01：Strict 的 Style Basis 是 Screen Contract，因此 screen-contract
+// 必须是 style-contract 的上游；否则功能契约变化后旧 Style 仍保持
+// approved，建立在旧契约之上的风格无法被失效。
 const STRICT_DEPENDENCIES = Object.freeze({
   ...COMMON_DEPENDENCIES,
   'style-contract': ['font-manifest', 'component-contract', 'layout-proposals', 'underlay-contract', 'visual-task'],
   'font-manifest': ['component-bindings', 'composition-manifest'],
   'component-contract': ['component-bindings'],
-  'screen-contract': ['component-bindings', 'layout-proposals'],
+  'screen-contract': ['style-contract', 'component-bindings', 'layout-proposals'],
   'component-bindings': ['layout-proposals'],
   'approved-layout': ['underlay-contract', 'visual-task'],
   'underlay-contract': ['visual-task', 'underlay-critique'],

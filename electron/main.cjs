@@ -101,6 +101,8 @@ function registerIpc() {
       artDirection: before.art_direction !== saved.art_direction,
       projectType: before.project_type !== saved.project_type,
       continuationMode: before.continuation_mode !== saved.continuation_mode,
+      // AUD-02：记录切换前模式，便于失效效果记录旧∪新路线来源。
+      previousContinuationMode: before.continuation_mode,
       screenId: patch.screenId || saved.screen_id
     });
   });
