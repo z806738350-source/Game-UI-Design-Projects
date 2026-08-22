@@ -107,3 +107,32 @@ describe('VisualWorkspace（strict 选择自动对齐审查证据）', () => {
     expect(checkboxes[1].checked).toBe(false);
   });
 });
+
+describe('VisualWorkspace（P1-07/P1-11 评审上下文与组合语义）', () => {
+  const variations = [
+    { id: 'v1', strategy: 'conservative', image_url: 'data:v1' },
+    { id: 'v2', strategy: 'expressive', image_url: 'data:v2' }
+  ];
+  const reviewProject = (screenId: string, notes: string) => makeProject({
+    project_type: 'new',
+    continuation_mode: 'exploration' as never,
+    screen_id: screenId,
+    artifacts: {
+      visualResults: makeArtifact({ id: 'visual-results-1', status: 'reviewed', version: 1, variations, review: { mode: 'selected', selected_variation_ids: ['v1'], notes } })
+    }
+  });
+
+  it('P1-11：组合按钮语义为记录评审建议，不再承诺成图', () => {
+    render(<VisualWorkspace project={reviewProject('screen-a', '')} busy={false} run={run} canCancel={false} onCancel={vi.fn()} />);
+    expect(screen.getByText('记录组合建议')).toBeTruthy();
+    expect(screen.queryByText('组合所选')).toBeNull();
+  });
+
+  it('P1-07：切换 Screen 时批注重置，不携带上一屏上下文', () => {
+    const { rerender } = render(<VisualWorkspace project={reviewProject('screen-a', '保留 A 屏的主视觉')} busy={false} run={run} canCancel={false} onCancel={vi.fn()} />);
+    const textarea = screen.getByPlaceholderText(/保留 V2/) as HTMLTextAreaElement;
+    expect(textarea.value).toBe('保留 A 屏的主视觉');
+    rerender(<VisualWorkspace project={reviewProject('screen-b', '')} busy={false} run={run} canCancel={false} onCancel={vi.fn()} />);
+    expect(textarea.value).toBe('');
+  });
+});

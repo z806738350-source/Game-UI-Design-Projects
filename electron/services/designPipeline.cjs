@@ -422,8 +422,12 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       assertApprovableFreshness(kind, current);
       const approved = (current.assets || []).filter((asset) => asset.approved === true);
       if (!approved.length) throw Object.assign(new Error('Reference Inventory requires at least one approved image.'), { code: ERROR_CODES.REFERENCE_INVENTORY_EMPTY });
+      // P2-03：批准是幂等操作——清单内容未变时重复批准不得 stale 下游，
+      // 只有参考内容（资产/批准/角色/顺序）变化才传播。
+      const inventorySignature = JSON.stringify((current.assets || []).map((asset) => ({ id: asset.id, approved: asset.approved === true, role: asset.role || '' })));
+      if (current.status === 'approved' && current.approval?.signature === inventorySignature) return openProject(projectId);
       await invalidateArtifacts(projectId, 'reference-inventory');
-      await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
+      await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString(), approval: { ...(current.approval || {}), signature: inventorySignature } });
       await projectStore.updateWorkflow(projectId, 'reference_analysis', 'approved', 'style/reference-inventory.json');
     } else if (kind === 'screen-contract') {
       const current = project.artifacts.screenContract;
@@ -442,17 +446,24 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       // Approval is a backend fact: stamp each binding and record the policy
       // version; client-supplied approved flags are never trusted.
       covered.bindings = (covered.bindings || []).map((binding) => ({ ...binding, approved: true }));
+      // P2-03：绑定内容、来源与策略版本均未变时重复批准为 no-op，不
+      // stale 下游；编辑会先降级为 reviewed 并移除 approval，不会命中。
+      const bindingsSignature = JSON.stringify(covered.bindings.map(({ control_id, component_id, state, font_role, slot_id }) => ({ control_id, component_id, state, font_role: font_role || '', slot_id })));
+      if (current.status === 'approved' && current.approval?.validation_version === BINDING_POLICY_VERSION && current.approval?.signature === bindingsSignature) return openProject(projectId);
       const approvedAt = new Date().toISOString();
       await invalidateArtifacts(projectId, 'component-bindings');
       await projectStore.saveArtifact(projectId, kind, {
         ...covered, status: 'approved', approved_at: approvedAt,
-        approval: { approved_at: approvedAt, approved_by: 'ui-designer', validation_version: BINDING_POLICY_VERSION }
+        approval: { approved_at: approvedAt, approved_by: 'ui-designer', validation_version: BINDING_POLICY_VERSION, signature: bindingsSignature }
       });
       await projectStore.updateWorkflow(projectId, 'component_binding', 'approved', `screens/${project.screen_id}/component-bindings.json`);
     } else if (kind === 'underlay-contract') {
       const current = project.artifacts.underlayContract;
       if (!current) throw new Error('Underlay Contract does not exist.');
       assertApprovableFreshness(kind, current);
+      // P2-03：同版本重复批准为 no-op，不得 stale 下游；重新生成/编辑会
+      // 先改变状态或版本，不会命中此短路。
+      if (current.status === 'approved') return openProject(projectId);
       await invalidateArtifacts(projectId, 'underlay-contract');
       await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'underlay_specification', 'approved', `screens/${project.screen_id}/underlay-contract.json`);
@@ -553,6 +564,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!selectedIds.length || selectedIds.some((id) => !validIds.has(id))) throw new Error('请选择有效的视觉方向。');
       const mode = input.mode === 'combine' ? 'combine' : 'selected';
       if (mode === 'combine' && selectedIds.length < 2) throw new Error('组合方向至少需要选择两个方案。');
+      // P2-03：评审决策未变时重复批准为 no-op：不得升版本，更不得失效
+      // 生产链——否则重复点击会打断仍然有效的合成/保真证据链。
+      if (current.status === 'approved' && current.review?.mode === mode && JSON.stringify(current.review?.selected_variation_ids || []) === JSON.stringify(selectedIds) && String(current.review?.notes || '') === String(input.notes || '').trim()) return openProject(projectId);
       // P0-05：评审决策变化属于 visual-results 变化事件：先失效生产链
       // （合成/保真/最终批准），再写入新评审，旧交付链不得继续放行。
       await invalidateArtifacts(projectId, 'visual-results', 'visual_review_changed', { screenId: project.screen_id });

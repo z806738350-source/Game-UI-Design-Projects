@@ -24,9 +24,23 @@ export const fieldLabels: Record<string, string> = {
 
 export const screenInput = (project: DesignProject, input: Record<string, unknown> = {}) => ({ screenId: project.screen_id, ...input });
 
+// P1-08：Rail 状态按作用域聚合——全局阶段读 global_stages，Screen 阶段
+// 读当前 Screen 的 screen_stages，不再把顶层 stages（最后操作页面写入）当
+// 多 Screen 唯一事实源；严格子阶段 stale 时 Style 组合状态不得继续显示已批准。
 export function statusOf(project: DesignProject | null, stageId: StageId) {
   if (stageId === 'input') return project?.wireframe_path && project.requirement && (project.requirement_confirmed ?? true) ? 'approved' : project?.workflow?.stages?.input?.status || 'draft';
-  return project?.workflow?.stages?.[stageId]?.status || 'draft';
+  const workflow = project?.workflow;
+  if (stageId === 'style_resolution') {
+    const status = workflow?.global_stages?.style_resolution?.status || workflow?.stages?.style_resolution?.status || 'draft';
+    const screenId = project?.screen_id || 'main';
+    const screen = workflow?.screen_stages?.[screenId] || {};
+    const strictStale = [screen.typography_resolution, screen.component_resolution, screen.component_binding].some((entry) => entry?.status === 'stale');
+    return strictStale && status === 'approved' ? 'stale' : status;
+  }
+  const globalStage = ['reference_analysis', 'typography_resolution', 'component_resolution'].includes(stageId);
+  if (globalStage) return workflow?.global_stages?.[stageId]?.status || workflow?.stages?.[stageId]?.status || 'draft';
+  const screenId = project?.screen_id || 'main';
+  return workflow?.screen_stages?.[screenId]?.[stageId]?.status || workflow?.stages?.[stageId]?.status || 'draft';
 }
 
 export function statusLabel(status: string) {

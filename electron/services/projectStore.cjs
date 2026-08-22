@@ -521,6 +521,48 @@ function createProjectStore(options = {}) {
     return entry;
   }
 
+  // P1-09：复制 Screen 专用 clone migration。直接 fs.cp 会让副本 Artifact
+  // 的 id、screen_id 与 source 引用全部属于原 Screen：与原页 id 冲突、
+  // lineage 指错、历史混在一起。这里逐文件重写身份：
+  // - screen_id 字段重写为新 Screen；
+  // - 以原 Screen id 为前缀的 Artifact id / source 引用重写为新前缀；
+  // - 路径中的 screens/<原 id>/ 重写为新目录；
+  // - 已批准事实不继承：副本中 approved Artifact 降级为 reviewed，
+  //   需用户重新确认（产品策略）。
+  const CLONE_SOURCE_REF_KEYS = new Set(['underlay', 'variation_id', 'critique_id', 'layout', 'style', 'composition_manifest', 'composition_output', 'screen_contract', 'component_bindings', 'underlay_contract', 'visual_results', 'visual_task', 'reference_pack', 'approved_layout', 'layout_proposals', 'fidelity_report']);
+  function rewriteScreenClone(node, sourceId, targetId) {
+    if (Array.isArray(node)) return node.map((item) => rewriteScreenClone(item, sourceId, targetId));
+    if (node && typeof node === 'object') {
+      const next = {};
+      for (const [key, value] of Object.entries(node)) {
+        let rewritten = rewriteScreenClone(value, sourceId, targetId);
+        if (typeof rewritten === 'string') {
+          if (key === 'screen_id' && rewritten === sourceId) rewritten = targetId;
+          else if (rewritten.startsWith(`${sourceId}-`) && (key === 'id' || CLONE_SOURCE_REF_KEYS.has(key))) rewritten = `${targetId}-${rewritten.slice(sourceId.length + 1)}`;
+          else if (rewritten.includes(`screens/${sourceId}/`)) rewritten = rewritten.split(`screens/${sourceId}/`).join(`screens/${targetId}/`);
+        }
+        next[key] = rewritten;
+      }
+      return next;
+    }
+    return node;
+  }
+
+  async function migrateClonedScreenArtifacts(workspacePath, sourceId, targetId) {
+    for (const relative of Object.values(SCREEN_ARTIFACTS)) {
+      const filePath = path.join(workspacePath, 'screens', targetId, relative);
+      const artifact = await readJson(filePath, null);
+      if (!artifact || typeof artifact !== 'object') continue;
+      let cloned = rewriteScreenClone(artifact, sourceId, targetId);
+      if (cloned.status === 'approved') {
+        cloned = { ...cloned, status: 'reviewed' };
+        delete cloned.approved_at;
+        delete cloned.approval;
+      }
+      await writeJson(filePath, cloned);
+    }
+  }
+
   async function duplicateScreen(projectId, screenId, input = {}) {
     const project = await resolveProject(projectId);
     const registry = await listScreens(projectId);
@@ -530,13 +572,17 @@ function createProjectStore(options = {}) {
     if (registry.screens.some((screen) => screen.id === id)) throw new Error(`Screen already exists: ${id}`);
     const now = new Date().toISOString();
     await fs.cp(path.join(project.workspacePath, 'screens', screenId), path.join(project.workspacePath, 'screens', id), { recursive: true });
+    await migrateClonedScreenArtifacts(project.workspacePath, screenId, id);
     const copiedInput = await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id));
     await writeJson(screenInputPath(project.workspacePath, id), { ...copiedInput, screen_id: id, input_mode: 'own', duplicated_from_screen_id: screenId, updated_at: now });
     const entry = { id, name: String(input.name || `${source.name} · 副本`), status: 'active', input_mode: 'own', duplicated_from_screen_id: screenId, created_at: now, updated_at: now };
     await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens: [...registry.screens, entry] });
     const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
     const state = await readJson(statePath, defaultWorkflow(projectId));
-    await writeJson(statePath, { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: { ...(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main) } }, updated_at: now });
+    // P1-09：副本 workflow 继承原 Screen 进度，但 approved 阶段同步降级为
+    // reviewed，与 Artifact 降级策略保持一致。
+    const clonedStages = Object.fromEntries(Object.entries(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main).map(([stage, entry]) => [stage, entry && entry.status === 'approved' ? { ...entry, status: 'reviewed' } : entry]));
+    await writeJson(statePath, { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: clonedStages }, updated_at: now });
     return entry;
   }
 

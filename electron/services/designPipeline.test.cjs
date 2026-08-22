@@ -427,3 +427,52 @@ test('label-only screen contract edits keep bindings fresh while role edits stal
     await fs.rm(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+// P2-03：批准必须幂等——内容未变的重复批准是 no-op，不得升版本、不得
+// stale 下游；内容变化后的批准仍然正常传播。
+test('re-approving unchanged artifacts is a no-op and does not stale downstream', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-noop-approve-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const projectStore = createProjectStore();
+    let project = await projectStore.create({ name: 'Noop Approve', projectType: 'new', requirement: 'Upgrade.' });
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    await projectStore.saveArtifact(project.id, 'visual-results', {
+      schema_version: '1.0', id: 'main-visual-results', version: 1, status: 'generated', source: {},
+      variations: [
+        { id: 'v1', strategy: 'conservative', image_url: 'https://kunpoapiimg.ziy.cc/v1.png' },
+        { id: 'v2', strategy: 'expressive', image_url: 'https://kunpoapiimg.ziy.cc/v2.png' }
+      ]
+    }, { screenId: 'main' });
+    project = await pipeline.approveArtifact(project.id, 'visual-results', { screenId: 'main', selectedIds: ['v1'], notes: '' });
+    assert.equal(project.artifacts.visualResults.version, 2);
+    // 相同评审决策重复批准：不升版本、不失效生产链。
+    project = await pipeline.approveArtifact(project.id, 'visual-results', { screenId: 'main', selectedIds: ['v1'], notes: '' });
+    assert.equal(project.artifacts.visualResults.version, 2);
+    // 决策变化仍然升版本并传播。
+    project = await pipeline.approveArtifact(project.id, 'visual-results', { screenId: 'main', selectedIds: ['v2'], notes: '' });
+    assert.equal(project.artifacts.visualResults.version, 3);
+    // Reference Inventory：相同内容重复批准不得 stale 已批准的风格规范。
+    await projectStore.saveArtifact(project.id, 'reference-inventory', {
+      schema_version: '1.0', id: 'reference-inventory-1', version: 1, status: 'reviewed', source: {},
+      assets: [{ id: 'ref-1', approved: true, role: 'primary' }]
+    });
+    project = await pipeline.approveArtifact(project.id, 'reference-inventory');
+    assert.equal(project.artifacts.referenceInventory.status, 'approved');
+    await projectStore.saveArtifact(project.id, 'style-contract', { schema_version: '1.0', id: 'style-1', version: 1, status: 'approved', source: {} });
+    project = await pipeline.approveArtifact(project.id, 'reference-inventory');
+    assert.equal(project.artifacts.styleContract.status, 'approved');
+    // 参考内容变化后重新批准仍然正常 stale 下游。
+    await projectStore.saveArtifact(project.id, 'reference-inventory', {
+      ...project.artifacts.referenceInventory, status: 'reviewed',
+      assets: [{ id: 'ref-1', approved: true, role: 'primary' }, { id: 'ref-2', approved: true, role: 'supporting' }]
+    });
+    project = await pipeline.approveArtifact(project.id, 'reference-inventory');
+    assert.equal(project.artifacts.styleContract.status, 'stale');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});

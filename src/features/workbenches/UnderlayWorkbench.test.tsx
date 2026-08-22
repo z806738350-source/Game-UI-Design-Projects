@@ -9,13 +9,16 @@ describe('UnderlayWorkbench（Repair 状态）', () => {
   it('正常路径：Critique 通过时展示结果与零问题计数', () => {
     const project = makeProject({
       artifacts: {
-        underlayContract: makeArtifact({ id: 'underlay-contract-1', status: 'approved', slots: [{ id: 'title' }] }),
+        underlayContract: makeArtifact({ id: 'underlay-contract-1', status: 'approved', reserved_regions: [{ id: 'title' }] }),
         underlayCritique: makeArtifact({ id: 'underlay-critique-1', status: 'generated', result: 'passed', issues: [], evidence: {} })
       }
     });
     render(<UnderlayWorkbench project={project} />);
     expect(screen.getByTestId('underlay-evidence-critique').textContent).toContain('已通过 · 0 项问题');
     expect(screen.getByTestId('underlay-evidence-repair').textContent).toContain('尚未生成');
+    // P2-01：结构契约面板必须展示契约真实字段 reserved_regions，而不是
+    // 不存在的 slots。
+    expect(screen.getByTestId('underlay-evidence-contract').textContent).toContain('reserved_regions');
   });
 
   it('失败路径：Repair 尝试链显示当前轮次与失败状态', () => {

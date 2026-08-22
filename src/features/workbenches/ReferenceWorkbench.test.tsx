@@ -67,4 +67,27 @@ describe('ReferenceWorkbench（Reference 容量）', () => {
     render(<ReferenceWorkbench project={project} busy={false} run={run} />);
     expect(screen.queryByTestId('reference-capacity-warning')).toBeNull();
   });
+
+  it('P1-12：存在未批准参考图时明确告知不会进入分析，并在 Pack 预览列出 ignored', () => {
+    const project = makeProject({
+      reference_assets: references,
+      artifacts: {
+        referencePack: makeArtifact({ id: 'reference-pack-1', status: 'approved', provider_limit: 10, capacity_decision: { used: 1 }, attachment_order: [{ id: 'ref-1', index: 1, description: '主参考' }], omitted: [] })
+      }
+    });
+    render(<ReferenceWorkbench project={project} busy={false} run={run} />);
+    const warning = screen.getByTestId('reference-unapproved-warning');
+    expect(warning.getAttribute('role')).toBe('alert');
+    expect(warning.textContent).toContain('有 1 张参考图尚未批准');
+    const ignored = screen.getByTestId('reference-pack-ignored');
+    expect(ignored.textContent).toContain('未批准 1 张（不会送入生成）');
+    expect(ignored.textContent).toContain('辅助.png');
+  });
+
+  it('全部参考图已批准时不展示未批准警示', () => {
+    const allApproved = references.map((asset) => ({ ...asset, approved: true }));
+    const project = makeProject({ reference_assets: allApproved });
+    render(<ReferenceWorkbench project={project} busy={false} run={run} />);
+    expect(screen.queryByTestId('reference-unapproved-warning')).toBeNull();
+  });
 });
