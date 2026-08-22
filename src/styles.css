@@ -44,7 +44,10 @@ html, body, #root { width: 100%; height: 100%; }
 body { margin: 0; min-width: 1180px; min-height: 760px; overflow: hidden; background: var(--bg-0); color: var(--ink); }
 button, input, textarea { font: inherit; }
 button { color: inherit; }
-button:disabled { opacity: .45; cursor: not-allowed !important; }
+/* disabled 的透明度变化延迟 .28s 生效：busy 等短暂无效会在阈值内释放，
+   opacity 来不及变化，避免全页按钮同步半透明往返造成的频闪；
+   长期禁用（未批准等）仍会在 .28s 后淡出，保留不可用视觉语义。 */
+button:disabled { opacity: .45; cursor: not-allowed !important; transition: opacity .18s ease .28s; }
 h1, h2, h3 { font-family: var(--disp); font-weight: 600; letter-spacing: -.015em; }
 ::selection { background: rgba(227, 166, 61, .3); }
 :focus-visible { outline: 2px solid rgba(227, 166, 61, .55); outline-offset: 2px; }
@@ -444,7 +447,7 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .screen-manager .dropdown-button { min-height: 30px; height: 30px; padding: 0 7px; border-color: var(--line); border-radius: 6px; font-size: 10px; }
 .screen-manager > button { width: 30px; height: 30px; display: grid; place-items: center; padding: 0; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; background: var(--panel-3); cursor: pointer; }
 .screen-manager > button:hover:not(:disabled) { color: var(--accent-ink); background: var(--accent); }
-.screen-manager > button:disabled { opacity: .38; cursor: not-allowed; }
+.screen-manager > button:disabled { opacity: .38; cursor: not-allowed; transition: opacity .18s ease .28s; }
 .reference-workbench { display: grid; gap: 12px; margin-bottom: 14px; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
 .reference-workbench > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .reference-workbench > header > div { display: grid; gap: 3px; }
