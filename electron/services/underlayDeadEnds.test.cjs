@@ -33,7 +33,7 @@ test('visual omission confirmation is bound to the underlay-generation pack hash
       project = await projectStore.importFile(project.id, reference, 'reference');
     }
     for (const asset of project.reference_assets) {
-      project = await projectStore.manageReference(project.id, { id: asset.id, action: 'approval', approved: true });
+      ({ project } = await projectStore.manageReference(project.id, { id: asset.id, action: 'approval', approved: true }));
     }
     await projectStore.saveArtifact(project.id, 'approved-layout', {
       schema_version: '1.0', id: 'approved-layout', version: 1, status: 'approved', source: {}, label: '横屏主布局',
@@ -79,7 +79,7 @@ test('visual omission confirmation is bound to the underlay-generation pack hash
     const extra = path.join(temporaryRoot, 'reference-4.png');
     await fs.writeFile(extra, pngHeader(1920, 1080));
     project = await projectStore.importFile(project.id, extra, 'reference');
-    project = await projectStore.manageReference(project.id, { id: project.reference_assets[project.reference_assets.length - 1].id, action: 'approval', approved: true });
+    ({ project } = await projectStore.manageReference(project.id, { id: project.reference_assets[project.reference_assets.length - 1].id, action: 'approval', approved: true }));
     await assert.rejects(
       pipeline.runStage(project.id, 'visual_exploration', { screenId: 'main', strategies: ['expressive'], confirmReferenceOmissions: true, referencePackHash: pack.pack_hash }),
       (error) => error.code === ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED

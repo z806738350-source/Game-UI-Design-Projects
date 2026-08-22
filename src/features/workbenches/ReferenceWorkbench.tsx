@@ -16,11 +16,19 @@ export function ReferenceWorkbench({ project, busy, run }: { project: DesignProj
   const unapproved = references.filter((asset) => !asset.approved);
   const pack = project.artifacts.referencePack;
   const manage = (input: Parameters<typeof copilotApi.manageReference>[1]) => run(() => copilotApi.manageReference(project.id, input), { label: '更新参考图清单' });
-  const saveDetails = (asset: ReferenceAsset, field: string, value: string) => manage({
-    id: asset.id, action: 'details', screenType: field === 'screenType' ? value : asset.screen_type,
-    contains: field === 'contains' ? value.split(/[、,，]/).map((item) => item.trim()).filter(Boolean) : asset.contains,
-    baseline: field === 'baseline' ? value : asset.baseline, notes: field === 'notes' ? value : asset.notes
-  });
+  const saveDetails = (asset: ReferenceAsset, field: string, value: string) => {
+    const nextDetails = {
+      screenType: field === 'screenType' ? (value.trim() || 'unspecified') : (asset.screen_type || 'unspecified'),
+      contains: field === 'contains' ? value.split(/[、,，]/).map((item) => item.trim()).filter(Boolean) : (asset.contains || []),
+      baseline: field === 'baseline' ? value.trim() : (asset.baseline || ''),
+      notes: field === 'notes' ? value.trim() : (asset.notes || '')
+    };
+    // AUD-07：规范化后新旧值一致时是 no-op（聚焦后离开输入框不得触发
+    // revision/invalidate），直接跳过提交。
+    const currentDetails = { screenType: asset.screen_type || 'unspecified', contains: asset.contains || [], baseline: asset.baseline || '', notes: asset.notes || '' };
+    if (JSON.stringify(nextDetails) === JSON.stringify(currentDetails)) return;
+    manage({ id: asset.id, action: 'details', screenType: nextDetails.screenType, contains: nextDetails.contains, baseline: nextDetails.baseline, notes: nextDetails.notes });
+  };
   return <section className="reference-workbench" data-testid="reference-workbench">
     <header><div><span>REFERENCE INVENTORY / PACK</span><h3>参考图清单与实际附件顺序</h3><p>逐张声明用途并批准；生成服务只会收到 Pack 中按序列出的附件。单次生成最多送 {MAX_REFERENCE_IMAGES} 张，超出会按角色优先级省略且生成前需确认。</p>{references.length > MAX_REFERENCE_IMAGES && <p className="capacity-warning" role="alert" data-testid="reference-limit-warning">当前已有 {references.length} 张，超过 {MAX_REFERENCE_IMAGES} 张上限，多余部分不会送入生成。</p>}{unapproved.length > 0 && <p className="capacity-warning" role="alert" data-testid="reference-unapproved-warning">有 {unapproved.length} 张参考图尚未批准，它们不会进入本次风格分析与生图；请逐张批准或移出参考集。</p>}</div><button className="button button--secondary" data-testid="reference-import" disabled={busy} onClick={() => run(() => copilotApi.importFile(project.id, 'reference'), { label: '添加风格参考' })}><ImagePlus size={15} />批量添加</button></header>
     <div className="reference-workbench-grid">{references.map((asset, index) => <article key={asset.id} className={asset.approved ? 'is-approved' : ''}>

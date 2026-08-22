@@ -158,3 +158,75 @@ test('duplicating a screen rewrites artifact identity and demotes approvals', as
     assert.equal(state.screen_stages.inventory.wireframe_interpretation.status, 'approved');
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+// AUD-13：clone 身份重写必须完整——引用数组元素（selected_variation_ids）、
+// source_proposal、嵌套 source 引用与 workflow stage 的 output 路径都不得
+// 残留原 Screen 身份。
+test('duplicating a screen rewrites nested references, arrays and workflow paths', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-clone-deep-'));
+  try {
+    const store = createProjectStore({ workspaceRoot: root });
+    const project = await store.create({ name: 'Clone Deep', projectType: 'new' });
+    await store.createScreen(project.id, { id: 'inventory', name: '背包' });
+    await store.saveArtifact(project.id, 'layout-proposals', {
+      schema_version: '1.0', id: 'inventory-layout-proposals', version: 1, status: 'approved', screen_id: 'inventory',
+      source: {}, proposals: [{ id: 'inventory-proposal-a', name: '方案一' }]
+    }, { screenId: 'inventory' });
+    await store.saveArtifact(project.id, 'approved-layout', {
+      schema_version: '1.0', id: 'inventory-approved-layout-v1', version: 1, status: 'approved', screen_id: 'inventory',
+      source: { layout_proposals: 'inventory-layout-proposals', source_proposal: 'inventory-proposal-a' },
+      source_proposal: 'inventory-proposal-a', label: '方案一'
+    }, { screenId: 'inventory' });
+    await store.saveArtifact(project.id, 'visual-results', {
+      schema_version: '2.0', id: 'inventory-visual-results', version: 1, status: 'approved', screen_id: 'inventory',
+      source: { visual_task: 'inventory-visual-task' },
+      variations: [{ id: 'inventory-v1', strategy: 'conservative', image_path: 'screens/inventory/explorations/inventory-v1.png' }],
+      review: { mode: 'selected', selected_variation_ids: ['inventory-v1'], notes: '选 V1' }
+    }, { screenId: 'inventory' });
+    await store.saveArtifact(project.id, 'composition-manifest', {
+      schema_version: '2.0', id: 'inventory-composition-final', version: 1, status: 'approved', screen_id: 'inventory',
+      source: { visual_results: 'inventory-visual-results', selected_variation_ids: ['inventory-v1'], approved_layout: 'inventory-approved-layout-v1' },
+      underlay: { path: 'screens/inventory/explorations/inventory-v1.png' }
+    }, { screenId: 'inventory' });
+    await store.updateWorkflow(project.id, 'composition', 'approved', 'screens/inventory/composition-output.json', { screenId: 'inventory' });
+    await store.duplicateScreen(project.id, 'inventory', { id: 'inventory-copy', name: '背包副本' });
+    const copyPath = (relative) => path.join(project.workspacePath, 'screens', 'inventory-copy', relative);
+
+    // 引用数组元素与 source 引用都指向副本身份；物理图片文件随目录复制保留
+    // 原文件名，路径只重写目录部分。
+    const copyVisual = await readJson(copyPath('explorations/results.json'));
+    assert.deepEqual(copyVisual.review.selected_variation_ids, ['inventory-copy-v1']);
+    assert.equal(copyVisual.variations[0].id, 'inventory-copy-v1');
+    assert.equal(copyVisual.variations[0].image_path, 'screens/inventory-copy/explorations/inventory-v1.png');
+    assert.equal(copyVisual.source.visual_task, 'inventory-copy-visual-task');
+    const copyManifest = await readJson(copyPath('composition-manifest.json'));
+    assert.deepEqual(copyManifest.source.selected_variation_ids, ['inventory-copy-v1']);
+    assert.equal(copyManifest.source.approved_layout, 'inventory-copy-approved-layout-v1');
+    assert.equal(copyManifest.underlay.path, 'screens/inventory-copy/explorations/inventory-v1.png');
+
+    // source_proposal 指向副本 Proposal（副本 proposals 同步重写）。
+    const copyApproved = await readJson(copyPath('approved-layout.json'));
+    const copyProposals = await readJson(copyPath('layout-proposals.json'));
+    assert.equal(copyApproved.source_proposal, 'inventory-copy-proposal-a');
+    assert.equal(copyApproved.source.source_proposal, 'inventory-copy-proposal-a');
+    assert.deepEqual(copyProposals.proposals.map((proposal) => proposal.id), ['inventory-copy-proposal-a']);
+
+    // workflow stage 的 output 路径同样重写。
+    const state = await readJson(path.join(project.workspacePath, 'workflow', 'state.json'));
+    assert.equal(state.screen_stages['inventory-copy'].composition.output, 'screens/inventory-copy/composition-output.json');
+
+    // 全部副本 Screen Artifact 中不得残留任何原 Screen id 的非 provenance 引用；
+    // 目录已重写但保留原文件名的物理资产路径除外。
+    for (const relative of ['screen-contract.json', 'layout-proposals.json', 'approved-layout.json', 'component-bindings.json', 'reference-pack.json', 'underlay-contract.json', 'underlay-critique.json', 'underlay-repair-task.json', 'composition-manifest.json', 'composition-output.json', 'fidelity-report.json', 'visual-task.json', 'explorations/results.json']) {
+      const artifact = await readJson(copyPath(relative), null);
+      if (!artifact) continue;
+      const serialized = JSON.stringify(artifact)
+        .replaceAll('screens/inventory-copy/explorations/inventory-v1.png', 'ASSET')
+        .replaceAll('inventory-copy', 'COPY');
+      assert.equal(serialized.includes('inventory'), false, `${relative} 残留原 Screen 身份`);
+    }
+    // 原页产物保持不动。
+    const originalVisual = await readJson(path.join(project.workspacePath, 'screens', 'inventory', 'explorations', 'results.json'));
+    assert.deepEqual(originalVisual.review.selected_variation_ids, ['inventory-v1']);
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});
