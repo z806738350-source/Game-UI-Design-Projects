@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { copilotApi } from '../../api';
@@ -134,5 +134,42 @@ describe('VisualWorkspace（P1-07/P1-11 评审上下文与组合语义）', () =
     expect(textarea.value).toBe('保留 A 屏的主视觉');
     rerender(<VisualWorkspace project={reviewProject('screen-b', '')} busy={false} run={run} canCancel={false} onCancel={vi.fn()} />);
     expect(textarea.value).toBe('');
+  });
+});
+
+// AUD-03：链式任务失败不得启动后续链。否决记录失败时，重新探索绝不能被触发。
+describe('VisualWorkspace（AUD-03 失败不继续链）', () => {
+  const variations = [
+    { id: 'v1', strategy: 'conservative', image_url: 'data:v1' },
+    { id: 'v2', strategy: 'expressive', image_url: 'data:v2' },
+    { id: 'v3', strategy: 'innovative', image_url: 'data:v3' }
+  ];
+  const generatedProject = () => makeProject({
+    project_type: 'new',
+    continuation_mode: 'exploration' as never,
+    artifacts: {
+      visualResults: makeArtifact({ id: 'visual-results-1', status: 'generated', variations })
+    }
+  });
+  // 模拟 App.run 的失败语义：失败返回 undefined 而不是 resolve 为成功
+  const failingRun: RunTask = async (task) => { try { return await task(); } catch { return undefined; } };
+
+  it('否决记录失败时不启动根据反馈重新探索', async () => {
+    const user = userEvent.setup();
+    vi.mocked(copilotApi.updateArtifact).mockRejectedValueOnce(new Error('拒绝写入失败'));
+    render(<VisualWorkspace project={generatedProject()} busy={false} run={failingRun} canCancel={false} onCancel={vi.fn()} />);
+    await user.click(screen.getByText('全部否决并重探'));
+    await waitFor(() => expect(copilotApi.updateArtifact).toHaveBeenCalledTimes(1));
+    expect(runStage).not.toHaveBeenCalled();
+  });
+
+  it('否决记录成功后才启动重新探索', async () => {
+    const user = userEvent.setup();
+    vi.mocked(copilotApi.updateArtifact).mockResolvedValueOnce(makeProject());
+    vi.mocked(copilotApi.runStage).mockResolvedValue(makeProject());
+    render(<VisualWorkspace project={generatedProject()} busy={false} run={failingRun} canCancel={false} onCancel={vi.fn()} />);
+    await user.click(screen.getByText('全部否决并重探'));
+    await waitFor(() => expect(runStage).toHaveBeenCalledTimes(1));
+    expect(runStage).toHaveBeenCalledWith('project-1', 'visual_exploration', expect.objectContaining({ feedback: '' }));
   });
 });

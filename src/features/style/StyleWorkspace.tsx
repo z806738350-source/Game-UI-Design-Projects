@@ -50,7 +50,8 @@ export function StyleWorkspace({ project, busy, run }: WorkspaceProps) {
   const [jsonDraft, setJsonDraft] = useState('');
   const [jsonError, setJsonError] = useState('');
   useEffect(() => { if (artifact) setJsonDraft(JSON.stringify({ visual_identity: artifact.visual_identity, colors: artifact.colors, typography: artifact.typography, materials: artifact.materials, geometry: artifact.geometry, lighting: artifact.lighting, components: artifact.components, composition: artifact.composition, negative_style_constraints: artifact.negative_style_constraints, designer_summary: artifact.designer_summary }, null, 2)); setEditing(false); }, [artifact?.id, artifact?.version]);
-  const save = () => { try { const patch = JSON.parse(jsonDraft); setJsonError(''); run(() => copilotApi.updateArtifact(project.id, 'style-contract', patch), { label: '保存风格规范新版本', stage: 'style_resolution' }).then(() => setEditing(false)); } catch { setJsonError('JSON 格式有误，请检查逗号、引号和括号。'); } };
+  // AUD-03：保存失败时 run 返回 undefined，编辑器保持打开，不得把失败当成功退出编辑。
+  const save = async () => { try { const patch = JSON.parse(jsonDraft); setJsonError(''); const next = await run(() => copilotApi.updateArtifact(project.id, 'style-contract', patch), { label: '保存风格规范新版本', stage: 'style_resolution' }); if (next) setEditing(false); } catch { setJsonError('JSON 格式有误，请检查逗号、引号和括号。'); } };
   const warnings = ((artifact?.quality_checks as Record<string, unknown>)?.warnings as string[]) || [];
   // 省略确认与任务目的绑定：风格页只处理 style-resolution Pack；落盘的
   // underlay-generation Pack 待确认状态由视觉探索页的确认面板接管。

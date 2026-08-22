@@ -117,13 +117,28 @@ export function preserveProjectPreviews(next: DesignProject, current: DesignProj
   };
 }
 
-// P0-07：并发项目上下文。任务结果可能在用户切换项目后才返回：
-// 结果只能写回任务发起时的项目（jobId），绝不能覆盖用户当前正在
-// 看的另一个项目；jobId 缺失（如创建项目任务）时不存在跨项目
-// 覆盖风险，直接放行。
-export function applyJobResult(current: DesignProject | null, next: DesignProject, jobId?: string) {
+// P0-07 / AUD-04：并发项目与 Screen 上下文。任务结果可能在用户切换项目
+// 或 Screen 后才返回：结果只能写回任务发起时的项目（jobId）与 Screen
+// （jobScreenId），绝不能覆盖用户当前正在看的另一个项目或另一个 Screen；
+// jobId / jobScreenId 缺失（如创建项目任务）时不存在跨上下文覆盖风险，
+// 直接放行。
+export function applyJobResult(current: DesignProject | null, next: DesignProject, jobId?: string, jobScreenId?: string) {
   if (jobId && current && current.id !== jobId) return current;
+  if (jobScreenId && current && current.id === jobId && (current.screen_id || 'main') !== jobScreenId) return current;
   return preserveProjectPreviews(next, current);
+}
+
+// AUD-04：重试上下文匹配。失败任务冻结了发起时的项目与 Screen；只有用户仍
+// 停留在同一项目与 Screen 时才允许重试，否则应提示先切回原上下文，绝不
+// 拿当前 UI 上下文执行旧任务。任务无项目上下文（如创建项目）时直接放行。
+export function retryContextMatches(
+  retry: { projectId?: string; screenId?: string } | null,
+  project: { id: string; screen_id?: string } | null
+) {
+  if (!retry?.projectId) return true;
+  if (!project || project.id !== retry.projectId) return false;
+  if (!retry.screenId) return true;
+  return (project.screen_id || 'main') === retry.screenId;
 }
 
 export const strictContinuation = (project: DesignProject) => project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
