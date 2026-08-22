@@ -33,6 +33,39 @@ describe('statusOf（多 Screen 作用域聚合）', () => {
   });
 });
 
+// AUD-12：typography/component resolution 由 updateWorkflow 写入 global_stages
+// 而非 screen_stages，Style Rail 聚合必须读全局作用域；只有 component_binding
+// 是 Screen 作用域。stale 与 blocked 都计入未就绪。
+describe('statusOf（AUD-12 严格子阶段作用域）', () => {
+  const styleApprovedWith = (global: Record<string, unknown>, screenStage: Record<string, unknown> = {}) => makeProject({
+    screen_id: 'screen-a',
+    workflow: {
+      current_stage: 'style_resolution',
+      stages: {},
+      global_stages: { style_resolution: { status: 'approved' }, ...global },
+      screen_stages: { 'screen-a': { component_binding: { status: 'approved' }, ...screenStage } }
+    } as never
+  });
+
+  it('全局字体解析 stale（写在 global_stages）时 Style Rail 不得显示已批准', () => {
+    expect(statusOf(styleApprovedWith({ typography_resolution: { status: 'stale' } }), 'style_resolution')).toBe('stale');
+  });
+
+  it('全局组件解析 blocked 时 Style Rail 不得显示已批准', () => {
+    expect(statusOf(styleApprovedWith({ component_resolution: { status: 'blocked' } }), 'style_resolution')).toBe('stale');
+  });
+
+  it('全局子阶段全部就绪时保持已批准', () => {
+    expect(statusOf(styleApprovedWith({ typography_resolution: { status: 'approved' }, component_resolution: { status: 'approved' } }), 'style_resolution')).toBe('approved');
+  });
+
+  it('screen_stages 里的同名残留条目不得冒充全局事实', () => {
+    // 旧实现读 screen_stages.typography_resolution；新实现必须忽略它。
+    const project = styleApprovedWith({ typography_resolution: { status: 'approved' } }, { typography_resolution: { status: 'stale' } });
+    expect(statusOf(project, 'style_resolution')).toBe('approved');
+  });
+});
+
 // AUD-04：重试上下文。失败任务冻结发起时的项目与 Screen，只有用户仍在
 // 原上下文才允许重试；切换项目或 Screen 后不得拿当前 UI 上下文执行旧任务。
 describe('retryContextMatches（重试上下文守卫）', () => {

@@ -60,12 +60,19 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
 
 ## 5. 批准与信任模型
 
-- 批准动作：`approveArtifact(kind='screen-contract')`，仅写入
-  `status='approved'` 与 `approved_at`，无附加门禁（内容校验在生成时完成）。
+- 批准动作：`approveArtifact(kind='screen-contract')`。批准即完整确定性
+  重验（AUD-06）：不信任契约体内存储的 coverage——归一化全部字段、按
+  当前 `source_inventory` 重算 coverage、重跑控件/角色/required 校验；
+  通过后写入 `status='approved'` 与 `approved_at`，失败抛
+  `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` / `SCREEN_CONTRACT_APPROVAL_INVALID`
+  且不改变状态。人工编辑删掉必需控件后不得仍能批准并继续显示
+  “0 项遗漏”。
 - 编辑：`updateArtifact` 允许直接编辑；只有语义键
   （`screen_name/purpose/primary_action/required_controls/required_information/states/edge_cases`）
   变化才触发失效传播。`required_controls` 的语义签名只比较
-  `{ id, role, required }`——**仅改 label 不会使绑定 stale**。
+  `{ id, role, required }`——**仅改 label 不会使绑定 stale**；但已产出的
+  交付链（composition → output → fidelity）会失效重建，且合成时最终文字
+  的事实源是当前契约的 `label`，不是 Binding 里冻结的旧文本（AUD-09）。
 
 ## 6. 状态机
 
@@ -77,15 +84,19 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
 - 上游：`input-requirement`、`input-wireframe` 变化 → screen-contract stale。
 - 自身重新生成：`runStage('wireframe_interpretation')` 先
   `invalidateArtifacts('screen-contract')`，下游全部 stale。
-- 下游（`artifactDependencies.cjs`）：`component-bindings`、`layout-proposals`，
+- 下游（`artifactDependencies.cjs`）：`component-bindings`、`layout-proposals`；
+  strict 路线额外包括 `style-contract`（风格基线是已批准契约，AUD-01），
   并传递至 approved-layout → underlay → composition → fidelity 全链。
-- 模式切换（guided↔strict）**不影响** screen-contract。
+- 模式切换（guided↔strict）**不影响** screen-contract（路线切换只重置
+  生产链资产）。
 
 ## 8. 错误码
 
 | 错误码 | 场景 |
 | --- | --- |
 | `SCREEN_ID_REQUIRED` / `SCREEN_NOT_FOUND` / `SCREEN_CONTEXT_MISMATCH` | Screen 上下文校验失败 |
+| `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` | 批准时重算 coverage 发现 source_inventory 未被覆盖（AUD-06） |
+| `SCREEN_CONTRACT_APPROVAL_INVALID` | 批准时重验发现其他结构/语义校验失败（AUD-06） |
 | `BINDING_COVERAGE_INCOMPLETE` | 契约控件变化后绑定未重新批准即做 strict 布局 |
 
 ## 9. strict 与 guided 模式
@@ -186,16 +197,22 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
 
 - `electron/services/contracts.test.cjs`、`electron/services/screenControls.test.cjs`
 - `electron/services/continuationGuardrails.test.cjs`（label-only 不 stale）
+- `electron/services/screen-contract-approval.test.cjs`（AUD-06 批准重算
+  coverage 负向回归）
+- `electron/services/label-render-source.test.cjs`（AUD-09 最终文字事实源）
+- `electron/services/migrations.test.cjs`（AUD-13 Screen Clone 完整 lineage）
 - `tests/ui-e2e/failure-paths.spec.ts`（契约编辑 → stale 传播）
 
 ## 17. 验收清单
 
 - [ ] `validateArtifact` 对 golden `screen-contract.json` 零错误
-- [ ] label-only 编辑不触发下游 stale；role/required 编辑触发
+- [ ] label-only 编辑不触发绑定 stale；role/required 编辑触发
+- [ ] 批准时重算 coverage：删掉必需控件后批准被拒绝（AUD-06）
 - [ ] 批准后 `approved_at` 落盘
 
 ## 18. 版本与变更记录
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 1.1 | 2026-08-23 | PR-36~38：批准即完整重验（AUD-06）、label 事实源与交付链失效（AUD-09）、strict 下游补 style-contract（AUD-01）、clone lineage 测试指针（AUD-13） |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |

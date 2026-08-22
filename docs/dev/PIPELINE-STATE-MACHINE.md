@@ -70,7 +70,36 @@ composition-manifest、composition-output、fidelity-report 的
 ## 4. 特殊转移规则
 
 - **screen-contract label-only 编辑**：语义签名只比较
-  `{id, role, required}`，仅改 label 不触发 stale；
+  `{id, role, required}`，仅改 label 不触发绑定 stale；但已产出的
+  文字层/合成/保真事实仍写着旧文案，会沿
+  composition-manifest → output → fidelity 失效
+  （`screen_contract_label_changed`），逼使交付链用新 label 重建；
+  合成时最终文字的事实源是当前 Screen Contract 的 label，不是
+  Binding 里冻结的旧文本（AUD-09）；
+- **screen-contract 批准即完整重验（AUD-06）**：批准边界不信任契约
+  体内存储的 coverage——归一化全部字段、按当前 source_inventory
+  重算 coverage、重跑控件/角色/required 校验；失败抛
+  `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` / `SCREEN_CONTRACT_APPROVAL_INVALID`；
+- **Reference 无变化操作是 no-op（AUD-07）**：`manageReference` 对
+  move/role/details/approval 先做规范化比较，无变化时返回
+  `{ project, changed: false }`：不写 project.json、不 bump
+  `input_revisions`、不写 inventory，IPC 也不触发下游失效；前端
+  ReferenceWorkbench blur 未改内容时不调用后端；
+- **Art Direction 保存不重置意图确认（AUD-08）**：`saveProject`
+  未携带 `requirementConfirmed` 时，仅在需求文本变化时重置确认；
+  只改美术方向/项目类型保留已确认的设计意图；前端普通保存不传该
+  字段，只有显式确认才传 `true`；
+- **Artifact 版本单调递增（AUD-10）**：版本只能由存储层产生
+  （nextVersion = previousVersion + 1），模型/调用方传入的 version
+  一律忽略；status-only 保存（如批准落盘）同样 bump；存储层同时盖
+  `generation_id` / `content_hash` / `updated_at`，历史不出现重复
+  V1，证据链版本识别不撞号；
+- **Screen Clone 完整 lineage（AUD-13）**：`duplicateScreen` 用
+  `rewriteScreenClone` 统一改写副本的身份与引用：新 id/screen_id、
+  `screens/<source>/` 路径、`source_proposal` / `selected_variation_ids`
+  等引用数组中的 `<sourceId>-` 前缀元素；已批准事实不继承，降为
+  `reviewed`；物理图片文件随 `fs.cp` 保留原文件名，JSON 只重写目录
+  部分；原页产物不受影响；
 - **bindings 编辑**：自动剥离 `approved`/`approval` stamp，回到待批准；
 - **font-manifest roles/fonts 编辑**：拒绝，抛
   `FONT_CONFIRMATION_ACTION_REQUIRED`（必须走导入+确认动作）；
@@ -133,6 +162,12 @@ variation）在动作开始时即失效旧链（`visual_results_regenerated` /
 `visual_review_changed` / `visual_results_repaired`），因为旧证据已
 不再可信，即使后续生图失败也不得回滚失效。
 
+**路线切换重置（AUD-02）**：continuation-mode 变化不走普通下游
+失效，改用旧∪新路线的固定重置集合（style-contract 至
+fidelity-report 全部 13 类生产链资产）无条件置 stale
+（`route_profile_changed`）并同步 workflow 阶段；Screen Contract、
+输入与参考资产跨路线保留。详见 ARTIFACT-DEPENDENCY-GRAPH.md。
+
 ## 6. 路线顺序与导航/执行分离
 
 阶段推进顺序由路线决定（事实来源 `pipelineProfile.cjs` /
@@ -153,6 +188,15 @@ exploration/guided 恒为已批准 approved-layout，记录于 style-contract
 页面内的显式按钮（如 `style-generate`）发起。进入风格锁定页面不会
 自动开始风格分析。
 
+**Rail 状态作用域（P1-08 / AUD-12）**：前端 `statusOf` 聚合时，全局
+阶段（reference/typography/component resolution）读
+`workflow.global_stages`，Screen 阶段读 `screen_stages[当前屏]`；
+Style Rail 的严格子阶段聚合读 `global_stages.typography_resolution` /
+`component_resolution` 与 Screen 作用域的 `component_binding`，任一
+stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地草稿
+（方案选择/备注/需求/方向）的重置依赖 `project.id + screen_id +
+版本`（AUD-11），App shell 另以 `key={project.id}:{screen_id}` 在切换上下文时强制重建工作台。
+
 ## 7. 失败处理
 
 `runStage` 捕获异常后 `updateWorkflow(stage, 'failed')` 再抛出，保证
@@ -162,6 +206,7 @@ exploration/guided 恒为已批准 approved-layout，记录于 style-contract
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.4 | 2026-08-23 | PR-35~38：批准即完整重验（AUD-06）、reference no-op（AUD-07）、art-direction 保存保留确认（AUD-08）、label 事实源与交付链失效（AUD-09）、版本单调递增（AUD-10）、草稿 Screen 隔离与 Rail 作用域（AUD-11/12）、clone lineage（AUD-13）、路线切换固定重置集合（AUD-02） |
 | 2.3 | 2026-08-21 | PR-29 证据链匹配门禁、交付链绑定重验、来源修订重验、视觉取代型失效与布局校验绑定门禁限 strict 路线 |
 | 2.2 | 2026-08-21 | PR-28 三条死路解除：严格底层规范状态机、视觉省略确认绑定 Pack hash、Underlay 人工复核入口 |
 | 2.1 | 2026-08-21 | PR-27 批准新鲜度门禁、编辑保留 stale、事务安全与旧版循环一次性修复 |

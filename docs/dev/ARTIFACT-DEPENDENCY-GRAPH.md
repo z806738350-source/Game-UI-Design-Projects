@@ -58,7 +58,7 @@ visual-task ─> visual-results
 | `style-contract` | font-manifest、component-contract、layout-proposals、underlay-contract、visual-task |
 | `font-manifest` | component-bindings、composition-manifest |
 | `component-contract` | component-bindings |
-| `screen-contract` | component-bindings、layout-proposals |
+| `screen-contract` | style-contract、component-bindings、layout-proposals |
 | `component-bindings` | layout-proposals |
 | `approved-layout` | underlay-contract、visual-task |
 | `underlay-contract` | visual-task、underlay-critique |
@@ -76,10 +76,17 @@ visual-task ─> visual-results
   为被标 stale 的屏集合。
 - **风格基线（style_basis）**：strict 恒为已批准 screen-contract；
   exploration/guided 恒为已批准 approved-layout。记录在
-  style-contract 的 `source.style_basis`。
+  style-contract 的 `source.style_basis`。因此 strict 下
+  `screen-contract` 是 `style-contract` 的直接上游（AUD-01）：
+  功能契约语义变化会使风格与全部严格下游 stale。
+- **路线切换重置（AUD-02）**：continuation-mode 变化不走普通下游
+  失效（此时模式已落盘，只会算出新图），改用旧∪新路线的固定重置
+  集合 `ROUTE_SWITCH_RESET_KINDS`（style-contract 至 fidelity-report
+  全部 13 类生产链资产）无条件置 stale（`route_profile_changed`），
+  避免旧路线 approved 事实残留并在切回时复活；Screen Contract、
+  输入与参考资产跨路线仍有效，不重置。
 - **例外**：input-continuation-mode 变化不 stale screen-contract
-  （控件语义与延续模式无关）；切回布局先行路线时，approved-layout
-  不因 style-contract stale 而失效。
+  （控件语义与延续模式无关）。
 - **环检测**：`artifactDependencies.test.cjs` 对三套图做 DFS 三色
   环检测；任何新边引入环会直接失败。
 - **fidelity-report 无下游**：终端证据；但 stale 时 final 批准会被
@@ -90,13 +97,15 @@ visual-task ─> visual-results
 | 变更点 | 路线 | stale 范围 |
 | --- | --- | --- |
 | 编辑 bindings（非 label） | strict | layout-proposals → approved-layout → underlay 全链 → composition → fidelity |
+| 编辑 screen-contract（语义键） | strict | style-contract → 字体/组件/绑定/布局/底层/视觉/合成全链（AUD-01） |
 | 重新导入字体 | strict | component-bindings → 布局链 → composition → fidelity |
 | 重新生成 layout 提案 | 全部 | approved-layout →（布局先行：style-contract → visual 链；strict：underlay 全链 → composition → fidelity） |
 | 批准/更换布局方案 | 布局先行 | style-contract → visual-task → visual-results |
 | 重新解析风格 | 布局先行 | visual-task → visual-results（**布局不受影响**） |
 | 重新解析风格 | strict | font/component/bindings/layout/underlay/visual 全链 |
 | 修复 underlay（repair） | strict | underlay-critique → composition → fidelity |
-| 切换延续模式 | 全部 | style-contract、visual-task（及各自路线下的下游） |
+| 切换延续模式 | 全部 | 旧∪新固定重置集合：两条路线的全部生产链资产（含已批准布局/底层/合成）置 stale（`route_profile_changed`）；Screen Contract 与输入保留（AUD-02） |
+| 参考图无变化操作（no-op） | 全部 | 不产生失效：manageReference 检测无变化时不写盘、不升 revision、不触发失效（AUD-07） |
 
 ## 6. 源码指针
 
@@ -112,5 +121,6 @@ visual-task ─> visual-results
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.1 | 2026-08-23 | PR-36/38：strict `screen-contract → style-contract` 依赖边（AUD-01）；路线切换改为旧∪新固定重置集合（AUD-02）；补充 reference no-op 行为（AUD-07） |
 | 2.0 | 2026-08-21 | PR-26 路线感知依赖图：三路线分列、scope-aware BFS、style_basis（修复 Layout—Style 循环） |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
