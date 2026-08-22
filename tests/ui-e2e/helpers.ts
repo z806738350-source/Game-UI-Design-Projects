@@ -214,7 +214,6 @@ export async function importReferencesAndGenerateStyle(launched: LaunchedApp): P
     await approveButtons.first().click();
     await page.waitForTimeout(150);
   }
-  await clickRun(page, 'reference-approve');
   await clickRun(page, 'style-generate');
   await clickRun(page, 'style-approve');
 }

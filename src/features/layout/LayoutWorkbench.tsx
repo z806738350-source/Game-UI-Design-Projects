@@ -6,7 +6,6 @@ import { pipelineProfileOf } from '../shared/pipelineRoute';
 import { layoutStaleGuidance } from '../shared/staleReason';
 import { friendlyError } from '../shared/ui';
 import type { RunTask } from '../shared/ui';
-
 export function LayoutCanvas({ proposal, safeArea, project }: { proposal?: LayoutProposal; safeArea: boolean; project: DesignProject }) {
   const regions = Object.entries((proposal?.regions || {}) as Record<string, unknown>).map(([key, rawRegion]) => {
     const region = rawRegion && typeof rawRegion === 'object'
@@ -38,28 +37,21 @@ export function LayoutCanvas({ proposal, safeArea, project }: { proposal?: Layou
   })}</div></div>;
 }
 
-// Layout approval workbench: owns proposal selection, safe-area review flags,
-// and the manual-adjustment notes draft. When embedded in the App shell it
-// receives the shared run() progress boundary; standalone (tests, future
-// routes) it calls copilotApi directly and shows failures in its own error
-// slot. Approval itself remains a backend gate either way.
-export function LayoutWorkbench({ project, busy, run }: { project: DesignProject; busy: boolean; run?: RunTask }) {
+// Layout review workbench: proposal comparison canvas, safe-area review
+// flags, and the manual-adjustment notes draft. Selection and notes state is
+// controlled by LayoutWorkspace so the sticky footer can keep the approve
+// button always visible. Approval itself remains a backend gate; when
+// embedded in the App shell the shared run() progress boundary is used, and
+// stale-branch actions fall back to direct calls with their own error slot.
+export function LayoutWorkbench({ project, busy, run, selected, onSelect, notes, onNotes }: { project: DesignProject; busy: boolean; run?: RunTask; selected: string; onSelect: (id: string) => void; notes: string; onNotes: (value: string) => void }) {
   const proposals = project.artifacts.layouts?.proposals || [];
   const approvedId = project.artifacts.approvedLayout?.status === 'approved'
     ? String(project.artifacts.approvedLayout.source_proposal || '')
     : '';
-  const preferredProposalId = proposals.some((proposal) => proposal.id === approvedId) ? approvedId : (proposals[0]?.id || '');
-  const [selected, setSelected] = useState(preferredProposalId);
   const [safeArea, setSafeArea] = useState(true);
-  const [notes, setNotes] = useState('');
-  const [approving, setApproving] = useState(false);
   const [error, setError] = useState('');
-  const approvedNotes = ((project.artifacts.approvedLayout?.manual_adjustments as string[]) || []).join('\n');
-  useEffect(() => { setSelected(preferredProposalId); setNotes(approvedNotes); setError(''); }, [project.id, project.artifacts.layouts?.version, preferredProposalId, approvedNotes]);
+  useEffect(() => { setError(''); }, [project.id, project.artifacts.layouts?.version]);
   const selectedProposal = proposals.find((proposal) => proposal.id === selected) || proposals[0];
-  const selectedProposalId = selectedProposal?.id || '';
-  const notesDirty = approvedId === selected && notes.trim() !== approvedNotes.trim();
-  const needsApproval = approvedId !== selectedProposalId || project.artifacts.approvedLayout?.status !== 'approved' || notesDirty;
   const stale = project.artifacts.layouts?.status === 'stale';
   // stale 指引按失效原因与路线区分（fix-plan P0-06），不再统一显示
   // “画布或需求已变化”；旧版风格循环造成的错误失效提供一次性修复。
@@ -82,22 +74,14 @@ export function LayoutWorkbench({ project, busy, run }: { project: DesignProject
     catch (cause) { setError(friendlyError(cause)); }
     finally { setRegenerating(false); }
   };
-  const approveSelected = async () => {
-    const approve = () => copilotApi.approveArtifact(project.id, 'approved-layout', { proposalId: selectedProposalId, manualAdjustments: notes.trim() ? notes.split('\n').map((item) => item.trim()).filter(Boolean) : [] });
-    if (run) { await run(approve, { label: notesDirty ? '更新布局批准备注' : '批准所选布局', stage: 'layout_design' }); return; }
-    setApproving(true); setError('');
-    try { await approve(); }
-    catch (cause) { setError(friendlyError(cause)); }
-    finally { setApproving(false); }
-  };
   const interactionFlow = Array.isArray(selectedProposal?.interaction_flow)
     ? selectedProposal.interaction_flow.map(String)
     : selectedProposal?.interaction_flow && typeof selectedProposal.interaction_flow === 'object'
       ? Object.entries(selectedProposal.interaction_flow as Record<string, unknown>).map(([key, value]) => `${key.replaceAll('_', ' ')}：${String(value)}`)
       : selectedProposal?.interaction_flow ? [String(selectedProposal.interaction_flow)] : [];
   return <>
-    <div className="proposal-tabs">{proposals.map((proposal, index) => <button key={proposal.id} className={selected === proposal.id ? 'is-selected' : ''} onClick={() => setSelected(proposal.id)}><span>方案 {String.fromCharCode(65 + index)}</span><b>{proposal.name}</b><small>{proposal.designer_fit || proposal.strategy}</small>{approvedId === proposal.id && <em><Check size={12} />当前批准</em>}</button>)}</div>
-    <div className="layout-review"><LayoutCanvas proposal={selectedProposal} safeArea={safeArea} project={project} /><aside className="layout-notes"><h3>{selectedProposal?.name}</h3><p>{selectedProposal?.strategy}</p><div className="review-checks"><label><input type="checkbox" checked={safeArea} onChange={(event) => setSafeArea(event.target.checked)} />显示边缘预留（5% 示意）</label><label><input type="checkbox" defaultChecked />校验焦点顺序</label><label><input type="checkbox" defaultChecked />校验长文本空间</label><label><input type="checkbox" defaultChecked />覆盖加载/禁用状态</label></div><ol>{interactionFlow.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol><label className="notes-field"><span>人工调整与批准备注</span><textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={project.canvas_spec?.orientation === 'portrait' ? '例如：保持竖屏，上方阵容区、下方侠客抽屉，底部固定保存与全局导航。' : '例如：右侧属性区缩小 4%，主按钮保持在首屏焦点链末端。'} /></label></aside></div>
-    {stale ? <div className="layout-workbench-actions">{error && <span className="inline-error" role="alert">{error}</span>}<span className="stale-guidance">{staleGuidance?.message}</span>{staleGuidance?.action === 'legacy-repair' && <button className="button" data-testid="layout-repair" disabled={busy || repairing} onClick={repairRouteCycle}><Wrench size={16} />执行一次性修复</button>}<button className="button button--primary" data-testid="layout-generate" disabled={busy || regenerating} onClick={regenerateLayout}><CheckSquare size={16} />重新生成布局</button></div> : needsApproval && <div className="layout-workbench-actions">{error && <span className="inline-error" role="alert">{error}</span>}<button className="button button--primary" data-testid="layout-approve" disabled={busy || approving || !selectedProposalId} onClick={approveSelected}><CheckSquare size={16} />{notesDirty ? '更新批准备注' : '批准此布局'}</button></div>}
+    <div className="proposal-tabs">{proposals.map((proposal, index) => <button key={proposal.id} className={selected === proposal.id ? 'is-selected' : ''} onClick={() => onSelect(proposal.id)}><span>方案 {String.fromCharCode(65 + index)}</span><b>{proposal.name}</b><small>{proposal.designer_fit || proposal.strategy}</small>{approvedId === proposal.id && <em><Check size={12} />当前批准</em>}</button>)}</div>
+    <div className="layout-review"><LayoutCanvas proposal={selectedProposal} safeArea={safeArea} project={project} /><aside className="layout-notes"><h3>{selectedProposal?.name}</h3><p>{selectedProposal?.strategy}</p><div className="review-checks"><label><input type="checkbox" checked={safeArea} onChange={(event) => setSafeArea(event.target.checked)} />显示边缘预留（5% 示意）</label><label><input type="checkbox" defaultChecked />校验焦点顺序</label><label><input type="checkbox" defaultChecked />校验长文本空间</label><label><input type="checkbox" defaultChecked />覆盖加载/禁用状态</label></div><ol>{interactionFlow.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol><label className="notes-field"><span>人工调整与批准备注</span><textarea value={notes} onChange={(event) => onNotes(event.target.value)} placeholder={project.canvas_spec?.orientation === 'portrait' ? '例如：保持竖屏，上方阵容区、下方侠客抽屉，底部固定保存与全局导航。' : '例如：右侧属性区缩小 4%，主按钮保持在首屏焦点链末端。'} /></label></aside></div>
+    {stale && <div className="layout-workbench-actions">{error && <span className="inline-error" role="alert">{error}</span>}<span className="stale-guidance">{staleGuidance?.message}</span>{staleGuidance?.action === 'legacy-repair' && <button className="button" data-testid="layout-repair" disabled={busy || repairing} onClick={repairRouteCycle}><Wrench size={16} />执行一次性修复</button>}<button className="button button--primary" data-testid="layout-generate" disabled={busy || regenerating} onClick={regenerateLayout}><CheckSquare size={16} />重新生成布局</button></div>}
   </>;
 }

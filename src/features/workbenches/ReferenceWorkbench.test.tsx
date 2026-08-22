@@ -1,7 +1,5 @@
 import { render, screen, cleanup } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { copilotApi } from '../../api';
 import type { DesignProject } from '../../types';
 import { makeArtifact, makeProject } from '../../test-utils/fixtures';
 import { ReferenceWorkbench } from './ReferenceWorkbench';
@@ -14,7 +12,6 @@ vi.mock('../../api', () => ({
   }
 }));
 
-const api = { approveArtifact: vi.mocked(copilotApi.approveArtifact) };
 const run = async (task: () => Promise<DesignProject>) => task();
 
 const references = [
@@ -25,14 +22,20 @@ const references = [
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe('ReferenceWorkbench（Reference 容量）', () => {
-  it('正常路径：存在已批准参考图时可以提交 Inventory 批准', async () => {
+  it('初次进入即常显 6 张上限提示，且不再提供清单批量批准按钮', () => {
     const project = makeProject({ reference_assets: references });
-    const user = userEvent.setup();
-    api.approveArtifact.mockResolvedValue(project);
     render(<ReferenceWorkbench project={project} busy={false} run={run} />);
 
-    await user.click(screen.getByTestId('reference-approve'));
-    expect(api.approveArtifact).toHaveBeenCalledWith('project-1', 'reference-inventory');
+    expect(screen.getByText(/单次生成最多送 6 张/)).toBeTruthy();
+    expect(screen.queryByTestId('reference-approve')).toBeNull();
+  });
+
+  it('超过 6 张时展示计数警示', () => {
+    const overflow = Array.from({ length: 7 }, (_, index) => ({ id: `ref-${index}`, path: `/tmp/ref-${index}.png`, name: `参考${index}.png`, role: 'primary' as const, order: index, preview: `data:${index}` }));
+    const project = makeProject({ reference_assets: overflow });
+    render(<ReferenceWorkbench project={project} busy={false} run={run} />);
+    const warning = screen.getByTestId('reference-limit-warning');
+    expect(warning.textContent).toContain('当前已有 7 张');
   });
 
   it('失败路径：容量达到上限时必须先看到省略警告', () => {
