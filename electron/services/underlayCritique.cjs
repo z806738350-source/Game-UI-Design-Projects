@@ -19,7 +19,7 @@ function metricExceedsThreshold(metric = {}, thresholds = {}, keys) {
   return keys.some((key) => Number(metric[key]) > Number(thresholds[key] ?? 1));
 }
 
-function buildUnderlayCritique({ screenId, underlayId, contract, deterministic = {}, semantic = {}, evidence = {}, strict = true }) {
+function buildUnderlayCritique({ screenId, underlayId, contract, deterministic = {}, semantic = {}, evidence = {}, strict = true, visualResultsId, visualResultsVersion }) {
   const issues = [];
   if (strict && (!evidence.underlay?.hash || !evidence.overlay?.hash || !evidence.component_board?.hash)) issues.push(issue('blocker', 'incomplete-review-inputs', { reason: 'Strict critique requires hashed Underlay, Review Overlay, and component board evidence.' }));
   if (!semantic || !Number.isFinite(Number(semantic.confidence))) issues.push(issue('major', 'missing-semantic-evidence', { reason: 'Underlay critique must include independent semantic evidence.' }));
@@ -58,7 +58,10 @@ function buildUnderlayCritique({ screenId, underlayId, contract, deterministic =
   const manualReview = normalizedIssues.some((item) => ['missing-semantic-evidence', 'low-critique-confidence', 'incomplete-review-inputs'].includes(item.type));
   return {
     schema_version: '2.0', id: `${screenId}-underlay-critique-${underlayId}`, version: 1, status: 'reviewed',
-    source: { underlay: underlayId, underlay_contract: contract.id, prompt_hash: evidence.prompt_hash, model: evidence.model },
+    // AUD-05：审查证据除了 Variation ID 还必须绑定当时的像素 hash 与
+    // Visual Results 版本；同 ID 重新生成后像素已变，仅凭 ID 匹配会
+    // 让旧 passed 结论继续放行新像素。
+    source: { underlay: underlayId, underlay_hash: evidence.underlay?.hash, underlay_contract: contract.id, ...(visualResultsId === undefined ? {} : { visual_results_id: visualResultsId }), ...(visualResultsVersion === undefined ? {} : { visual_results_version: visualResultsVersion }), prompt_hash: evidence.prompt_hash, model: evidence.model },
     global_scan: { suspected_ui_regions: semantic.suspected_ui_regions || [], text_like_regions: semantic.text_like_regions || [] },
     slot_checks: semantic.slot_checks || [], deterministic_metrics: deterministic, evidence, issues: normalizedIssues,
     result: manualReview ? 'manual-review' : failed ? 'failed' : 'passed', manual_review: { required: manualReview, approved: false }, manual_waivers: []
@@ -66,6 +69,11 @@ function buildUnderlayCritique({ screenId, underlayId, contract, deterministic =
 }
 
 function reviewGate(critique) {
+  // AUD-05：stale Critique 的证据已不对应当前底图，必须直接失败；
+  // 任何 waiver / manual-review 都不得洗回过期证据。
+  if (critique?.status === 'stale') {
+    return { passed: false, blocking: [{ severity: 'blocker', type: 'critique-stale', reason: `Critique 已失效（${critique.stale_reason || '上游变化'}），必须对当前底图重新审查。` }] };
+  }
   const waived = new Set((critique?.manual_waivers || []).filter((waiver) => typeof waiver.reason === 'string' && waiver.reason.trim().length >= 10).map((waiver) => waiver.issue_id));
   const blocking = (critique?.issues || []).map((item, index) => ({ ...item, issue_id: item.issue_id || `issue-${index + 1}` })).filter((item) => ['blocker', 'critical', 'major'].includes(item.severity) && !waived.has(item.issue_id));
   const manualBlocked = critique?.manual_review?.required && !critique?.manual_review?.approved;

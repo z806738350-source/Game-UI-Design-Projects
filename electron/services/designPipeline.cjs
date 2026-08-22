@@ -5,7 +5,7 @@ const sharp = require('sharp');
 const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask } = require('./prompts.cjs');
 const { providerCapabilities } = require('./providerCapabilities.cjs');
 const { buildReferencePack } = require('./referencePack.cjs');
-const { validateArtifact } = require('./contracts.cjs');
+const { normalizeArtifact, recomputeCoverage, validateArtifact } = require('./contracts.cjs');
 const { confirmFontUsage: confirmFontUsageContract, importFontAsset } = require('./typographyAssets.cjs');
 const { importComponentAsset, importForgeManifest, validateComponentAssets } = require('./componentKit.cjs');
 const { validateBindings, withCoverage } = require('./componentBindings.cjs');
@@ -332,7 +332,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       const referencePack = omissionsConfirmed ? buildReferencePack({ assets: project.reference_assets || [], capabilities, purpose: 'underlay-generation', structureGuides, omissionsConfirmed: true }) : probePack;
       await projectStore.saveArtifact(projectId, 'reference-pack', referencePack);
       if (!omissionsConfirmed && probePack.omitted.length > 0) throw Object.assign(new Error(`参考图超过服务容量：已选择 ${probePack.selected.length} 张，省略 ${probePack.omitted.length} 张。请在视觉探索页核对省略清单后点击“确认省略项并生成”。`), { code: ERROR_CODES.REFERENCE_OMISSIONS_CONFIRMATION_REQUIRED });
-      const tasks = strategies.map((strategy) => visualTask(project, approved, style, strategy, input.feedback, { underlayContract: project.artifacts.underlayContract, referencePack }));
+      // AUD-10：同一轮生成共用一个稳定 generation 戳，保证同轮 Task/Variation
+      // ID 可追溯且与上一轮不撞号。
+      const generationStamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const tasks = strategies.map((strategy) => visualTask(project, approved, style, strategy, input.feedback, { underlayContract: project.artifacts.underlayContract, referencePack, generationStamp }));
       await projectStore.saveArtifact(projectId, 'visual-task', {
         schema_version: '1.0', id: `${project.screen_id}-visual-tasks`, version: 1, status: 'approved',
         source: { approved_layout: approved.id, style_contract: style.id, ...inputSource(project) }, tasks
@@ -480,7 +483,17 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!current) throw new Error('Screen Contract does not exist.');
       assertApprovableFreshness(kind, current);
       assertSourceRevisionsFresh(kind, current, project);
-      await projectStore.saveArtifact(projectId, kind, { ...current, status: 'approved', approved_at: new Date().toISOString() });
+      // AUD-06：批准即完整确定性重验——归一化全部字段、按当前
+      // source_inventory 重算 coverage、重跑控件/角色/required 校验；
+      // 人工编辑删掉必需控件后不得仍能批准并继续显示“0 项遗漏”。
+      const normalized = normalizeArtifact('screen-contract', current);
+      const revalidated = { ...normalized, coverage: recomputeCoverage(normalized) };
+      const approvalErrors = validateArtifact('screen-contract', revalidated);
+      if (approvalErrors.length) {
+        const coverageProblem = approvalErrors.some((message) => message.includes('uncovered_items') || message.includes('missing source items'));
+        throw Object.assign(new Error(`Screen Contract 无法批准：${approvalErrors.join('；')}`), { code: coverageProblem ? ERROR_CODES.SCREEN_CONTRACT_COVERAGE_INCOMPLETE : ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID });
+      }
+      await projectStore.saveArtifact(projectId, kind, { ...revalidated, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'wireframe_interpretation', 'approved', `screens/${project.screen_id}/screen-contract.json`);
     } else if (kind === 'component-bindings') {
       const current = project.artifacts.bindings;
@@ -553,8 +566,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (project.artifacts.approvedLayout?.source_proposal !== selected.id || JSON.stringify(project.artifacts.approvedLayout?.manual_adjustments || []) !== JSON.stringify(manualAdjustments)) {
         await invalidateArtifacts(projectId, 'approved-layout', 'approved_layout_changed', { screenId: project.screen_id });
       }
+      // AUD-10：ID 内嵌的版本必须与存储层即将分配的单调版本一致
+      //（previous + 1），不得永远写死 -v1。
+      const nextLayoutVersion = Number(project.artifacts.approvedLayout?.version || 0) + 1;
       const artifact = {
-        schema_version: '1.0', id: `${project.screen_id}-approved-layout-v1`, version: 1, status: 'approved',
+        schema_version: '1.0', id: `${project.screen_id}-approved-layout-v${nextLayoutVersion}`, version: nextLayoutVersion, status: 'approved',
         source: { layout_proposals: project.artifacts.layouts.id, source_proposal: selected.id },
         screen_id: project.screen_id, source_proposal: selected.id, approved_by: 'ui-designer',
         approved_at: new Date().toISOString(), manual_adjustments: manualAdjustments,
@@ -671,6 +687,12 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       return JSON.stringify(artifactPatch[key]) !== JSON.stringify(definition.artifact[key]);
     });
     if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
+    else {
+      // AUD-09：label-only 编辑不失效 Binding（控件语义未变），但已产出的
+      // 文字层/合成/保真事实仍写着旧文案，必须沿 manifest→output→fidelity
+      // 失效，逼使交付链用新 label 重建。
+      await invalidateArtifacts(projectId, 'composition-manifest', 'screen_contract_label_changed', { screenId: project.screen_id });
+    }
     // 编辑不是洗回路径：stale Artifact 被编辑后仍保持 stale，必须通过
     // 重新生成（或允许重验的资产重批）恢复；否则 stale 会被普通编辑
     // 静默清除，绕过新鲜度门禁。
@@ -826,7 +848,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     });
     const annotatedOverlay = await writeReviewOverlay(resolved.workspacePath, project.screen_id, underlay.absolute_path, contract, semantic, `${underlayId.replace(/[^A-Za-z0-9_-]/g, '-')}-review-overlay.png`);
     const evidence = { underlay, overlay: overlayInput, annotated_overlay: annotatedOverlay, component_board: componentBoard, semantic_raw: semanticRaw, prompt_hash: promptHash, model };
-    const critique = buildUnderlayCritique({ screenId: project.screen_id, underlayId, contract, deterministic, semantic, evidence, strict: true });
+    const critique = buildUnderlayCritique({ screenId: project.screen_id, underlayId, contract, deterministic, semantic, evidence, strict: true, visualResultsId: project.artifacts.visualResults?.id, visualResultsVersion: project.artifacts.visualResults?.version });
     await invalidateArtifacts(projectId, 'underlay-critique', 'underlay_recritiqued');
     await projectStore.saveArtifact(projectId, 'underlay-critique', critique);
     const gate = reviewGate(critique);
@@ -935,6 +957,21 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     if (strictProduction && (!critique || critique.source?.underlay !== variation.id)) {
       throw Object.assign(new Error(`当前选中底图尚未审查：审查对象是 ${critique?.source?.underlay || '（无）'}，请先对 ${variation.id} 执行污染审查。`), { code: ERROR_CODES.UNDERLAY_EVIDENCE_MISMATCH });
     }
+    if (strictProduction) {
+      // AUD-05：证据链重验不只看 ID——stale 结论、像素 hash、Visual Results
+      // 版本任一项对不上都不得放行，否则同 ID 重新生成后旧 passed 会继续生效。
+      if (critique.status === 'stale') {
+        throw Object.assign(new Error(`底图审查已失效（${critique.stale_reason || '上游变化'}），请先对 ${variation.id} 重新执行污染审查。`), { code: ERROR_CODES.UNDERLAY_EVIDENCE_STALE });
+      }
+      const currentVisualVersion = Number(project.artifacts.visualResults?.version || 0);
+      if (Number(critique.source?.visual_results_version) !== currentVisualVersion) {
+        throw Object.assign(new Error(`审查证据绑定的是 Visual Results V${critique.source?.visual_results_version ?? '（无）'}，当前已是 V${currentVisualVersion}；请重新审查后再合成。`), { code: ERROR_CODES.UNDERLAY_EVIDENCE_MISMATCH });
+      }
+      const currentUnderlay = await materializeUnderlay(project, resolved, variation);
+      if (critique.source?.underlay_hash !== currentUnderlay.hash) {
+        throw Object.assign(new Error(`底图像素已变化（审查 hash 与当前文件不一致），审查证据不再可信；请对 ${variation.id} 重新执行污染审查。`), { code: ERROR_CODES.UNDERLAY_EVIDENCE_MISMATCH });
+      }
+    }
     const mode = input.mode === 'final' ? 'final' : 'preview';
     // A regeneration attempt supersedes the previous evidence even when the
     // render itself fails: downstream fidelity/approval gates must not keep
@@ -945,7 +982,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     if (previousManifest && previousManifest.status !== 'stale') {
       await projectStore.saveArtifact(projectId, 'composition-manifest', { ...previousManifest, status: 'stale', stale_at: new Date().toISOString(), stale_reason: reason }, { screenId: project.screen_id });
     }
-    const version = Math.max(Number(project.artifacts.compositionManifest?.version || 0), Number(project.artifacts.compositionOutput?.version || 0)) + 1;
+    // AUD-10：文件名版本必须与存储层即将分配给 Manifest 的单调版本
+    //（previous + 1）一致；若前面的 stale 回写已把磁盘版本 +1，这里要
+    // 一并计入，否则落盘版本与文件名/证据链记录撞不上。
+    const version = Number(project.artifacts.compositionManifest?.version || 0) + 1 + (previousManifest && previousManifest.status !== 'stale' ? 1 : 0);
     const manifest = createCompositionManifest({
       project, underlay: { source: 'provider-result', variation_id: variation.id, ...(variation.image_path ? { path: variation.image_path } : { image_url: variation.image_url }), provider_task_id: variation.provider_task_id, critique_id: project.artifacts.underlayCritique?.id },
       layout: project.artifacts.approvedLayout, bindings: project.artifacts.bindings, componentContract: project.artifacts.componentContract,

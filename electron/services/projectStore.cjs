@@ -1,6 +1,7 @@
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { createHash, randomUUID } = require('node:crypto');
 const { ensureDir, readJson, writeJson } = require('./jsonStore.cjs');
 const { readImageMetadata } = require('./imageMetadata.cjs');
 const { artifactRelativePath, GLOBAL_ARTIFACTS, SCREEN_ARTIFACTS } = require('./artifactRegistry.cjs');
@@ -396,6 +397,14 @@ function createProjectStore(options = {}) {
     const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const artifactPath = path.join(project.workspacePath, artifactRelativePath(kind, screenId));
     const previous = await readJson(artifactPath, null);
+    // AUD-10：版本只能由存储层产生（nextVersion = previousVersion + 1），
+    // 模型或调用方传入的 version 一律忽略；同时由存储层盖 generation_id /
+    // content_hash / updated_at，保证历史不出现重复 V1、React 依赖与
+    // 证据链版本识别不撞号。
+    const version = previous ? Number(previous.version || 1) + 1 : Math.max(1, Number(artifact.version) || 1);
+    const { version: _incomingVersion, generation_id: _incomingGeneration, content_hash: _incomingHash, updated_at: _incomingStamp, ...contentFields } = artifact;
+    const contentHash = createHash('sha256').update(JSON.stringify(contentFields)).digest('hex');
+    const stored = { ...artifact, version, generation_id: randomUUID(), content_hash: contentHash, updated_at: new Date().toISOString() };
     if (previous) {
       const historyDir = path.join(project.workspacePath, 'workflow', 'history');
       await ensureDir(historyDir);
@@ -413,8 +422,8 @@ function createProjectStore(options = {}) {
       });
       await writeJson(historyPath, history.slice(0, 100));
     }
-    await writeJson(artifactPath, artifact);
-    return artifact;
+    await writeJson(artifactPath, stored);
+    return stored;
   }
 
   async function updateWorkflow(projectId, stage, status, output, details = {}) {

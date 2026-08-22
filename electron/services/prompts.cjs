@@ -91,6 +91,9 @@ function stylePrompt(project, styleBasis, referencePack) {
 }
 
 function visualTask(project, approvedLayout, styleContract, variation, feedback = '', context = {}) {
+  // AUD-10：同策略重新生成时像素已变，Task/Variation ID 不得永远写死
+  // -v1；每轮生成携带稳定的 generation 戳，证据链版本识别不撞号。
+  const generationStamp = context.generationStamp || new Date().toISOString().replace(/[:.]/g, '-');
   const mode = continuationMode(project);
   if (mode === 'existing-strict' || mode === 'existing-guided' || mode === 'locked-continuation') {
     const strict = mode !== 'existing-guided';
@@ -112,7 +115,7 @@ function visualTask(project, approvedLayout, styleContract, variation, feedback 
     return {
       schema_version: '2.0', id: `${project.screen_id}-${variation}-underlay-task`, version: 1, status: 'approved',
       source: { approved_layout: approvedLayout.id, style_contract: styleContract.id, ...(underlayContract ? { underlay_contract: underlayContract.id } : {}) },
-      task_id: `${project.screen_id}-${variation}-underlay-v1`, screen_id: project.screen_id,
+      task_id: `${project.screen_id}-${variation}-underlay-${generationStamp}`, screen_id: project.screen_id,
       continuation_mode: mode, production_mode: 'underlay-only', variation_strategy: variation,
       generate: ['background', 'character', 'scene', 'page-specific-decoration'],
       must_not_generate: ['shared-buttons', 'shared-tabs', 'shared-navigation', 'shared-icons', 'formal-ui-text'],
@@ -148,7 +151,7 @@ function visualTask(project, approvedLayout, styleContract, variation, feedback 
       approved_layout: approvedLayout.id,
       style_contract: styleContract.id
     },
-    task_id: `${project.screen_id}-${variation}-v1`,
+    task_id: `${project.screen_id}-${variation}-${generationStamp}`,
     screen_id: project.screen_id,
     variation_strategy: variation,
     must_include: approvedLayout.required_controls || [],

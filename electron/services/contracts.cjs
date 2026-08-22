@@ -158,6 +158,21 @@ function validateArtifact(kind, value) {
   return errors;
 }
 
+// AUD-06：批准边界不得信任契约体内存储的 coverage——人工编辑删掉
+// 必需控件/信息后，旧 coverage 仍会显示“0 项遗漏”。批准前必须按
+// 当前 source_inventory 与字段重算覆盖事实。
+function recomputeCoverage(value) {
+  const controls = [...(value.required_controls || []).map((control) => control?.label || control?.id || control), ...(value.secondary_actions || [])];
+  const information = [...(value.required_information || [])];
+  const inventoryControls = [...(value.source_inventory?.requirement_functions || []), ...(value.source_inventory?.wireframe_controls || [])];
+  const inventoryInformation = value.source_inventory?.wireframe_information || [];
+  const coveredControls = inventoryControls.filter((item) => sourceItemCovered(item, controls));
+  const uncoveredControls = inventoryControls.filter((item) => !sourceItemCovered(item, controls));
+  const coveredInformation = inventoryInformation.filter((item) => sourceItemCovered(item, information));
+  const uncoveredInformation = inventoryInformation.filter((item) => !sourceItemCovered(item, information));
+  return { covered_items: [...coveredControls, ...coveredInformation], uncovered_items: [...uncoveredControls, ...uncoveredInformation] };
+}
+
 function extractJson(text) {
   const clean = String(text || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
   try { return JSON.parse(clean); } catch {}
@@ -201,4 +216,4 @@ function withCommonFields(value, defaults) {
   };
 }
 
-module.exports = { extractJson, normalizeArtifact, validateArtifact, withCommonFields };
+module.exports = { extractJson, normalizeArtifact, recomputeCoverage, validateArtifact, withCommonFields };

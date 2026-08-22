@@ -98,11 +98,12 @@ test('pipeline persists generated and approved artifacts separately', async () =
     });
     project = await pipeline.updateArtifact(project.id, 'screen-contract', { screenId: 'main', review_metadata: { required_controls: ['confirmed'] } });
     assert.equal(project.artifacts.screenContract.status, 'approved');
-    assert.equal(project.artifacts.screenContract.version, 2);
+    // AUD-10：存储层强制每次保存单调 bump 版本，metadata-only 编辑的保存同样升版本。
+    assert.equal(project.artifacts.screenContract.version, 3);
     assert.equal(project.artifacts.layouts.status, 'approved');
     project = await pipeline.updateArtifact(project.id, 'screen-contract', { screenId: 'main', purpose: 'Upgrade with a clear before/after comparison.' });
     assert.equal(project.artifacts.screenContract.status, 'reviewed');
-    assert.equal(project.artifacts.screenContract.version, 3);
+    assert.equal(project.artifacts.screenContract.version, 4);
     assert.equal(project.artifacts.screenContract.purpose, 'Upgrade with a clear before/after comparison.');
     assert.equal(project.artifacts.layouts.status, 'stale');
     assert.equal(project.artifactHistory.length > 0, true);
