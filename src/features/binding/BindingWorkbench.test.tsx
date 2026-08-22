@@ -145,4 +145,23 @@ describe('BindingWorkbench（REM-01 / F-01 显式选择）', () => {
     expect(alert.textContent).toContain('BINDING_COVERAGE_INCOMPLETE');
     expect(alert.className).toContain('inline-error');
   });
+
+  it('P1-07：已保存绑定 hydrate 进草稿，切换 Screen 后草稿重建不串线', () => {
+    const project = projectWithControls({
+      bindings: makeArtifact({
+        id: 'bindings-1', status: 'approved', version: 1,
+        bindings: [
+          { control_id: 'save', component_id: 'button.primary', state: 'default', font_role: 'button-label', slot_id: 'slot-save' },
+          { control_id: 'back', component_id: 'nav.item', state: 'default', slot_id: 'slot-back' }
+        ]
+      })
+    });
+    const { rerender } = render(<BindingWorkbench project={project} busy={false} />);
+    // hydrate 后全部控件已显式解析，保存/批准立即可用。
+    expect(screen.getByTestId('binding-save').hasAttribute('disabled')).toBe(false);
+    // 切到另一个 Screen（同控件 id）且无已保存绑定时，旧选择不得携带过来。
+    const other = { ...project, screen_id: 'other-screen', artifacts: { ...project.artifacts, bindings: makeArtifact({ id: 'bindings-2', status: 'draft', version: 1, bindings: [] }) } };
+    rerender(<BindingWorkbench project={other} busy={false} />);
+    expect(screen.getByTestId('binding-save').hasAttribute('disabled')).toBe(true);
+  });
 });

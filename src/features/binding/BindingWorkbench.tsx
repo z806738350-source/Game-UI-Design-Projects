@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Layers3, LockKeyhole } from 'lucide-react';
 import { copilotApi } from '../../api';
 import type { DesignProject } from '../../types';
@@ -40,6 +40,17 @@ export function BindingWorkbench({ project, busy, run }: { project: DesignProjec
   const [choices, setChoices] = useState<Record<string, BindingChoice>>({});
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
+  // P1-07：从已保存的 Binding Artifact hydrate 草稿（已批准绑定不再一片空白），
+  // 并在项目 / Screen / Artifact 版本变化时重建草稿，避免跨 Screen、跨项目
+  // 携带旧选择（相同控件 id 时尤其危险）。
+  useEffect(() => {
+    const saved = ((project.artifacts.bindings?.bindings as Array<Record<string, unknown>>) || []).reduce<Record<string, BindingChoice>>((draft, binding) => {
+      const controlId = String(binding.control_id || '');
+      if (controlId) draft[controlId] = { component_id: String(binding.component_id || ''), state: String(binding.state || ''), font_role: String(binding.font_role || '') };
+      return draft;
+    }, {});
+    setChoices(saved);
+  }, [project.id, project.screen_id, project.artifacts.bindings?.version]);
   const controls = useMemo(() => ((project.artifacts.screenContract?.required_controls as Control[]) || []).filter((control) => control.required !== false), [project.artifacts.screenContract]);
   const families = ((project.artifacts.componentContract?.families as Array<Record<string, unknown>>) || []);
   const fontRoles = Object.keys((project.artifacts.fontManifest?.roles as Record<string, unknown>) || {});

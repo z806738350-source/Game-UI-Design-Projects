@@ -139,8 +139,10 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
     await switchScreen(page, 'battle-copy');
     const project = await getProject(page);
     expect(project.screen_id).toBe('battle-copy');
-    expect(project.artifacts.screenContract?.status).toBe('approved');
-    expect(String(project.artifacts.screenContract?.screen_id)).toBe('battle');
+    // P1-09: clone migration rewrites artifact identity to the new screen and
+    // demotes inherited approvals to reviewed; the copy must re-confirm.
+    expect(project.artifacts.screenContract?.status).toBe('reviewed');
+    expect(String(project.artifacts.screenContract?.screen_id)).toBe('battle-copy');
 
     // The duplicated screen input records its provenance on disk.
     const inputsPath = path.join(findProjectDir(launched, 'screens/battle-copy/inputs.json'), 'screens', 'battle-copy', 'inputs.json');

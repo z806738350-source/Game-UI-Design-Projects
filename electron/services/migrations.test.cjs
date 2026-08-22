@@ -125,3 +125,36 @@ test('screen registry creates and switches independent screens', async () => {
     assert.equal(archived.status, 'archived');
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+// P1-09：复制 Screen 必须执行 clone migration——副本 Artifact 获得新身份
+// （新 id、新 screen_id、重写 source 引用），已批准事实不继承而降级为
+// reviewed，原页产物保持不动。
+test('duplicating a screen rewrites artifact identity and demotes approvals', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-clone-'));
+  try {
+    const store = createProjectStore({ workspaceRoot: root });
+    const project = await store.create({ name: 'Clone', projectType: 'new' });
+    await store.createScreen(project.id, { id: 'inventory', name: '背包' });
+    await store.saveArtifact(project.id, 'screen-contract', {
+      schema_version: '2.0', id: 'inventory-screen-contract-v1', version: 1, status: 'approved',
+      approved_at: '2026-08-01T00:00:00.000Z', screen_id: 'inventory',
+      source: { wireframe: 'screens/inventory/inputs/wireframe.png' },
+      purpose: '背包页面'
+    }, { screenId: 'inventory' });
+    await store.updateWorkflow(project.id, 'wireframe_interpretation', 'approved', 'screens/inventory/screen-contract.json', { screenId: 'inventory' });
+    await store.duplicateScreen(project.id, 'inventory', { id: 'inventory-copy', name: '背包副本' });
+    const copyContract = await readJson(path.join(project.workspacePath, 'screens', 'inventory-copy', 'screen-contract.json'));
+    assert.equal(copyContract.id, 'inventory-copy-screen-contract-v1');
+    assert.equal(copyContract.screen_id, 'inventory-copy');
+    assert.equal(copyContract.source.wireframe, 'screens/inventory-copy/inputs/wireframe.png');
+    assert.equal(copyContract.status, 'reviewed');
+    assert.equal(copyContract.approved_at, undefined);
+    assert.equal(copyContract.purpose, '背包页面');
+    const original = await readJson(path.join(project.workspacePath, 'screens', 'inventory', 'screen-contract.json'));
+    assert.equal(original.id, 'inventory-screen-contract-v1');
+    assert.equal(original.status, 'approved');
+    const state = await readJson(path.join(project.workspacePath, 'workflow', 'state.json'));
+    assert.equal(state.screen_stages['inventory-copy'].wireframe_interpretation.status, 'reviewed');
+    assert.equal(state.screen_stages.inventory.wireframe_interpretation.status, 'approved');
+  } finally { await fs.rm(root, { recursive: true, force: true }); }
+});

@@ -237,7 +237,10 @@ export const copilotApi = {
   saveModelConfig: (input: { visionModel: string; critiqueModel?: string; imageModel: string }): Promise<AppConfig> => api().saveModelConfig(input),
   listProjects: (): Promise<ProjectSummary[]> => api().listProjects(),
   createProject: async (input: CreateProjectInput): Promise<DesignProject> => rememberScreen(await api().createProject(input)),
-  duplicateProject: (id: string): Promise<DesignProject> => api().duplicateProject(id),
+  // P1-10：复制项目后 wrapper 立即把新项目设为当前，必须同步记住其
+  // Screen 上下文，否则立即执行 Screen-scoped 操作会因空 screenId 报
+  // SCREEN_ID_REQUIRED。
+  duplicateProject: async (id: string): Promise<DesignProject> => rememberScreen(await api().duplicateProject(id)),
   openProject: async (id: string, options?: { includePreviews?: boolean }): Promise<DesignProject> => rememberScreen(await api().openProject(id, options)),
   listScreens: (id: string) => api().listScreens(id),
   createScreen: (id: string, input: { id?: string; name: string }) => api().createScreen(id, input),
