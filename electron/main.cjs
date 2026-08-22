@@ -190,13 +190,19 @@ function registerIpc() {
     const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
     if (strict) {
       const output = project.artifacts.compositionOutput;
+      const manifest = project.artifacts.compositionManifest;
       // Exporting the final PNG requires a passing fidelity report that was
       // computed against exactly this manifest/output pair; a failed or stale
       // fidelity gate blocks the export (UIE2E-07C).
+      // AUD-10：新鲜度不能用存储版本号对齐——批准保存也会单调 bump Manifest
+      // 版本。改用内容证据链：Fidelity 验证的是同一份 Manifest（id）与同一张
+      // PNG（hash），且当前 Manifest 仍引用这张 PNG；上游变化会使 Fidelity 变
+      // stale 不再是 passed，重新合成会同时替换 Manifest 引用与 Output hash。
       const fidelity = project.artifacts.fidelityReport;
       const fidelityFresh = Boolean(fidelity && fidelity.status === 'passed'
-        && fidelity.source?.composition_manifest_version === project.artifacts.compositionManifest?.version
-        && fidelity.source?.composition_output_hash === output?.hash);
+        && fidelity.source?.composition_manifest === manifest?.id
+        && fidelity.source?.composition_output_hash === output?.hash
+        && manifest?.output?.hash === output?.hash);
       if (!fidelityFresh) throw Object.assign(new Error('无法导出最终成图：需要先通过针对当前合成结果的 Final Fidelity 检查。'), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
       // 交付边界：最终批准（Composition Manifest approved）必须先于导出，
       // 避免未签核产物被当作正式交付外流。

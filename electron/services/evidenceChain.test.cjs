@@ -3,11 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const sharp = require('sharp');
 const { createDesignPipeline } = require('./designPipeline.cjs');
 const { createProjectStore } = require('./projectStore.cjs');
 const { ERROR_CODES } = require('./errorCodes.cjs');
 const { visualBindingMismatch, visualReviewHash } = require('./compositor.cjs');
 const { assertFinalApprovalForExport } = require('./compositionRenderer.cjs');
+const { hashBuffer } = require('./underlayReview.cjs');
 
 function pngHeader(width, height) {
   const bytes = Buffer.alloc(24);
@@ -52,11 +54,19 @@ test('composeVisual requires an explicit variation whose critique evidence match
     const strict = await projectStore.create({ name: 'Evidence Strict', projectType: 'existing', requirement: 'Compose with matching evidence.' });
     assert.equal(strict.continuation_mode, 'existing-strict');
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    // AUD-05：证据链门禁要重验像素 hash，variation 必须是可读取的本地文件。
+    const resolved = await projectStore.resolveProject(strict.id);
+    const v1Bytes = await sharp({ create: { width: 16, height: 16, channels: 4, background: '#223355ff' } }).png().toBuffer();
+    const v2Bytes = await sharp({ create: { width: 16, height: 16, channels: 4, background: '#553322ff' } }).png().toBuffer();
+    await fs.mkdir(path.join(resolved.workspacePath, 'screens', 'main', 'explorations'), { recursive: true });
+    await fs.writeFile(path.join(resolved.workspacePath, 'screens', 'main', 'explorations', 'v1.png'), v1Bytes);
+    await fs.writeFile(path.join(resolved.workspacePath, 'screens', 'main', 'explorations', 'v2.png'), v2Bytes);
+    const v1Hash = hashBuffer(await sharp(v1Bytes).png().toBuffer());
     await projectStore.saveArtifact(strict.id, 'visual-results', {
       schema_version: '2.0', id: 'main-visual-results', version: 1, status: 'generated',
       variations: [
-        { id: 'v-1', strategy: 'conservative', image_url: 'https://kunpoapiimg.ziy.cc/v1.png', status: 'generated' },
-        { id: 'v-2', strategy: 'expressive', image_url: 'https://kunpoapiimg.ziy.cc/v2.png', status: 'generated' }
+        { id: 'v-1', strategy: 'conservative', image_path: 'screens/main/explorations/v1.png', status: 'generated' },
+        { id: 'v-2', strategy: 'expressive', image_path: 'screens/main/explorations/v2.png', status: 'generated' }
       ]
     }, { screenId: 'main' });
 
@@ -70,10 +80,11 @@ test('composeVisual requires an explicit variation whose critique evidence match
       (error) => error.code === ERROR_CODES.VISUAL_VARIATION_NOT_FOUND
     );
 
-    // Critique 审的是 v-1：合成 v-2 必须被证据链门禁拦截。
+    // Critique 审的是 v-1（携带 hash 与 Visual Results 版本绑定）：
+    // 合成 v-2 必须被证据链门禁拦截。
     await projectStore.saveArtifact(strict.id, 'underlay-critique', {
       schema_version: '2.0', id: 'critique-1', version: 1, status: 'reviewed', result: 'passed',
-      source: { underlay: 'v-1' }, issues: []
+      source: { underlay: 'v-1', underlay_hash: v1Hash, visual_results_id: 'main-visual-results', visual_results_version: 1 }, issues: []
     }, { screenId: 'main' });
     await projectStore.saveArtifact(strict.id, 'composition-manifest', {
       schema_version: '1.0', id: 'main-composition-manifest', version: 1, status: 'approved', mode: 'final', source: {}
@@ -92,6 +103,42 @@ test('composeVisual requires an explicit variation whose critique evidence match
       pipeline.composeVisual(strict.id, { screenId: 'main', variationId: 'v-1' }),
       (error) => error.code !== ERROR_CODES.UNDERLAY_EVIDENCE_MISMATCH && error.code !== ERROR_CODES.VISUAL_VARIATION_NOT_FOUND
     );
+
+    // AUD-05：stale Critique 必须直接失败，不得凭旧 passed 结论放行。
+    await projectStore.saveArtifact(strict.id, 'underlay-critique', {
+      schema_version: '2.0', id: 'critique-1', version: 2, status: 'stale', stale_reason: 'visual_results_regenerated', result: 'passed',
+      source: { underlay: 'v-1', underlay_hash: v1Hash, visual_results_id: 'main-visual-results', visual_results_version: 1 }, issues: []
+    }, { screenId: 'main' });
+    await assert.rejects(
+      pipeline.composeVisual(strict.id, { screenId: 'main', variationId: 'v-1' }),
+      (error) => error.code === ERROR_CODES.UNDERLAY_EVIDENCE_STALE
+    );
+
+    // AUD-05：像素 hash 对不上（同 ID 重新生成后像素已变）同样拦截。
+    await projectStore.saveArtifact(strict.id, 'underlay-critique', {
+      schema_version: '2.0', id: 'critique-1', version: 3, status: 'reviewed', result: 'passed',
+      source: { underlay: 'v-1', underlay_hash: 'sha256:outdated', visual_results_id: 'main-visual-results', visual_results_version: 1 }, issues: []
+    }, { screenId: 'main' });
+    await assert.rejects(
+      pipeline.composeVisual(strict.id, { screenId: 'main', variationId: 'v-1' }),
+      (error) => error.code === ERROR_CODES.UNDERLAY_EVIDENCE_MISMATCH
+    );
+
+    // AUD-05：Visual Results 版本漂移（审查后又生成/评审过）同样拦截。
+    await projectStore.saveArtifact(strict.id, 'underlay-critique', {
+      schema_version: '2.0', id: 'critique-1', version: 4, status: 'reviewed', result: 'passed',
+      source: { underlay: 'v-1', underlay_hash: v1Hash, visual_results_id: 'main-visual-results', visual_results_version: 99 }, issues: []
+    }, { screenId: 'main' });
+    await assert.rejects(
+      pipeline.composeVisual(strict.id, { screenId: 'main', variationId: 'v-1' }),
+      (error) => error.code === ERROR_CODES.UNDERLAY_EVIDENCE_MISMATCH
+    );
+    // 后续三次证据门禁失败都没有再改动链路：Manifest 保持上一步“通过门禁后
+    // 下游失败”留下的 stale 状态（再生成尝试取代旧证据的正确语义），而不是
+    // 被失败尝试洗成别的状态。
+    reopened = await projectStore.open(strict.id, { includePreviews: false, screenId: 'main' });
+    assert.equal(reopened.artifacts.compositionManifest.status, 'stale');
+    assert.equal(reopened.artifacts.compositionManifest.stale_reason, 'preview_composition_regenerated');
 
     // exploration 路线没有污染审查链，指定有效方向即放行证据门禁。
     const exploration = await projectStore.create({ name: 'Evidence Exploration', projectType: 'new', requirement: 'Compose freely.' });
@@ -248,10 +295,17 @@ test('contract approval rechecks recorded source input revisions', async () => {
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
 
     // screen-contract 记录的是旧输入修订（requirement 已变化）→ 拒绝批准。
+    // AUD-06 后批准即完整重验，fixture 必须携带完整可验证字段。
+    const contractBase = {
+      screen_id: 'main', secondary_actions: [], data_dependencies: [],
+      design_constraints: {}, source_inventory: { requirement_functions: [], wireframe_controls: [], wireframe_information: [] },
+      coverage: { covered_items: [], uncovered_items: [] }
+    };
     await projectStore.saveArtifact(project.id, 'screen-contract', {
       schema_version: '2.0', id: 'main-screen-contract', version: 1, status: 'generated',
       source: { input_revisions: { requirement: 1, wireframe: 0, art_direction: 0, references: 0 } },
-      screen_name: '阵容编成', purpose: '编成', primary_action: '保存', required_controls: [], required_information: [], states: [], edge_cases: []
+      screen_name: '阵容编成', purpose: '编成', primary_action: '保存', required_controls: [], required_information: [], states: [], edge_cases: [],
+      ...contractBase
     }, { screenId: 'main' });
     await assert.rejects(
       pipeline.approveArtifact(project.id, 'screen-contract', { screenId: 'main' }),
@@ -262,7 +316,8 @@ test('contract approval rechecks recorded source input revisions', async () => {
     await projectStore.saveArtifact(project.id, 'screen-contract', {
       schema_version: '2.0', id: 'main-screen-contract', version: 2, status: 'generated',
       source: { input_revisions: { requirement: 0, wireframe: 0, art_direction: 0, references: 0 } },
-      screen_name: '阵容编成', purpose: '编成', primary_action: '保存', required_controls: [], required_information: [], states: [], edge_cases: []
+      screen_name: '阵容编成', purpose: '编成', primary_action: '保存', required_controls: [], required_information: [], states: [], edge_cases: [],
+      ...contractBase
     }, { screenId: 'main' });
     const approved = await pipeline.approveArtifact(project.id, 'screen-contract', { screenId: 'main' });
     assert.equal(approved.artifacts.screenContract.status, 'approved');

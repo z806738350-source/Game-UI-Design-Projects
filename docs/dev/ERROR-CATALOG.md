@@ -43,6 +43,8 @@
 | 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
 | --- | --- | --- | --- |
 | `STALE_REAPPROVAL_BLOCKED` | `electron/services/designPipeline.cjs` | 批准已因上游变化失效（stale）的 Artifact、风格基线已变化，或批准布局时提案已失效 | 重新生成对应阶段（或重批允许确定性重验的字体/组件/绑定）后再批准 |
+| `SCREEN_CONTRACT_APPROVAL_INVALID` | `electron/services/designPipeline.cjs` | 批准 Screen Contract 时批准即重验（归一化/契约校验）未通过 | 按校验信息修正 Screen Contract 内容后重新批准 |
+| `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` | `electron/services/designPipeline.cjs` | 批准 Screen Contract 时按 source_inventory 重算 coverage 仍存在未覆盖项 | 补全 source_inventory 对应来源或调整控件清单后重新批准 |
 | `ROUTE_CYCLE_REPAIR_INELIGIBLE` | `electron/services/flowStateRepair.cjs` | 项目不满足旧版风格循环一次性修复的识别条件（strict 路线、失效原因不符、输入变化、校验失败等） | 按 stale 原因指引重新生成对应阶段 |
 
 ### 参考与输入
@@ -74,7 +76,8 @@
 | `EXACT_SCALE_OUT_OF_POLICY` | `electron/services/compositionRenderer.cjs` | exact 组件缩放超出 `scale_policy` 范围 | 调整 slot 或组件缩放策略 |
 | `COMPOSITION_GATE_FAILED` | `electron/services/compositor.cjs` | 合成前置门禁（critique/binding/layout/font）未通过 | 按 `missing_requirements` 列表逐项修复 |
 | `VISUAL_VARIATION_NOT_FOUND` | `electron/services/designPipeline.cjs` | 合成时未指定或指定了不存在的视觉方向（不再静默回退第一张） | 在视觉探索页选择一个有效方向后再合成 |
-| `UNDERLAY_EVIDENCE_MISMATCH` | `electron/services/designPipeline.cjs` | strict 合成时 Critique 审查对象与待合成底图不一致 | 先对选中的底图执行污染审查 |
+| `UNDERLAY_EVIDENCE_MISMATCH` | `electron/services/designPipeline.cjs` | strict 合成时 Critique 审查对象与待合成底图不一致，或记录的像素 hash / Visual Results 版本已与当前证据漂移 | 先对选中的底图执行污染审查 |
+| `UNDERLAY_EVIDENCE_STALE` | `electron/services/designPipeline.cjs` | strict 合成时 Critique 已因上游变化失效（stale），不得凭旧 passed 结论放行 | 重新审查当前底图后再合成 |
 | `VISUAL_RESULTS_BINDING_STALE` | `electron/services/designPipeline.cjs`、`electron/services/compositionRenderer.cjs` | 最终批准/导出时 Manifest 已不对应当前 Visual Results 评审 | 重新合成最终 PNG 并重走保真与批准 |
 
 ### Composition Output 与导出

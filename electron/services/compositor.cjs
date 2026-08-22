@@ -4,6 +4,7 @@ const { ERROR_CODES, BINDING_VALIDATION_CODES } = require('./errorCodes.cjs');
 const { validateFontManifest } = require('./typographyAssets.cjs');
 const { validateBindings } = require('./componentBindings.cjs');
 const { validateLayout } = require('./layoutValidator.cjs');
+const { normalizeControls } = require('./screenControls.cjs');
 
 // P0-05：视觉评审指纹。Manifest 在合成时记录当前 Visual Results 的
 // 版本/选择/评审 hash；最终批准与导出边界用它重验交付链是否仍对应
@@ -83,11 +84,15 @@ function createCompositionManifest({ project, underlay, layout, bindings, compon
   if (errors.length) throw Object.assign(new Error(errors.join('; ')), { code: ERROR_CODES.COMPOSITION_GATE_FAILED, missing_requirements: errors });
   const families = new Map((componentContract.families || []).map((family) => [family.id, family]));
   const slots = new Map((layout.slots || []).map((slot) => [slot.id, slot]));
+  // AUD-09：最终文字的事实源是当前 Screen Contract 的 label，不是 Binding
+  // 里冻结的旧文本；label-only 编辑不失效 Binding，但合成必须读到新值。
+  const contractLabels = new Map(normalizeControls(project.artifacts?.screenContract?.required_controls || []).map((control) => [control.id, control.label]));
   const layers = [];
   for (const binding of bindings.bindings || []) {
     const family = families.get(binding.component_id); const slot = slots.get(binding.slot_id);
     layers.push(componentLayer(binding, slot, family));
-    const text = textLayer(binding, slot, family, fontManifest, styleContract.typography, strict);
+    const contractLabel = contractLabels.get(binding.control_id);
+    const text = textLayer(contractLabel ? { ...binding, text: contractLabel } : binding, slot, family, fontManifest, styleContract.typography, strict);
     if (text) layers.push(text);
   }
   for (const layer of layers) if (layer.type === 'text') layer.composition_mode = mode;
