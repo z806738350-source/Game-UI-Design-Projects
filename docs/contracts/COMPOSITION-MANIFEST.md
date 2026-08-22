@@ -32,7 +32,7 @@ strict 校验；任一失败抛 `COMPOSITION_GATE_FAILED`（`missing_requirement
 | `coverage` | object | 是 | binding 覆盖事实 |
 | `renderer` | object | 是 | `{ engine: 'sharp-libvips', deterministic_order: true, registry: ['exact','nine-slice','vector-token'], version }` |
 | `output` | 渲染后写入 | 是 | `{ artifact_id, path, hash, width, height }` |
-| `source` | object | 是 | 全部上游 artifact id 引用 |
+| `source` | object | 是 | 全部上游 artifact id 引用；另记录交付链证据：`visual_results_version`、`selected_variation_ids`、`review_hash`（AUD-05，最终批准与导出边界重验用） |
 
 注：manifest 中记录的 `registry` 是三个正式渲染器；运行时注册表
 （`compositionRenderer.cjs`）另有 `reference-locked` 与 `local-generated`
@@ -50,6 +50,10 @@ strict 校验；任一失败抛 `COMPOSITION_GATE_FAILED`（`missing_requirement
   `TYPOGRAPHY PREVIEW · FONT FIDELITY UNRESOLVED`（z_index 10000）。
 
 文字图层仅在 `family.text_policy === 'text-slot'` 且 binding 有文字内容时生成。
+文字层内容的事实源是当前 Screen Contract 的 `label`（AUD-09）：合成时
+用当前契约的 `required_controls` label 覆盖 Binding 的 `text` 快照；仅当
+契约缺失该控件时才回退 Binding 自带文本。因此 label-only 编辑后必须
+重新合成才能拿到新文案（交付链会按 `screen_contract_label_changed` 失效）。
 
 ## 4. 领域策略（门禁）
 
@@ -65,10 +69,19 @@ strict 校验；任一失败抛 `COMPOSITION_GATE_FAILED`（`missing_requirement
 - `verifyCompositionOutput(requireFinal: true)` 通过；
 - Manifest `output.hash/path` 与当前 Composition Output 一致，否则
   `COMPOSITION_OUTPUT_INVALID`；
+- 交付链绑定重验：Manifest `source` 记录的 visual results
+  版本/选择/评审 hash 与当前 Visual Results 一致，漂移抛
+  `VISUAL_RESULTS_BINDING_STALE`（AUD-05；未记录绑定字段的旧格式
+  Manifest 由 stale 机制保底）；
 - Fidelity Report 的 source 指向当前 output（id/version/hash 全等），否则
   `FIDELITY_OUTPUT_STALE`；
 - 实时 `inspectFidelityEvidence` 通过，否则 `FIDELITY_CURRENT_EVIDENCE_FAILED`；
 - `finalApprovalGate` 通过，否则 `FIDELITY_GATE_FAILED`。
+
+导出边界（`exportCompositionOutput`）：要求 final 批准与 Fidelity 证据链
+仍对应当前合成输出；新鲜度按内容证据链对齐（manifest id + output
+hash + `manifest.output.hash === output.hash`），不用 artifact version
+（AUD-10：版本在 status-only 保存也会 bump，不能用于新鲜度对齐）。
 
 ## 5. 批准与信任模型
 
@@ -193,9 +206,12 @@ FIDELITY-REPORT。
 - [ ] 四道生成门禁任一失败即 `COMPOSITION_GATE_FAILED`
 - [ ] preview 非 exact 文字携带水印图层
 - [ ] final 批准需要 output/fidelity/实时像素三重一致
+- [ ] 交付链绑定漂移抛 `VISUAL_RESULTS_BINDING_STALE`（AUD-05）
+- [ ] 文字层内容来自当前 Screen Contract label（AUD-09）
 
 ## 18. 版本与变更记录
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 1.1 | 2026-08-23 | PR-37/38：交付链证据绑定重验（AUD-05）、文字层事实源为当前契约 label（AUD-09）、导出新鲜度改用内容证据链（AUD-10） |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |

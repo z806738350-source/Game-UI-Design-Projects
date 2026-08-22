@@ -116,7 +116,10 @@ draft/generated ──updateArtifact──▶ reviewed ──approveArtifact(校
 - **Label-only 编辑不失效**：`updateArtifact('screen-contract')` 用
   `controlsSemanticSignature`（仅比较 `id`/`role`/`required`）判断
   `required_controls` 是否语义变化；仅改 `label` 不触发 stale，改
-  `role`/`required`/`id` 触发。
+  `role`/`required`/`id` 触发。label-only 编辑会沿
+  composition-manifest → output → fidelity 失效交付链（AUD-09）：
+  合成时文字层内容以当前 Screen Contract 的 `label` 为事实源，
+  Binding 里的 `text` 只在契约缺失该控件时作为回退。
 
 ## 9. 错误码
 
@@ -266,3 +269,4 @@ draft/generated ──updateArtifact──▶ reviewed ──approveArtifact(校
 | --- | --- |
 | `binding-policy-v1` | 初版：REM-01 整改落地（显式选择、语义门禁、批准事实化、label-only 不失效、font-manifest 依赖边） |
 | `binding-policy-v1`（F-01 强化） | state/font_role 显式化（`BINDING_STATE_REQUIRED`/`BINDING_FONT_ROLE_REQUIRED`）、strict 拒绝 legacy `action`（`BINDING_GENERIC_ROLE_UNRESOLVED`）、合成器去回退、content-panel 允许 `body` 字体角色、`BINDING_VALIDATION_CODES` 注册表；策略版本号不变（校验集扩展，兼容矩阵仅放宽 content-panel 一项） |
+| `binding-policy-v1`（AUD-09 补充） | label-only 编辑沿交付链失效；合成文字层以当前 Screen Contract label 为事实源（策略版本号不变，仅明确文字事实源） |
