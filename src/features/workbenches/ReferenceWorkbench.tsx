@@ -5,6 +5,10 @@ import { Dropdown } from '../shared/ui';
 
 type Run = (task: () => Promise<DesignProject>, options: { label: string }) => Promise<DesignProject | undefined>;
 
+// 单次生成最多送模型的参考图数；与后端
+// providerCapabilities.cjs 的 DEFAULT_PROVIDER_CAPABILITIES.max_reference_images 保持一致。
+const MAX_REFERENCE_IMAGES = 6;
+
 export function ReferenceWorkbench({ project, busy, run }: { project: DesignProject; busy: boolean; run: Run }) {
   const references = project.reference_assets || [];
   const pack = project.artifacts.referencePack;
@@ -15,7 +19,7 @@ export function ReferenceWorkbench({ project, busy, run }: { project: DesignProj
     baseline: field === 'baseline' ? value : asset.baseline, notes: field === 'notes' ? value : asset.notes
   });
   return <section className="reference-workbench" data-testid="reference-workbench">
-    <header><div><span>REFERENCE INVENTORY / PACK</span><h3>参考图清单与实际附件顺序</h3><p>逐张声明用途并批准；生成服务只会收到 Pack 中按序列出的附件。</p></div><button className="button button--secondary" data-testid="reference-import" disabled={busy} onClick={() => run(() => copilotApi.importFile(project.id, 'reference'), { label: '添加风格参考' })}><ImagePlus size={15} />批量添加</button></header>
+    <header><div><span>REFERENCE INVENTORY / PACK</span><h3>参考图清单与实际附件顺序</h3><p>逐张声明用途并批准；生成服务只会收到 Pack 中按序列出的附件。单次生成最多送 {MAX_REFERENCE_IMAGES} 张，超出会按角色优先级省略且生成前需确认。</p>{references.length > MAX_REFERENCE_IMAGES && <p className="capacity-warning" role="alert" data-testid="reference-limit-warning">当前已有 {references.length} 张，超过 {MAX_REFERENCE_IMAGES} 张上限，多余部分不会送入生成。</p>}</div><button className="button button--secondary" data-testid="reference-import" disabled={busy} onClick={() => run(() => copilotApi.importFile(project.id, 'reference'), { label: '添加风格参考' })}><ImagePlus size={15} />批量添加</button></header>
     <div className="reference-workbench-grid">{references.map((asset, index) => <article key={asset.id} className={asset.approved ? 'is-approved' : ''}>
       <img src={asset.preview} alt={asset.name} />
       <div className="reference-fields"><b title={asset.name}>{asset.name}</b><small>{asset.metadata ? `${asset.metadata.width}×${asset.metadata.height}` : '图片参考'} · {asset.approved ? '已批准' : '待批准'}</small>
@@ -28,6 +32,5 @@ export function ReferenceWorkbench({ project, busy, run }: { project: DesignProj
       <nav><button title="前移" disabled={busy || index === 0} onClick={() => manage({ id: asset.id, action: 'move', direction: 'up' })}><ArrowUp size={13} /></button><button title="后移" disabled={busy || index === references.length - 1} onClick={() => manage({ id: asset.id, action: 'move', direction: 'down' })}><ArrowDown size={13} /></button><button className={asset.approved ? 'is-approved' : ''} title={asset.approved ? '撤销批准' : '批准参考图'} disabled={busy} onClick={() => manage({ id: asset.id, action: 'approval', approved: !asset.approved })}><Check size={13} /></button><button title="移出参考集" disabled={busy} onClick={() => manage({ id: asset.id, action: 'remove' })}><Trash2 size={13} /></button></nav>
     </article>)}</div>
     {pack && <div className="reference-pack-preview"><header><b>附件容量 {String((pack.capacity_decision as Record<string, unknown>)?.used || 0)} / {String(pack.provider_limit || 0)}</b><span className={pack.status === 'approved' ? 'is-approved' : ''}>{pack.status === 'approved' ? '附件顺序已确认' : '等待确认省略项'}</span></header>{Number((pack.capacity_decision as Record<string, unknown>)?.used || 0) >= Number(pack.provider_limit || Number.MAX_SAFE_INTEGER) && <p className="capacity-warning" role="alert" data-testid="reference-capacity-warning">附件容量已达上限，超出的参考图已被省略，生成前必须确认。</p>}<ol>{((pack.attachment_order as Array<Record<string, unknown>>) || []).map((item) => <li key={String(item.id)}><b>附件 {String(item.index)}</b><span>{String(item.description)}</span></li>)}</ol>{Array.isArray(pack.omitted) && pack.omitted.length > 0 && <details open><summary>省略 {pack.omitted.length} 张（生成前必须确认）</summary>{(pack.omitted as Array<Record<string, unknown>>).map((item) => <p key={String(item.id)}>{String(item.name || item.id)} · {String(item.reason)}</p>)}</details>}</div>}
-    {references.length > 0 && <footer><button className="button button--primary" data-testid="reference-approve" disabled={busy || !references.some((asset) => asset.approved)} onClick={() => run(() => copilotApi.approveArtifact(project.id, 'reference-inventory'), { label: '批准参考图清单' })}><Check size={15} />批准参考图清单</button></footer>}
   </section>;
 }

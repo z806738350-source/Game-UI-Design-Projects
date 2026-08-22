@@ -60,7 +60,7 @@ describe('LayoutWorkspace（导航与执行分离）', () => {
     expect(runStage).not.toHaveBeenCalled();
   });
 
-  it('布局未批准时不显示风格入口，仅提示先批准', () => {
+  it('布局未批准时批准与风格入口并排常显，入口置灰直至批准', () => {
     const project = makeProject({
       project_type: 'new',
       continuation_mode: 'exploration' as never,
@@ -73,8 +73,54 @@ describe('LayoutWorkspace（导航与执行分离）', () => {
     });
     const run: RunTask = async (task) => task();
     render(<LayoutWorkspace project={project} busy={false} run={run} onNavigate={vi.fn()} />);
-    expect(screen.queryByTestId('style-enter')).toBeNull();
-    expect(screen.getByText('选择方案并批准后进入下一步。')).toBeTruthy();
+    expect(screen.getByTestId('layout-approve')).toBeTruthy();
+    expect(((screen.getByTestId('style-enter')) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('批准所选方案时把 proposalId 与备注交给后端门禁', async () => {
+    const user = userEvent.setup();
+    const project = makeProject({
+      project_type: 'new',
+      continuation_mode: 'exploration' as never,
+      artifacts: {
+        layouts: makeArtifact({
+          id: 'layouts-1', status: 'generated',
+          proposals: [
+            { id: 'layout-a', name: '效率优先', strategy: 'efficiency', regions: {} },
+            { id: 'layout-b', name: '表现优先', strategy: 'expressive', regions: {} }
+          ]
+        })
+      }
+    });
+    approveArtifact.mockResolvedValue(project);
+    const run: RunTask = async (task) => task();
+    render(<LayoutWorkspace project={project} busy={false} run={run} onNavigate={vi.fn()} />);
+
+    await user.click(screen.getByText('方案 B'));
+    await user.click(screen.getByTestId('layout-approve'));
+    expect(approveArtifact).toHaveBeenCalledWith('project-1', 'approved-layout', expect.objectContaining({ proposalId: 'layout-b', manualAdjustments: [] }));
+  });
+
+  it('批准后切换回未批准的方案时风格入口重新置灰', async () => {
+    const user = userEvent.setup();
+    const project = approvedExplorationProject({
+      artifacts: {
+        layouts: makeArtifact({
+          id: 'layouts-1', status: 'generated',
+          proposals: [
+            { id: 'layout-a', name: '效率优先', strategy: 'efficiency', regions: {} },
+            { id: 'layout-b', name: '表现优先', strategy: 'expressive', regions: {} }
+          ]
+        }),
+        approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'approved', source_proposal: 'layout-a', manual_adjustments: [] })
+      }
+    });
+    const run: RunTask = async (task) => task();
+    render(<LayoutWorkspace project={project} busy={false} run={run} onNavigate={vi.fn()} />);
+    expect(((screen.getByTestId('style-enter')) as HTMLButtonElement).disabled).toBe(false);
+    await user.click(screen.getByText('方案 B'));
+    expect(((screen.getByTestId('style-enter')) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('layout-approve')).toBeTruthy();
   });
 });
 
