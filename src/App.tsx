@@ -119,7 +119,12 @@ export function App() {
     const jobProjectId = project?.id;
     const jobProjectName = project?.name;
     if (options.stage) setActiveStage(options.stage);
-    setBusy(true); setBusyJob({ ...options, startedAt: Date.now(), projectId: jobProjectId, projectName: jobProjectName }); setElapsed(0); setError('');
+    setBusy(true); setElapsed(0); setError('');
+    // 进度条延迟 250ms 显示：参考图字段保存、下拉切换等快任务会在几百
+    // 毫秒内返回，顶部进度条若即刻渲染又立即消失，会被感知为页面频闪；
+    // 只有持续超过阈值的任务才展示进度条（busy 仍立即生效以禁用按钮）。
+    const job = { ...options, startedAt: Date.now(), projectId: jobProjectId, projectName: jobProjectName };
+    const revealTimer = window.setTimeout(() => setBusyJob(job), 250);
     try { const next = await task(); setProject((current) => applyJobResult(current, next, jobProjectId)); setRetryTask(null); await refreshProjects(); return next; }
     catch (cause) {
       setError(friendlyError(cause)); setRetryTask({ task, options });
@@ -129,7 +134,7 @@ export function App() {
       // overwrite a project the user switched to meanwhile.
       if (jobProjectId) copilotApi.openProject(jobProjectId, { includePreviews: false }).then((next) => setProject((current) => applyJobResult(current, next, jobProjectId))).catch(() => undefined);
     }
-    finally { setBusy(false); setBusyJob(null); }
+    finally { window.clearTimeout(revealTimer); setBusy(false); setBusyJob(null); }
   };
   const cancelVisual = async () => {
     const jobId = busyJob?.projectId || project?.id;
