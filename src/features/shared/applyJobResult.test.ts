@@ -28,9 +28,24 @@ describe('applyJobResult（Job Context 守卫）', () => {
     expect(result?.id).toBe('project-a');
   });
 
-  it('当前无项目时正常应用', () => {
+  it('当前无项目但返回对象属于任务上下文时正常应用', () => {
     const next = makeProject({ id: 'project-a' });
-    expect(applyJobResult(null, next, 'project-x')?.id).toBe('project-a');
+    expect(applyJobResult(null, next, 'project-a')?.id).toBe('project-a');
+  });
+
+  it('AUD-04 缺口 A：返回对象自身项目身份错误时，即使当前 UI 仍在原上下文也不得应用', () => {
+    const current = makeProject({ id: 'project-a' });
+    // 晚到响应/错误响应返回了另一个项目的数据。
+    const next = makeProject({ id: 'project-b' });
+    expect(applyJobResult(current, next, 'project-a')).toBe(current);
+    // 当前无项目时同样拒绝，绝不用错误项目填充空状态。
+    expect(applyJobResult(null, next, 'project-a')).toBe(null);
+  });
+
+  it('AUD-04 缺口 A：返回对象 Screen 身份错误时不得应用', () => {
+    const current = makeProject({ id: 'project-a', screen_id: 'screen-battle' });
+    const next = makeProject({ id: 'project-a', screen_id: 'screen-shop' });
+    expect(applyJobResult(current, next, 'project-a', 'screen-battle')).toBe(current);
   });
 
   it('同项目但用户已切到其他 Screen 时，旧 Screen 任务结果不得覆盖当前页面', () => {

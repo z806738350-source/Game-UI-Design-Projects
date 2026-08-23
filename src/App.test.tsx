@@ -7,6 +7,8 @@ import type { AppConfig } from './types';
 // 弹窗内「在系统浏览器中打开」失败时必须在错误条反馈，不允许静默无反应（PR#25 收口 P1）。
 const openUserGuide = vi.fn();
 const createProject = vi.fn();
+const openProject = vi.fn();
+const listProjects = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
 vi.mock('./api', () => ({
   copilotApi: {
     getConfig: vi.fn(async (): Promise<AppConfig> => ({
@@ -14,13 +16,15 @@ vi.mock('./api', () => ({
       workspaceRoot: '/tmp/workspace',
       kunpo: { configured: true, mode: 'gateway', modelSource: 'models.json', envSource: '.env' }
     } as AppConfig)),
-    listProjects: vi.fn(async () => []),
+    listProjects: (...args: unknown[]) => listProjects(...args),
     createProject: (...args: unknown[]) => createProject(...args),
+    openProject: (...args: unknown[]) => openProject(...args),
     openUserGuide: (...args: unknown[]) => openUserGuide(...args)
   }
 }));
 
 import { App } from './App';
+import { makeProject } from './test-utils/fixtures';
 
 // jsdom 未实现 Element.scrollTo（App 在阶段切换时对主工作区调用），测试环境补空实现
 if (!Element.prototype.scrollTo) Element.prototype.scrollTo = () => {};
@@ -29,6 +33,9 @@ afterEach(() => {
   cleanup();
   openUserGuide.mockReset();
   createProject.mockReset();
+  openProject.mockReset();
+  listProjects.mockReset();
+  listProjects.mockImplementation(async () => []);
 });
 
 describe('App 顶栏帮助入口', () => {
@@ -100,5 +107,53 @@ describe('App 创建项目失败语义（AUD-03）', () => {
     await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
     expect(screen.getByTestId('create-project-dialog')).toBeTruthy();
     await screen.findByText(/工作区不可写/);
+  });
+
+  it('mutation 成功但列表刷新失败时不改判失败，也不提供重跑 mutation 的重试入口（AUD-03）', async () => {
+    const user = userEvent.setup();
+    // 首次进入加载成功；创建成功后的辅助列表刷新因临时 I/O 失败。
+    listProjects.mockResolvedValueOnce([]);
+    listProjects.mockRejectedValueOnce(new Error('list io failed'));
+    createProject.mockResolvedValueOnce(makeProject({ id: 'project-new', name: '测试项目' }));
+    render(<App />);
+    await user.click(await screen.findByText('建立第一个项目'));
+    await user.type(screen.getByPlaceholderText(/云境计划/), '测试项目');
+    await user.click(screen.getByTestId('create-project'));
+    // mutation 成功语义保留：对话框关闭，且 mutation 只执行一次。
+    await waitFor(() => expect(screen.queryByTestId('create-project-dialog')).toBeNull());
+    expect(createProject).toHaveBeenCalledTimes(1);
+    // 刷新失败不得产生错误条与“重试”入口（重试会重复创建项目）。
+    await waitFor(() => expect(listProjects).toHaveBeenCalledTimes(2));
+    expect(document.querySelector('.error-banner')).toBeNull();
+  });
+});
+
+// AUD-04 Job Identity 回归防护：创建项目是 newEntity 任务，其目标是尚不
+// 存在的新项目；若 run() 冻结了当前打开的旧项目 id，成功返回的新项目会被
+// applyJobResult 的身份校验拒绝，页面停留在旧项目（CI ui-e2e 曾因此失败）。
+describe('App 创建项目身份豁免（AUD-04 newEntity）', () => {
+  it('已打开其他项目时创建成功：新项目直接接管工作区，不被 Job Identity 校验拒绝', async () => {
+    const user = userEvent.setup();
+    const oldProject = makeProject({ id: 'project-old', name: '旧项目' });
+    const newProject = makeProject({ id: 'project-new', name: '新建测试项目' });
+    listProjects.mockResolvedValueOnce([{ id: 'project-old', name: '旧项目', project_type: 'existing', status: 'draft', updated_at: oldProject.updated_at, workspacePath: oldProject.workspacePath }]);
+    // 创建成功后的辅助列表刷新返回包含新项目的列表，切换器选项可见。
+    const newSummary = { id: 'project-new', name: '新建测试项目', project_type: 'new', status: 'draft', updated_at: newProject.updated_at, workspacePath: newProject.workspacePath };
+    const oldSummary = { id: 'project-old', name: '旧项目', project_type: 'existing', status: 'draft', updated_at: oldProject.updated_at, workspacePath: oldProject.workspacePath };
+    listProjects.mockResolvedValueOnce([oldSummary, newSummary]);
+    openProject.mockResolvedValueOnce(oldProject);
+    createProject.mockResolvedValueOnce(newProject);
+    render(<App />);
+    // 启动时自动打开旧项目，此时创建任务的目标不是当前打开的项目。
+    await screen.findByText('旧项目');
+    await user.click(screen.getByText('新项目', { selector: '.project-switcher button' }));
+    await user.type(screen.getByPlaceholderText(/云境计划/), '新建测试项目');
+    await user.click(screen.getByTestId('create-project'));
+    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+    // 新项目必须成为当前打开的项目（切换器显示新项目名），而不是被
+    // 身份校验拒绝后停留在旧项目；也不得产生错误条。
+    await waitFor(() => expect(document.querySelector('.error-banner')).toBeNull());
+    await screen.findByText('新建测试项目');
+    expect(screen.queryByText('旧项目')).toBeNull();
   });
 });

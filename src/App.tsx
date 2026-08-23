@@ -113,16 +113,17 @@ export function App() {
     // P0-07 / AUD-04：轮询任务所属项目与 Screen 而不是当前打开的上下文；
     // 结果只写回任务发起时的项目与原 Screen。
     if (!busyJob.projectId) return;
-    copilotApi.openProject(busyJob.projectId, { includePreviews: false }).then((next) => setProject((current) => applyJobResult(current, next, busyJob.projectId, busyJob.screenId))).catch(() => undefined);
+    copilotApi.openProject(busyJob.projectId, { includePreviews: false, screenId: busyJob.screenId }).then((next) => setProject((current) => applyJobResult(current, next, busyJob.projectId, busyJob.screenId))).catch(() => undefined);
   }, 1200); return () => window.clearInterval(timer); }, [busyJob]);
 
   const run: RunTask = async (task, options) => {
     // P0-07 / AUD-04：Job Context——任务启动时冻结项目与 Screen 上下文，运行
     // 中用户切换项目或 Screen 后，结果/轮询/取消/重试都只作用于任务发起时
-    // 的上下文。
-    const jobProjectId = project?.id;
+    // 的上下文。newEntity 任务（创建项目）的目标是尚不存在的新项目，不得
+    // 绑定当前打开的项目/Screen，否则返回的新项目会被身份校验拒绝。
+    const jobProjectId = options.newEntity ? undefined : project?.id;
     const jobProjectName = project?.name;
-    const jobScreenId = project?.screen_id;
+    const jobScreenId = options.newEntity ? undefined : project?.screen_id;
     if (options.stage) setActiveStage(options.stage);
     setBusy(true); setElapsed(0); setError('');
     // 进度条延迟 250ms 显示：参考图字段保存、下拉切换等快任务会在几百
@@ -130,14 +131,22 @@ export function App() {
     // 只有持续超过阈值的任务才展示进度条（busy 仍立即生效以禁用按钮）。
     const job = { ...options, startedAt: Date.now(), projectId: jobProjectId, projectName: jobProjectName, screenId: jobScreenId };
     const revealTimer = window.setTimeout(() => setBusyJob(job), 250);
-    try { const next = await task(); setProject((current) => applyJobResult(current, next, jobProjectId, jobScreenId)); setRetryTask(null); await refreshProjects(); return next; }
+    try {
+      const next = await task();
+      setProject((current) => applyJobResult(current, next, jobProjectId, jobScreenId)); setRetryTask(null);
+      // AUD-03：辅助列表刷新不属于业务任务的事务边界——mutation 已成功后，
+      // 刷新失败不得把任务改判为失败，更不能提供“重试”入口让用户重跑非幂等
+      // mutation（如重复创建项目）。
+      try { await refreshProjects(); } catch { /* 非阻断：列表刷新失败不推翻已成功的 mutation */ }
+      return next;
+    }
     catch (cause) {
       setError(friendlyError(cause)); setRetryTask({ task, options, projectId: jobProjectId, projectName: jobProjectName, screenId: jobScreenId });
       // A failed attempt may still have changed backend state (e.g. a
       // regeneration attempt invalidates stale evidence before it fails).
       // Reload the job's project so gates reflect the current truth; never
       // overwrite a project or screen the user switched to meanwhile.
-      if (jobProjectId) copilotApi.openProject(jobProjectId, { includePreviews: false }).then((next) => setProject((current) => applyJobResult(current, next, jobProjectId, jobScreenId))).catch(() => undefined);
+      if (jobProjectId) copilotApi.openProject(jobProjectId, { includePreviews: false, screenId: jobScreenId }).then((next) => setProject((current) => applyJobResult(current, next, jobProjectId, jobScreenId))).catch(() => undefined);
       // AUD-03：失败必须对调用方可见（返回 undefined），调用方只在成功
       // 返回值存在时执行后续动作；失败绝不 resolve 为成功。
       return undefined;
@@ -147,10 +156,13 @@ export function App() {
   const cancelVisual = async () => {
     const jobId = busyJob?.projectId || project?.id;
     if (!jobId) return;
-    try { const next = await copilotApi.cancelStage(jobId, 'visual_exploration'); setProject((current) => applyJobResult(current, next, jobId)); }
+    // AUD-04：取消必须携带任务冻结时的 Screen，后端按项目+Screen 建取消键，
+    // 不得影响同项目其他 Screen 的生成任务。
+    const jobScreenId = busyJob?.screenId;
+    try { const next = await copilotApi.cancelStage(jobId, 'visual_exploration', jobScreenId); setProject((current) => applyJobResult(current, next, jobId, jobScreenId)); }
     catch (cause) { setError(friendlyError(cause)); }
   };
-  const create = async (input: CreateProjectInput) => { const next = await run(() => copilotApi.createProject(input), { label: '创建项目' }); if (next) { setCreateOpen(false); setActiveStage('input'); } };
+  const create = async (input: CreateProjectInput) => { const next = await run(() => copilotApi.createProject(input), { label: '创建项目', newEntity: true }); if (next) { setCreateOpen(false); setActiveStage('input'); } };
   // AUD-04：重试校验——仅当用户仍停留在任务发起时的项目与 Screen 才执行重试；
   // 已离开原上下文时明确提示先切回，绝不拿当前 UI 上下文执行旧任务。
   const retryMatchesContext = retryContextMatches(retryTask, project);

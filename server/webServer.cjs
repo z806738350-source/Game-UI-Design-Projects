@@ -361,7 +361,7 @@ function createApplication(environment = process.env) {
       if (!match) return false;
       const projectId = decodeURIComponent(match[1]);
       const suffix = match[2];
-      if (request.method === 'GET' && suffix === '') value = await projectStore.open(projectId, { includePreviews: url.searchParams.get('includePreviews') !== 'false' });
+      if (request.method === 'GET' && suffix === '') value = await projectStore.open(projectId, { includePreviews: url.searchParams.get('includePreviews') !== 'false', ...(url.searchParams.get('screenId') ? { screenId: url.searchParams.get('screenId') } : {}) });
       else if (request.method === 'PATCH' && suffix === '') {
         const before = await projectStore.open(projectId, { screenId: body.screenId });
         const saved = await projectStore.saveProject(projectId, body);
