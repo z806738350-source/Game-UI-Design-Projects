@@ -12,7 +12,8 @@ vi.mock('../../api', () => ({
     approveArtifact: vi.fn(),
     generateUnderlayContract: vi.fn(),
     generateLayoutGuide: vi.fn(),
-    updateArtifact: vi.fn()
+    updateArtifact: vi.fn(),
+    repairRouteCycle: vi.fn()
   }
 }));
 
@@ -20,6 +21,7 @@ const runStage = vi.mocked(copilotApi.runStage);
 const approveArtifact = vi.mocked(copilotApi.approveArtifact);
 const generateUnderlayContract = vi.mocked(copilotApi.generateUnderlayContract);
 const generateLayoutGuide = vi.mocked(copilotApi.generateLayoutGuide);
+const repairRouteCycle = vi.mocked(copilotApi.repairRouteCycle);
 
 // 布局已批准的探索路线项目：CTA 应只导航到风格锁定，绝不触发模型执行。
 const approvedExplorationProject = (overrides: Record<string, unknown> = {}) => makeProject({
@@ -182,5 +184,45 @@ describe('LayoutWorkspace（严格底层规范状态机）', () => {
     render(<LayoutWorkspace project={strictWithUnderlay({ id: 'underlay-1', status: 'approved', layout_guide: { path: 'screens/main/underlay-guide.md' } })} busy={false} run={run} onNavigate={vi.fn()} />);
     await user().click(screen.getByTestId('underlay-generate'));
     expect(runStage).toHaveBeenCalledWith('project-1', 'visual_exploration', expect.anything());
+  });
+});
+
+// AUD-14：布局 stale 时全部恢复动作集中在 sticky Footer，按
+// layoutStaleGuidance 的 action 分派；工作台不再提供冲突按钮。
+const staleLayouts = (staleReason: string | undefined, overrides: Record<string, unknown> = {}) => makeProject({
+  project_type: 'existing',
+  artifacts: {
+    layouts: makeArtifact({
+      id: 'layouts-1', status: 'stale', stale_reason: staleReason,
+      proposals: [{ id: 'layout-a', name: '效率优先', strategy: 'efficiency', regions: {} }]
+    }),
+    approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'stale', stale_reason: staleReason, source_proposal: 'layout-a' })
+  },
+  ...overrides
+} as never);
+
+describe('LayoutWorkspace（stale Footer 统一分派）', () => {
+  const run: RunTask = async (task) => task();
+
+  it('契约变化 → Footer 按钮为“先更新功能契约”并导航回契约页', async () => {
+    const onNavigate = vi.fn();
+    render(<LayoutWorkspace project={staleLayouts('screen-contract_changed')} busy={false} run={run} onNavigate={onNavigate} />);
+    await userEvent.setup().click(screen.getByText('先更新功能契约'));
+    expect(onNavigate).toHaveBeenCalledWith('wireframe_interpretation');
+    expect(runStage).not.toHaveBeenCalled();
+  });
+
+  it('旧版风格循环失效（非 strict）→ Footer 提供一次性修复并调用修复 API', async () => {
+    repairRouteCycle.mockResolvedValue(makeProject());
+    render(<LayoutWorkspace project={staleLayouts('style_contract_regenerated', { continuation_mode: 'existing-guided' })} busy={false} run={run} onNavigate={vi.fn()} />);
+    await userEvent.setup().click(screen.getByText('执行一次性修复'));
+    expect(repairRouteCycle).toHaveBeenCalledWith('project-1');
+  });
+
+  it('其余失效原因 → Footer 按钮为重新生成布局并执行布局阶段', async () => {
+    runStage.mockResolvedValue(makeProject());
+    render(<LayoutWorkspace project={staleLayouts(undefined)} busy={false} run={run} onNavigate={vi.fn()} />);
+    await userEvent.setup().click(screen.getByText('重新生成布局'));
+    expect(runStage).toHaveBeenCalledWith('project-1', 'layout_design');
   });
 });
