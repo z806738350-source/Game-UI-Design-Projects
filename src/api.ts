@@ -152,7 +152,9 @@ function webApi(): DesignCopilotApi {
     listProjects: () => request('/api/projects'),
     createProject: (input) => request('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
     duplicateProject: (id) => request(`${projectPath(id)}/duplicate`, { method: 'POST', body: '{}' }),
-    openProject: (id, options) => request(`${projectPath(id)}?includePreviews=${options?.includePreviews === false ? 'false' : 'true'}`),
+    // AUD-04：轮询/失败重载可显式携带任务冻结时的 Screen，不再依赖项目当前
+    // active screen。
+    openProject: (id, options) => request(`${projectPath(id)}?includePreviews=${options?.includePreviews === false ? 'false' : 'true'}${options?.screenId ? `&screenId=${encodeURIComponent(options.screenId)}` : ''}`),
     listScreens: (id) => request(`${projectPath(id)}/screens`),
     createScreen: (id, input) => request(`${projectPath(id)}/screens`, { method: 'POST', body: JSON.stringify(input) }),
     duplicateScreen: (id, screenId, input) => request(`${projectPath(id)}/screens/${encodeURIComponent(screenId)}/duplicate`, { method: 'POST', body: JSON.stringify(input || {}) }),
@@ -241,7 +243,7 @@ export const copilotApi = {
   // Screen 上下文，否则立即执行 Screen-scoped 操作会因空 screenId 报
   // SCREEN_ID_REQUIRED。
   duplicateProject: async (id: string): Promise<DesignProject> => rememberScreen(await api().duplicateProject(id)),
-  openProject: async (id: string, options?: { includePreviews?: boolean }): Promise<DesignProject> => rememberScreen(await api().openProject(id, options)),
+  openProject: async (id: string, options?: { includePreviews?: boolean; screenId?: string }): Promise<DesignProject> => rememberScreen(await api().openProject(id, options)),
   listScreens: (id: string) => api().listScreens(id),
   createScreen: (id: string, input: { id?: string; name: string }) => api().createScreen(id, input),
   duplicateScreen: (id: string, screenId: string, input?: { id?: string; name?: string }) => api().duplicateScreen(id, screenId, input),

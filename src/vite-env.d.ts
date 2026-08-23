@@ -9,7 +9,7 @@ interface DesignCopilotApi {
   listProjects(): Promise<ProjectSummary[]>;
   createProject(input: CreateProjectInput): Promise<DesignProject>;
   duplicateProject(projectId: string): Promise<DesignProject>;
-  openProject(projectId: string, options?: { includePreviews?: boolean }): Promise<DesignProject>;
+  openProject(projectId: string, options?: { includePreviews?: boolean; screenId?: string }): Promise<DesignProject>;
   listScreens(projectId: string): Promise<{ active_screen_id: string; screens: ScreenEntry[] }>;
   createScreen(projectId: string, input: { id?: string; name: string }): Promise<ScreenEntry>;
   duplicateScreen(projectId: string, screenId: string, input?: { id?: string; name?: string }): Promise<ScreenEntry>;

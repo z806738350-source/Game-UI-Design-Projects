@@ -27,6 +27,9 @@ const { inspectFidelityEvidence } = require('./fidelityInspector.cjs');
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
+  // AUD-04：取消标记按“项目 + Screen”建键：取消某个 Screen 的生成不得误伤
+  // 同项目其他 Screen 的任务（Web 多会话/并行任务下的串线防线）。
+  const visualCancelKey = (projectId, screenId) => `${projectId}:${screenId || 'main'}`;
   const openProject = (projectId, screenId) => projectStore.open(projectId, { includePreviews: false, ...(screenId ? { screenId } : {}) });
   async function openScreen(projectId, screenId) {
     if (!String(screenId || '').trim()) throw Object.assign(new Error('screenId is required for screen-scoped pipeline operations.'), { code: ERROR_CODES.SCREEN_ID_REQUIRED });
@@ -311,8 +314,10 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (strictProduction && (project.artifacts.underlayContract?.status !== 'approved' || !project.artifacts.underlayContract?.layout_guide?.path)) {
         throw Object.assign(new Error('Strict underlay generation requires an approved Underlay Contract and generated Layout Guide.'), { code: ERROR_CODES.UNDERLAY_SPEC_REQUIRED });
       }
-      cancelledVisualJobs.delete(projectId);
-      await projectStore.updateWorkflow(projectId, stage, 'in_progress');
+      cancelledVisualJobs.delete(visualCancelKey(projectId, project.screen_id));
+      // AUD-04：本阶段全部工作流写回绑定任务发起时的 Screen（input.screenId），
+      // 用户在生成中途切换 Screen 不得改变状态落点。
+      await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, { screenId: input.screenId });
       const requestedStrategies = (input.strategies || ['conservative', 'expressive', 'innovative']).slice(0, 4);
       const previousVariations = project.artifacts.visualResults?.variations || [];
       const resumeInterrupted = project.workflow?.stages?.visual_exploration?.status === 'failed' && previousVariations.length > 0 && !input.preserveExisting;
@@ -349,10 +354,11 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       // 生图失败，旧的审查/合成/保真链也不得继续被信任。
       await invalidateArtifacts(projectId, 'visual-results', 'visual_results_regenerated', { screenId: project.screen_id });
       await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, {
+        screenId: input.screenId,
         progress: { completed: 0, total: tasks.length, message: '正在准备视觉任务' }
       });
       for (const task of tasks) {
-        if (cancelledVisualJobs.has(projectId)) break;
+        if (cancelledVisualJobs.has(visualCancelKey(projectId, project.screen_id))) break;
         const result = await kunpoClient.generateImage(stageConfig, {
           prompt: task.prompt, imagePaths: references, size: project.canvas_spec.generation_size, model: input.model,
           maxReferenceImages: capabilities.max_reference_images,
@@ -381,14 +387,16 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
           source: { visual_tasks: `${project.screen_id}-visual-tasks`, ...inputSource(project) }, variations
         });
         await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, {
+          screenId: input.screenId,
           progress: { completed: variations.length - preserved.length, total: tasks.length, message: `已完成 ${variations.length - preserved.length}/${tasks.length} 个方向` }
         });
       }
-      const wasCancelled = cancelledVisualJobs.delete(projectId);
+      const wasCancelled = cancelledVisualJobs.delete(visualCancelKey(projectId, project.screen_id));
       await projectStore.updateWorkflow(projectId, stage, 'reviewed', `screens/${project.screen_id}/explorations/results.json`, {
+        screenId: input.screenId,
         progress: { completed: variations.length - preserved.length, total: tasks.length, message: wasCancelled ? '已停止剩余任务，已完成结果可以继续评审' : '视觉方向已生成，等待评审' }
       });
-      return openProject(projectId);
+      return openProject(projectId, project.screen_id);
     }
     throw new Error(`Unknown stage: ${stage}`);
   }
@@ -397,7 +405,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     try {
       return await runStageUnsafe(projectId, stage, input);
     } catch (error) {
-      await projectStore.updateWorkflow(projectId, stage, 'failed', undefined, { keepCurrentStage: Boolean(input.stayOnInputUntilComplete) }).catch(() => undefined);
+      // AUD-04：失败状态写回任务发起时的 Screen，不依赖项目当前 active
+      // screen（用户可能已在等待期间切走）。
+      await projectStore.updateWorkflow(projectId, stage, 'failed', undefined, { keepCurrentStage: Boolean(input.stayOnInputUntilComplete), screenId: input.screenId }).catch(() => undefined);
       throw error;
     }
   }
@@ -431,13 +441,14 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
 
   async function cancelStage(projectId, stage, input = {}) {
     if (stage !== 'visual_exploration') throw new Error('当前步骤不支持停止。');
-    cancelledVisualJobs.add(projectId);
     const project = await openScreen(projectId, input.screenId);
+    cancelledVisualJobs.add(visualCancelKey(projectId, project.screen_id));
     const progress = project.workflow?.stages?.visual_exploration?.progress || {};
     await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, {
+      screenId: project.screen_id,
       progress: { ...progress, message: '正在停止；当前图片完成后不会继续生成' }
     });
-    return openProject(projectId);
+    return openProject(projectId, project.screen_id);
   }
 
   // 批准新鲜度门禁：内容无法对着新上游做确定性重验的 Artifact，stale

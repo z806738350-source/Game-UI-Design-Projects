@@ -13,7 +13,7 @@ export const stages = [
 ] as const;
 
 export type StageId = typeof stages[number]['id'];
-export type RunOptions = { label: string; stage?: StageId; total?: number };
+export type RunOptions = { label: string; stage?: StageId; total?: number; newEntity?: boolean };
 export type RunTask = (task: () => Promise<DesignProject>, options: RunOptions) => Promise<DesignProject | undefined>;
 export type WorkspaceProps = { project: DesignProject; busy: boolean; run: RunTask };
 
@@ -129,10 +129,13 @@ export function preserveProjectPreviews(next: DesignProject, current: DesignProj
 // 或 Screen 后才返回：结果只能写回任务发起时的项目（jobId）与 Screen
 // （jobScreenId），绝不能覆盖用户当前正在看的另一个项目或另一个 Screen；
 // jobId / jobScreenId 缺失（如创建项目任务）时不存在跨上下文覆盖风险，
-// 直接放行。
+// 直接放行。返回对象自身也必须属于任务冻结的上下文：晚到响应或错误
+// 响应即使碰上当前 UI 恰好仍在原上下文，也不得被应用。
 export function applyJobResult(current: DesignProject | null, next: DesignProject, jobId?: string, jobScreenId?: string) {
   if (jobId && current && current.id !== jobId) return current;
   if (jobScreenId && current && current.id === jobId && (current.screen_id || 'main') !== jobScreenId) return current;
+  if (jobId && next.id !== jobId) return current;
+  if (jobScreenId && (next.screen_id || 'main') !== jobScreenId) return current;
   return preserveProjectPreviews(next, current);
 }
 
