@@ -18,7 +18,7 @@ async function startApplication() {
     PORT: '0',
     PUBLIC_URL: 'http://127.0.0.1:9030',
     DESIGN_COPILOT_DATA_ROOT: dataRoot,
-    SESSION_SECRET: 'delivery-gate-test-secret-0123456789abcdef'
+    SESSION_SECRET: 'delivery-gate-test-secret-0123456789abcdef' // gitleaks:allow 仅测试用假值，非真实密钥
   });
   const server = http.createServer(app.handler);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
