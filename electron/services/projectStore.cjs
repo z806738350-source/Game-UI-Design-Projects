@@ -4,7 +4,7 @@ const path = require('node:path');
 const { createHash, randomUUID } = require('node:crypto');
 const { ensureDir, readJson, writeJson } = require('./jsonStore.cjs');
 const { readImageMetadata } = require('./imageMetadata.cjs');
-const { artifactRelativePath, GLOBAL_ARTIFACTS, SCREEN_ARTIFACTS } = require('./artifactRegistry.cjs');
+const { artifactRelativePath, CLONE_FIELD_SCHEMA, GLOBAL_ARTIFACTS, SCREEN_ARTIFACTS } = require('./artifactRegistry.cjs');
 const { migrateProjectV2 } = require('./migrations.cjs');
 
 function nextRevisions(project, keys) {
@@ -565,14 +565,20 @@ function createProjectStore(options = {}) {
   // - 路径中的 screens/<原 id>/ 重写为新目录；
   // - 已批准事实不继承：副本中 approved Artifact 降级为 reviewed，
   //   需用户重新确认（产品策略）。
-  const CLONE_SOURCE_REF_KEYS = new Set(['underlay', 'variation_id', 'critique_id', 'layout', 'style', 'composition_manifest', 'composition_output', 'screen_contract', 'component_bindings', 'underlay_contract', 'visual_results', 'visual_task', 'reference_pack', 'approved_layout', 'layout_proposals', 'fidelity_report', 'source_proposal', 'selected_variation_ids']);
-  function rewriteScreenClone(node, sourceId, targetId, parentKey = '') {
+  // AUD-13：不再扩大通用 key 白名单猜测——Artifact 的重写 key 集由
+  // artifactRegistry 的 CLONE_FIELD_SCHEMA 逐类声明（生产管线真实字段）；
+  // 下方 COMMON 集仅供无类型上下文的结构（workflow stage 条目）使用。
+  const CLONE_COMMON_REF_KEYS = new Set(['underlay', 'variation_id', 'critique_id', 'layout', 'style', 'composition_manifest', 'composition_output', 'screen_contract', 'component_bindings', 'underlay_contract', 'visual_results', 'visual_task', 'reference_pack', 'approved_layout', 'layout_proposals', 'fidelity_report', 'source_proposal', 'selected_variation_ids']);
+  function cloneReferenceKeys(kind) {
+    return new Set([...CLONE_COMMON_REF_KEYS, ...(CLONE_FIELD_SCHEMA[kind]?.references || [])]);
+  }
+  function rewriteScreenClone(node, sourceId, targetId, referenceKeys, parentKey = '') {
     if (Array.isArray(node)) {
       // AUD-13：进入数组后 key 上下文会丢失；引用类数组（如
       // selected_variation_ids）内的字符串元素也是 ID，必须同样重写。
       return node.map((item) => {
-        const rewritten = rewriteScreenClone(item, sourceId, targetId, parentKey);
-        if (typeof rewritten === 'string' && CLONE_SOURCE_REF_KEYS.has(parentKey) && rewritten.startsWith(`${sourceId}-`)) {
+        const rewritten = rewriteScreenClone(item, sourceId, targetId, referenceKeys, parentKey);
+        if (typeof rewritten === 'string' && referenceKeys.has(parentKey) && rewritten.startsWith(`${sourceId}-`)) {
           return `${targetId}-${rewritten.slice(sourceId.length + 1)}`;
         }
         return rewritten;
@@ -581,10 +587,10 @@ function createProjectStore(options = {}) {
     if (node && typeof node === 'object') {
       const next = {};
       for (const [key, value] of Object.entries(node)) {
-        let rewritten = rewriteScreenClone(value, sourceId, targetId, key);
+        let rewritten = rewriteScreenClone(value, sourceId, targetId, referenceKeys, key);
         if (typeof rewritten === 'string') {
           if (key === 'screen_id' && rewritten === sourceId) rewritten = targetId;
-          else if (rewritten.startsWith(`${sourceId}-`) && (key === 'id' || CLONE_SOURCE_REF_KEYS.has(key))) rewritten = `${targetId}-${rewritten.slice(sourceId.length + 1)}`;
+          else if (rewritten.startsWith(`${sourceId}-`) && (key === 'id' || referenceKeys.has(key))) rewritten = `${targetId}-${rewritten.slice(sourceId.length + 1)}`;
           else if (rewritten.includes(`screens/${sourceId}/`)) rewritten = rewritten.split(`screens/${sourceId}/`).join(`screens/${targetId}/`);
         }
         next[key] = rewritten;
@@ -595,17 +601,29 @@ function createProjectStore(options = {}) {
   }
 
   async function migrateClonedScreenArtifacts(workspacePath, sourceId, targetId) {
-    for (const relative of Object.values(SCREEN_ARTIFACTS)) {
+    for (const [kind, relative] of Object.entries(SCREEN_ARTIFACTS)) {
       const filePath = path.join(workspacePath, 'screens', targetId, relative);
       const artifact = await readJson(filePath, null);
       if (!artifact || typeof artifact !== 'object') continue;
-      let cloned = rewriteScreenClone(artifact, sourceId, targetId);
+      let cloned = rewriteScreenClone(artifact, sourceId, targetId, cloneReferenceKeys(kind));
       if (cloned.status === 'approved') {
         cloned = { ...cloned, status: 'reviewed' };
         delete cloned.approved_at;
         delete cloned.approval;
       }
       await writeJson(filePath, cloned);
+    }
+    // AUD-13：reviews/ 下的 semantic-response 是 Critique 证据链文件，不在
+    // SCREEN_ARTIFACTS 注册表内但随目录整体复制；source.underlay_id 同样
+    // 是 Screen 作用域 ID，必须与 Artifact 同一套 rewriter 重写。
+    const reviewsDir = path.join(workspacePath, 'screens', targetId, 'reviews');
+    const reviewEntries = await fs.readdir(reviewsDir).catch(() => []);
+    for (const name of reviewEntries) {
+      if (!name.endsWith('-semantic-response.json')) continue;
+      const filePath = path.join(reviewsDir, name);
+      const evidence = await readJson(filePath, null);
+      if (!evidence || typeof evidence !== 'object') continue;
+      await writeJson(filePath, rewriteScreenClone(evidence, sourceId, targetId, new Set([...CLONE_COMMON_REF_KEYS, 'underlay_id'])));
     }
   }
 
@@ -619,7 +637,9 @@ function createProjectStore(options = {}) {
     const now = new Date().toISOString();
     await fs.cp(path.join(project.workspacePath, 'screens', screenId), path.join(project.workspacePath, 'screens', id), { recursive: true });
     await migrateClonedScreenArtifacts(project.workspacePath, screenId, id);
-    const copiedInput = await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id));
+    // AUD-13：inputs.json 内的 wireframe_path 等路径指向原 Screen 目录，
+    // 副本必须重写到自己的目录（provenance 字段在其后覆盖，不受影响）。
+    const copiedInput = rewriteScreenClone(await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id)), screenId, id, CLONE_COMMON_REF_KEYS);
     await writeJson(screenInputPath(project.workspacePath, id), { ...copiedInput, screen_id: id, input_mode: 'own', duplicated_from_screen_id: screenId, updated_at: now });
     const entry = { id, name: String(input.name || `${source.name} · 副本`), status: 'active', input_mode: 'own', duplicated_from_screen_id: screenId, created_at: now, updated_at: now };
     await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens: [...registry.screens, entry] });
@@ -631,7 +651,7 @@ function createProjectStore(options = {}) {
     // 必须与 Artifact 同一套 rewriter 统一改写。
     const clonedStages = Object.fromEntries(Object.entries(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main).map(([stage, stageEntry]) => {
       if (!stageEntry) return [stage, stageEntry];
-      let rewritten = rewriteScreenClone(stageEntry, screenId, id);
+      let rewritten = rewriteScreenClone(stageEntry, screenId, id, CLONE_COMMON_REF_KEYS);
       if (rewritten.status === 'approved') rewritten = { ...rewritten, status: 'reviewed' };
       return [stage, rewritten];
     }));
