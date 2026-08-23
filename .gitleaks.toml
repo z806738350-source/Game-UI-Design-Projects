@@ -3,5 +3,5 @@
 useDefault = true
 
 [allowlist]
-description = "交付门禁 HTTP 集成测试仅含本地一次性假值（SESSION_SECRET 等），非真实密钥"
-paths = ['''server/webServer\.delivery\.test\.cjs''']
+description = "Web HTTP 集成测试仅含本地一次性假值（SESSION_SECRET 等），非真实密钥"
+paths = ['''server/webServer\.delivery\.test\.cjs''', '''server/webServer\.reference\.test\.cjs''']
