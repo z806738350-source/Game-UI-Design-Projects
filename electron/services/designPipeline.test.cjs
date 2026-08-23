@@ -382,7 +382,11 @@ function bindingGateFixture() {
   const screenContract = {
     schema_version: '2.0', id: 'main-screen-contract', version: 1, status: 'approved', source: {},
     screen_id: 'main', screen_name: 'Lineup', purpose: 'Save lineup', primary_action: 'save',
-    required_controls: [{ id: 'save', label: '保存', role: 'primary-action', required: true }]
+    secondary_actions: [], required_information: [],
+    required_controls: [{ id: 'save', label: '保存', role: 'primary-action', required: true }],
+    states: [], edge_cases: [], data_dependencies: [], design_constraints: {},
+    source_inventory: { requirement_functions: ['保存'], wireframe_controls: [], wireframe_information: [] },
+    coverage: { covered_items: ['保存'], uncovered_items: [] }
   };
   const componentContract = {
     schema_version: '2.0', id: 'components', version: 1, status: 'approved', source: {},

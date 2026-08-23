@@ -724,6 +724,19 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       delete next.stale_at;
       delete next.stale_reason;
     }
+    if (kind === 'screen-contract' && !screenContractContentChanged && next.status === 'approved') {
+      // AUD-06：label-only 编辑保持 approved 的事实同样要用与批准相同的
+      // 确定性链路重验（normalize → 重算 coverage → 重跑校验）；改 label
+      // 使 source coverage 失真时拒绝保存，不允许带着旧 coverage 静默通过。
+      const normalized = normalizeArtifact('screen-contract', next);
+      const revalidated = { ...normalized, coverage: recomputeCoverage(normalized) };
+      const editErrors = validateArtifact('screen-contract', revalidated);
+      if (editErrors.length) {
+        const coverageProblem = editErrors.some((message) => message.includes('uncovered_items') || message.includes('missing source items'));
+        throw Object.assign(new Error(`Screen Contract 无法保存该 label 编辑：${editErrors.join('；')}`), { code: coverageProblem ? ERROR_CODES.SCREEN_CONTRACT_COVERAGE_INCOMPLETE : ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID });
+      }
+      next = { ...revalidated, status: next.status, version: next.version, source: next.source, edited_at: next.edited_at, approved_at: next.approved_at };
+    }
     if (kind === 'component-bindings') {
       // Editing demotes the artifact to reviewed; drop any stale approval
       // stamp from the previous version so approval remains a current fact.
