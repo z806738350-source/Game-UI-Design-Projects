@@ -7,7 +7,8 @@ const kunpoClient = require('./services/kunpoClient.cjs');
 const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
 const { createFlowStateRepair } = require('./services/flowStateRepair.cjs');
-const { assertFinalApprovalForExport, exportCompositionOutput, hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('./services/compositionRenderer.cjs');
+const { exportCompositionOutput, hashBuffer, resolveProjectPath } = require('./services/compositionRenderer.cjs');
+const { assertFinalDeliveryReady } = require('./services/finalDeliveryGate.cjs');
 
 // UI E2E runs the packaged renderer (dist/) from an unpackaged checkout via
 // DESIGN_COPILOT_FORCE_DIST; a dev server URL always wins for local dev.
@@ -191,25 +192,10 @@ function registerIpc() {
     const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
     if (strict) {
       const output = project.artifacts.compositionOutput;
-      const manifest = project.artifacts.compositionManifest;
-      // Exporting the final PNG requires a passing fidelity report that was
-      // computed against exactly this manifest/output pair; a failed or stale
-      // fidelity gate blocks the export (UIE2E-07C).
-      // AUD-10：新鲜度不能用存储版本号对齐——批准保存也会单调 bump Manifest
-      // 版本。改用内容证据链：Fidelity 验证的是同一份 Manifest（id）与同一张
-      // PNG（hash），且当前 Manifest 仍引用这张 PNG；上游变化会使 Fidelity 变
-      // stale 不再是 passed，重新合成会同时替换 Manifest 引用与 Output hash。
-      const fidelity = project.artifacts.fidelityReport;
-      const fidelityFresh = Boolean(fidelity && fidelity.status === 'passed'
-        && fidelity.source?.composition_manifest === manifest?.id
-        && fidelity.source?.composition_output_hash === output?.hash
-        && manifest?.output?.hash === output?.hash);
-      if (!fidelityFresh) throw Object.assign(new Error('无法导出最终成图：需要先通过针对当前合成结果的 Final Fidelity 检查。'), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
-      // 交付边界：最终批准（Composition Manifest approved）必须先于导出，
-      // 避免未签核产物被当作正式交付外流。
-      assertFinalApprovalForExport(project);
-      const verification = await verifyCompositionOutput(project.workspacePath, output, { requireFinal: true });
-      if (!verification.passed) throw Object.assign(new Error(`无法导出最终成图：${verification.issues.map((item) => item.message).join('；')}`), { code: ERROR_CODES.FINAL_EXPORT_BLOCKED });
+      // WEB-DELIVERY-01：交付门禁统一收敛到 finalDeliveryGate.cjs，与 Web
+      // 路由共用同一实现：Fidelity 内容证据链新鲜度 → 最终批准与视觉绑定
+      // 重验 → Output 像素校验，任一环失败即阻断导出。
+      await assertFinalDeliveryReady({ project, projectPath: project.workspacePath });
       const selection = await dialog.showSaveDialog({
         title: '导出最终合成 PNG',
         defaultPath: `${project.name}-${project.screen_id}-final.png`,

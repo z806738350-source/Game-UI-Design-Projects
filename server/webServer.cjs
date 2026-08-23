@@ -6,7 +6,8 @@ const { pipeline } = require('node:stream/promises');
 const { createProjectStore } = require('../electron/services/projectStore.cjs');
 const { createDesignPipeline } = require('../electron/services/designPipeline.cjs');
 const { createFlowStateRepair } = require('../electron/services/flowStateRepair.cjs');
-const { hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('../electron/services/compositionRenderer.cjs');
+const { hashBuffer, resolveProjectPath } = require('../electron/services/compositionRenderer.cjs');
+const { assertFinalDeliveryReady } = require('../electron/services/finalDeliveryGate.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
 const kunpoClient = require('../electron/services/kunpoClient.cjs');
 
@@ -441,8 +442,10 @@ function createApplication(environment = process.env) {
         const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
         if (strict) {
           const output = project.artifacts.compositionOutput;
-          const verification = await verifyCompositionOutput(project.workspacePath, output, { requireFinal: true });
-          if (!verification.passed) throw Object.assign(new Error(`最终成图不可导出：${verification.issues.map((item) => item.message).join('；')}`), { status: 409 });
+          // WEB-DELIVERY-01：Web 直接 URL 就是正式交付边界，必须与桌面端
+          // 共用同一最终交付门禁：未过 Fidelity / 未最终批准 / 视觉绑定
+          // 漂移 / Output 像素异常均返回 409，禁止未签核成图外流。
+          await assertFinalDeliveryReady({ project, projectPath: project.workspacePath });
           const bytes = await fs.readFile(resolveProjectPath(project.workspacePath, output.path));
           response.writeHead(200, {
             'Content-Type': 'image/png',
