@@ -389,8 +389,10 @@ function createApplication(environment = process.env) {
           value = await projectStore.open(projectId);
         } finally { await fs.unlink(temporary).catch(() => undefined); }
       } else if (request.method === 'POST' && suffix === '/reference') {
-        await projectStore.manageReference(projectId, body);
-        await designPipeline.invalidateFromInputChange(projectId, { references: true });
+        // AUD-07：与桌面端一致——无变化的 blur/重复操作是 no-op，不得失效
+        // Style/Visual 下游链。
+        const { changed } = await projectStore.manageReference(projectId, body);
+        if (changed) await designPipeline.invalidateFromInputChange(projectId, { references: true });
         value = await projectStore.open(projectId);
       } else if (request.method === 'POST' && (suffix === '/assets/font' || suffix === '/assets/component' || suffix === '/assets/forge-manifest')) {
         const assetKind = suffix.endsWith('/font') ? 'font' : suffix.endsWith('/forge-manifest') ? 'forge-manifest' : 'component';
