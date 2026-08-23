@@ -91,15 +91,22 @@ composition-manifest、composition-output、fidelity-report 的
   字段，只有显式确认才传 `true`；
 - **Artifact 版本单调递增（AUD-10）**：版本只能由存储层产生
   （nextVersion = previousVersion + 1），模型/调用方传入的 version
-  一律忽略；status-only 保存（如批准落盘）同样 bump；存储层同时盖
+  一律忽略（含首次保存：首版固定 V1，即使调用方传入 version 99）；
+  status-only 保存（如批准落盘）同样 bump；存储层同时盖
   `generation_id` / `content_hash` / `updated_at`，历史不出现重复
   V1，证据链版本识别不撞号；
-- **Screen Clone 完整 lineage（AUD-13）**：`duplicateScreen` 用
-  `rewriteScreenClone` 统一改写副本的身份与引用：新 id/screen_id、
-  `screens/<source>/` 路径、`source_proposal` / `selected_variation_ids`
-  等引用数组中的 `<sourceId>-` 前缀元素；已批准事实不继承，降为
+- **Screen Clone 完整 lineage（AUD-13，schema 驱动）**：`duplicateScreen`
+  用 `rewriteScreenClone` 统一改写副本的身份与引用；重写 key 集不再靠
+  通用白名单猜测，而是由 `artifactRegistry.cjs` 的冻结 `CLONE_FIELD_SCHEMA`
+  逐类声明（13 类 Screen Artifact 的生产真实引用字段，如 `task_id` /
+  `visual_tasks` / `visual_results_id` / `underlay_id` / `parent_underlay_id` /
+  `repair_task_id` / `critique` / `layout_version`），COMMON 集仅供无类型
+  上下文的结构（workflow stage 条目、`inputs.json`）使用；硬守卫仍是
+  “值以原 Screen id 为前缀”；`reviews/*-semantic-response.json` 证据文件
+  同套 rewriter 重写 `source.underlay_id`；已批准事实不继承，降为
   `reviewed`；物理图片文件随 `fs.cp` 保留原文件名，JSON 只重写目录
-  部分；原页产物不受影响；
+  部分；原页产物不受影响；完整性由 `cloneSchemaIntegrity.test.cjs` 用
+  真实 pipeline 生成完整 Strict 树后递归扫描验证；
 - **bindings 编辑**：自动剥离 `approved`/`approval` stamp，回到待批准；
 - **font-manifest roles/fonts 编辑**：拒绝，抛
   `FONT_CONFIRMATION_ACTION_REQUIRED`（必须走导入+确认动作）；
@@ -206,6 +213,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.5 | 2026-08-24 | PR-40~45（M4-F1~F6）：Web/Desktop 统一最终交付门禁（WEB-DELIVERY-01，finalDeliveryGate，Web 阻断一律 409）、Job Identity 绑定与刷新错误隔离（AUD-03/04）、已批准 Contract label-only 编辑重验（AUD-06）、Web Reference no-op（AUD-07）、schema-aware Clone（AUD-13）、UI 证据守卫对齐/首版 V1/stale 恢复动作统一到 Footer（AUD-05/10/14） |
 | 2.4 | 2026-08-23 | PR-35~38：批准即完整重验（AUD-06）、reference no-op（AUD-07）、art-direction 保存保留确认（AUD-08）、label 事实源与交付链失效（AUD-09）、版本单调递增（AUD-10）、草稿 Screen 隔离与 Rail 作用域（AUD-11/12）、clone lineage（AUD-13）、路线切换固定重置集合（AUD-02） |
 | 2.3 | 2026-08-21 | PR-29 证据链匹配门禁、交付链绑定重验、来源修订重验、视觉取代型失效与布局校验绑定门禁限 strict 路线 |
 | 2.2 | 2026-08-21 | PR-28 三条死路解除：严格底层规范状态机、视觉省略确认绑定 Pack hash、Underlay 人工复核入口 |
