@@ -82,3 +82,55 @@ describe('StrictProductionPanel（证据链匹配守卫）', () => {
     expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(false);
   });
 });
+
+// AUD-05：UI 层与后端 reviewGate 预对齐——stale Critique 或审查时冻结的
+// visual_results_version 与当前版本不一致，都不得显示绿灯或放开合成入口。
+describe('StrictProductionPanel（stale/版本证据守卫）', () => {
+  const passedCritique = (extra: Record<string, unknown> = {}) => ({
+    id: 'critique-1', status: 'reviewed', result: 'passed', source: { underlay: 'v1', visual_results_version: 2 },
+    issues: [], evidence: {}, manual_waivers: [], ...extra
+  });
+
+  it('stale Critique 不显示绿灯并禁用合成入口', () => {
+    const project = makeProject({
+      artifacts: {
+        underlayCritique: makeArtifact(passedCritique({ status: 'stale' })),
+        visualResults: makeArtifact({ id: 'visuals-1', status: 'generated', version: 2, variations: [] })
+      }
+    });
+    render(<StrictProductionPanel project={project} underlayId="v1" busy={false} run={run} />);
+    expect(screen.getByTestId('critique-stale-warning')).toBeTruthy();
+    expect(screen.getByTestId('strict-gate-critique').className).not.toContain('is-ready');
+    expect((screen.getByTestId('composition-preview') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('审查冻结版本与当前 Visual Results 版本不一致时禁用合成入口', () => {
+    const project = makeProject({
+      artifacts: {
+        underlayCritique: makeArtifact(passedCritique()),
+        visualResults: makeArtifact({ id: 'visuals-1', status: 'generated', version: 3, variations: [] })
+      }
+    });
+    render(<StrictProductionPanel project={project} underlayId="v1" busy={false} run={run} />);
+    const warning = screen.getByTestId('critique-version-mismatch');
+    expect(warning.textContent).toContain('V2');
+    expect(warning.textContent).toContain('V3');
+    expect(screen.getByTestId('strict-gate-critique').className).not.toContain('is-ready');
+    expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('版本一致且非 stale 时绿灯与合成入口照常', () => {
+    const project = makeProject({
+      artifacts: {
+        underlayCritique: makeArtifact(passedCritique()),
+        visualResults: makeArtifact({ id: 'visuals-1', status: 'generated', version: 2, variations: [] })
+      }
+    });
+    render(<StrictProductionPanel project={project} underlayId="v1" busy={false} run={run} />);
+    expect(screen.queryByTestId('critique-stale-warning')).toBeNull();
+    expect(screen.queryByTestId('critique-version-mismatch')).toBeNull();
+    expect(screen.getByTestId('strict-gate-critique').className).toContain('is-ready');
+    expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(false);
+  });
+});

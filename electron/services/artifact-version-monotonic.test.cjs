@@ -26,9 +26,10 @@ test('artifact versions increase monotonically regardless of caller-supplied ver
     const generations = new Set();
     let expected = 0;
     for (let index = 0; index < 5; index += 1) {
-      // 调用方每次都声称 version 1（模拟模型回传固定版本）：存储层必须
-      // 忽略并基于上一版递增。
-      await store.saveArtifact(project.id, 'screen-contract', { ...base, version: 1, purpose: `第 ${index + 1} 次保存` }, { screenId: 'main' });
+      // 调用方每次都声称固定版本（首版注入 version 99，模拟模型回传历史
+      // 版本；其余轮次固定 1）：存储层必须忽略并基于上一版递增，
+      // 首版一律落 V1。
+      await store.saveArtifact(project.id, 'screen-contract', { ...base, version: index === 0 ? 99 : 1, purpose: `第 ${index + 1} 次保存` }, { screenId: 'main' });
       expected += 1;
       const snapshot = await store.open(project.id, { screenId: 'main' });
       const artifact = snapshot.artifacts.screenContract;

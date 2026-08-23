@@ -424,10 +424,10 @@ function createProjectStore(options = {}) {
     const artifactPath = path.join(project.workspacePath, artifactRelativePath(kind, screenId));
     const previous = await readJson(artifactPath, null);
     // AUD-10：版本只能由存储层产生（nextVersion = previousVersion + 1），
-    // 模型或调用方传入的 version 一律忽略；同时由存储层盖 generation_id /
-    // content_hash / updated_at，保证历史不出现重复 V1、React 依赖与
-    // 证据链版本识别不撞号。
-    const version = previous ? Number(previous.version || 1) + 1 : Math.max(1, Number(artifact.version) || 1);
+    // 模型或调用方传入的 version 一律忽略（含首次保存：首版固定 V1）；
+    // 同时由存储层盖 generation_id / content_hash / updated_at，保证历史不
+    // 出现重复 V1、React 依赖与证据链版本识别不撞号。
+    const version = previous ? Number(previous.version || 0) + 1 : 1;
     const { version: _incomingVersion, generation_id: _incomingGeneration, content_hash: _incomingHash, updated_at: _incomingStamp, ...contentFields } = artifact;
     const contentHash = createHash('sha256').update(JSON.stringify(contentFields)).digest('hex');
     const stored = { ...artifact, version, generation_id: randomUUID(), content_hash: contentHash, updated_at: new Date().toISOString() };
