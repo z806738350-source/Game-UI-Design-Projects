@@ -189,17 +189,21 @@ describe('LayoutWorkspace（严格底层规范状态机）', () => {
 
 // AUD-14：布局 stale 时全部恢复动作集中在 sticky Footer，按
 // layoutStaleGuidance 的 action 分派；工作台不再提供冲突按钮。
-const staleLayouts = (staleReason: string | undefined, overrides: Record<string, unknown> = {}) => makeProject({
-  project_type: 'existing',
-  artifacts: {
-    layouts: makeArtifact({
-      id: 'layouts-1', status: 'stale', stale_reason: staleReason,
-      proposals: [{ id: 'layout-a', name: '效率优先', strategy: 'efficiency', regions: {} }]
-    }),
-    approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'stale', stale_reason: staleReason, source_proposal: 'layout-a' })
-  },
-  ...overrides
-} as never);
+const staleLayouts = (staleReason: string | undefined, overrides: Record<string, unknown> = {}) => {
+  const { artifacts, ...rest } = overrides as { artifacts?: Record<string, unknown> };
+  return makeProject({
+    project_type: 'existing',
+    artifacts: {
+      layouts: makeArtifact({
+        id: 'layouts-1', status: 'stale', stale_reason: staleReason,
+        proposals: [{ id: 'layout-a', name: '效率优先', strategy: 'efficiency', regions: {} }]
+      }),
+      approvedLayout: makeArtifact({ id: 'approved-layout-1', status: 'stale', stale_reason: staleReason, source_proposal: 'layout-a' }),
+      ...artifacts
+    },
+    ...rest
+  } as never);
+};
 
 describe('LayoutWorkspace（stale Footer 统一分派）', () => {
   const run: RunTask = async (task) => task();
@@ -224,5 +228,41 @@ describe('LayoutWorkspace（stale Footer 统一分派）', () => {
     render(<LayoutWorkspace project={staleLayouts(undefined)} busy={false} run={run} onNavigate={vi.fn()} />);
     await userEvent.setup().click(screen.getByText('重新生成布局'));
     expect(runStage).toHaveBeenCalledWith('project-1', 'layout_design');
+  });
+
+  // M4-H2：strict 资产 stale 的三种原因（font / component / binding）都必须
+  // 分派到“先补齐资产”导航，绝不发送必然被后端严格资产 Gate 拒绝的
+  // layout_design 请求。
+  it.each(['font_asset_imported', 'component-contract_changed', 'component-bindings_changed'])(
+    'strict 资产失效（%s）→ Footer 按钮为补齐资产并导航风格锁定，不执行布局',
+    async (reason) => {
+      const onNavigate = vi.fn();
+      render(<LayoutWorkspace project={staleLayouts(reason)} busy={false} run={run} onNavigate={onNavigate} />);
+      await userEvent.setup().click(screen.getByText('先补齐字体、组件与绑定'));
+      expect(onNavigate).toHaveBeenCalledWith('style_resolution');
+      expect(runStage).not.toHaveBeenCalled();
+    }
+  );
+
+  it('strict 风格变化且资产未就绪 → 不重新生成布局，先导航补资产', async () => {
+    const onNavigate = vi.fn();
+    render(<LayoutWorkspace project={staleLayouts('style_contract_regenerated')} busy={false} run={run} onNavigate={onNavigate} />);
+    await userEvent.setup().click(screen.getByText('先补齐字体、组件与绑定'));
+    expect(onNavigate).toHaveBeenCalledWith('style_resolution');
+    expect(runStage).not.toHaveBeenCalled();
+  });
+
+  it('strict 风格变化且资产已就绪 → Footer 按钮为重新生成组件感知布局并执行布局阶段', async () => {
+    runStage.mockResolvedValue(makeProject());
+    const onNavigate = vi.fn();
+    const readyAssets = {
+      fontManifest: makeArtifact({ id: 'fonts-1', status: 'approved' }),
+      componentContract: makeArtifact({ id: 'components-1', status: 'approved' }),
+      bindings: makeArtifact({ id: 'bindings-1', status: 'approved' })
+    };
+    render(<LayoutWorkspace project={staleLayouts('style_contract_regenerated', { artifacts: { ...readyAssets } })} busy={false} run={run} onNavigate={onNavigate} />);
+    await userEvent.setup().click(screen.getByText('重新生成组件感知布局'));
+    expect(runStage).toHaveBeenCalledWith('project-1', 'layout_design');
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 });
