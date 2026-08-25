@@ -213,6 +213,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.6 | 2026-08-25 | PR-47~51（M4-H1~H4，基线 `main@0f8e9ce` 复审整改）：Clone schema 补齐 `underlay_critique`/`issue_id`/waiver/`artifact_id` 并以真实交付链重验（MAJOR-01）、Layout stale 恢复动作显式分派全部 5 种 action（MAJOR-02）、label-only Contract 编辑先校验后 invalidate 的失败原子性（MAJOR-03）、legacy Critique 缺 version 时 UI fail closed（P1-01）、Web 导出改 fetch 并回传 409、URL 携带冻结 screenId（P1-03）、job_id 并发硬化登记 Issue #50（P1-02） |
 | 2.5 | 2026-08-24 | PR-40~45（M4-F1~F6）：Web/Desktop 统一最终交付门禁（WEB-DELIVERY-01，finalDeliveryGate，Web 阻断一律 409）、Job Identity 绑定与刷新错误隔离（AUD-03/04）、已批准 Contract label-only 编辑重验（AUD-06）、Web Reference no-op（AUD-07）、schema-aware Clone（AUD-13）、UI 证据守卫对齐/首版 V1/stale 恢复动作统一到 Footer（AUD-05/10/14） |
 | 2.4 | 2026-08-23 | PR-35~38：批准即完整重验（AUD-06）、reference no-op（AUD-07）、art-direction 保存保留确认（AUD-08）、label 事实源与交付链失效（AUD-09）、版本单调递增（AUD-10）、草稿 Screen 隔离与 Rail 作用域（AUD-11/12）、clone lineage（AUD-13）、路线切换固定重置集合（AUD-02） |
 | 2.3 | 2026-08-21 | PR-29 证据链匹配门禁、交付链绑定重验、来源修订重验、视觉取代型失效与布局校验绑定门禁限 strict 路线 |
