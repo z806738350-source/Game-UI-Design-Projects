@@ -64,7 +64,9 @@ describe('StrictProductionPanel（人工复核入口）', () => {
 // P0-04：证据链匹配——选中底图必须是被审查的那张，否则合成入口禁用
 // 并展示警告条，避免 A 的审查证据被用于合成 B。
 describe('StrictProductionPanel（证据链匹配守卫）', () => {
-  const withSource = (underlay: string) => withCritique({ id: 'critique-1', status: 'reviewed', result: 'passed', source: { underlay }, issues: [], evidence: {}, manual_waivers: [] });
+  // visual_results_version: 1 与 makeProject 默认 Visual Results V1 一致，
+  // 保证证据链完整，隔离验证“审查对象不匹配”单一变量。
+  const withSource = (underlay: string) => withCritique({ id: 'critique-1', status: 'reviewed', result: 'passed', source: { underlay, visual_results_version: 1 }, issues: [], evidence: {}, manual_waivers: [] });
 
   it('选中底图与审查对象不一致时展示警告并禁用合成入口', () => {
     render(<StrictProductionPanel project={withSource('v1')} underlayId="v2" busy={false} run={run} />);
@@ -130,7 +132,46 @@ describe('StrictProductionPanel（stale/版本证据守卫）', () => {
     render(<StrictProductionPanel project={project} underlayId="v1" busy={false} run={run} />);
     expect(screen.queryByTestId('critique-stale-warning')).toBeNull();
     expect(screen.queryByTestId('critique-version-mismatch')).toBeNull();
+    expect(screen.queryByTestId('critique-legacy-evidence')).toBeNull();
     expect(screen.getByTestId('strict-gate-critique').className).toContain('is-ready');
     expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+// P1-01：legacy Critique 缺少冻结的 visual_results_version（或没有 source）
+// 时，Number(undefined)=NaN 不会命中版本不一致分支；必须直接视为证据
+// 不完整 fail closed：显示“旧版证据需重新审查”，禁用合成。
+describe('StrictProductionPanel（legacy 证据 fail closed）', () => {
+  it('source 缺少 visual_results_version 时显示旧版证据警告并禁用合成入口', () => {
+    const project = makeProject({
+      artifacts: {
+        underlayCritique: makeArtifact({ id: 'critique-1', status: 'reviewed', result: 'passed', source: { underlay: 'v1' }, issues: [], evidence: {}, manual_waivers: [] }),
+        visualResults: makeArtifact({ id: 'visuals-1', status: 'generated', version: 1, variations: [] })
+      }
+    });
+    render(<StrictProductionPanel project={project} underlayId="v1" busy={false} run={run} />);
+    const warning = screen.getByTestId('critique-legacy-evidence');
+    expect(warning.textContent).toContain('旧版证据需重新审查');
+    expect(screen.getByTestId('strict-gate-critique').className).not.toContain('is-ready');
+    expect((screen.getByTestId('composition-preview') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('完全没有 source 的 legacy Critique 同样 fail closed', () => {
+    const project = makeProject({
+      artifacts: {
+        underlayCritique: makeArtifact({ id: 'critique-1', status: 'reviewed', result: 'passed', issues: [], evidence: {}, manual_waivers: [] }),
+        visualResults: makeArtifact({ id: 'visuals-1', status: 'generated', version: 1, variations: [] })
+      }
+    });
+    render(<StrictProductionPanel project={project} underlayId="v1" busy={false} run={run} />);
+    expect(screen.getByTestId('critique-legacy-evidence')).toBeTruthy();
+    expect(screen.getByTestId('strict-gate-critique').className).not.toContain('is-ready');
+    expect((screen.getByTestId('composition-final') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('无 Critique 时不出现旧版证据警告（fail closed 只针对已有 legacy 证据）', () => {
+    render(<StrictProductionPanel project={withCritique(null)} underlayId="v1" busy={false} run={run} />);
+    expect(screen.queryByTestId('critique-legacy-evidence')).toBeNull();
   });
 });

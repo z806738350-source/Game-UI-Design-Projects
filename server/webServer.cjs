@@ -440,7 +440,10 @@ function createApplication(environment = process.env) {
       else if (request.method === 'POST' && suffix === '/fidelity') value = await designPipeline.runFidelity(projectId, body);
       else if (request.method === 'GET' && suffix.startsWith('/visual/')) {
         const variationId = decodeURIComponent(suffix.slice('/visual/'.length));
-        const project = await projectStore.open(projectId, { includePreviews: false });
+        // P1-03：下载 URL 可携带调用时冻结的 Screen，避免多会话下 Active
+        // Screen 被其它会话切换后打开错误 Screen 的交付证据。
+        const visualScreenId = url.searchParams.get('screenId') || undefined;
+        const project = await projectStore.open(projectId, { includePreviews: false, ...(visualScreenId ? { screenId: visualScreenId } : {}) });
         const strict = project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
         if (strict) {
           const output = project.artifacts.compositionOutput;
