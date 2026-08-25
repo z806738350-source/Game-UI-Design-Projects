@@ -207,13 +207,32 @@ function webApi(): DesignCopilotApi {
     approveUnderlayManualReview: (id, input) => request(`${projectPath(id)}/underlay/manual-review`, { method: 'POST', body: JSON.stringify(input) }),
     composeVisual: (id, input) => request(`${projectPath(id)}/composition`, { method: 'POST', body: JSON.stringify(input) }),
     runFidelity: (id, screenId) => request(`${projectPath(id)}/fidelity`, { method: 'POST', body: JSON.stringify({ screenId }) }),
+    // P1-03：<a> 导航下载无法感知 409/4xx，Gate 错误不会回传到应用错误条。
+    // 改为 fetch：非 2xx 读取 JSON 错误并 throw（UI 层可见）；2xx 转 Blob
+    // 再触发下载。同时把调用时冻结的 Screen 放进 URL，避免多会话下
+    // Active Screen 被其它会话切换后下载到错误 Screen 的交付结果。
     exportVisual: async (id, variationId) => {
+      const screenId = screenIdFor(id);
+      const response = await fetch(`${projectPath(id)}/visual/${encodeURIComponent(variationId)}${screenId ? `?screenId=${encodeURIComponent(screenId)}` : ''}`, { credentials: 'same-origin' });
+      if (response.status === 401) {
+        window.location.assign('/auth/feishu/start');
+        throw new Error('登录状态已失效，正在重新登录。');
+      }
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(payload.error || `导出最终成图失败（${response.status}）`);
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] || `visual-${variationId.replace(/[^A-Za-z0-9_-]/g, '')}.png`;
+      const objectUrl = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
-      anchor.href = `${projectPath(id)}/visual/${encodeURIComponent(variationId)}`;
-      anchor.download = '';
+      anchor.href = objectUrl;
+      anchor.download = fileName;
       document.body.append(anchor);
       anchor.click();
       anchor.remove();
+      URL.revokeObjectURL(objectUrl);
       return { ok: true };
     },
     logout: async () => {

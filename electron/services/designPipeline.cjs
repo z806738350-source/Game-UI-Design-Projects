@@ -29,6 +29,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
   // AUD-04：取消标记按“项目 + Screen”建键：取消某个 Screen 的生成不得误伤
   // 同项目其他 Screen 的任务（Web 多会话/并行任务下的串线防线）。
+  // P1-02：该键仍不能隔离同 Screen 的两个并行任务（Web 多标签页/直接 API）；
+  // 引入独立 job_id 取消键的并发硬化见 Issue #50 跟踪。
   const visualCancelKey = (projectId, screenId) => `${projectId}:${screenId || 'main'}`;
   const openProject = (projectId, screenId) => projectStore.open(projectId, { includePreviews: false, ...(screenId ? { screenId } : {}) });
   async function openScreen(projectId, screenId) {
