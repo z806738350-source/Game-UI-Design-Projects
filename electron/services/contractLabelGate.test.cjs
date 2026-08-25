@@ -74,3 +74,65 @@ test('AUD-06：已批准 Contract 的 label-only 编辑走批准同链重验', a
     await fs.rm(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+// M4-H3（MAJOR-03）：非法 label-only 编辑必须在失效下游之前被拒绝：
+// Contract / Manifest / Output / Fidelity 与 Workflow 全部保持原样；
+// 只有合法编辑才使交付链 stale。
+test('M4-H3：非法 label 编辑被拒绝前不得破坏交付链（失败原子性）', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-label-atomicity-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const projectStore = createProjectStore();
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: {}, kunpoConfig: {} });
+    const project = await projectStore.create({ name: 'Label Atomicity', projectType: 'new', requirement: 'Save the party.' });
+    await projectStore.saveArtifact(project.id, 'screen-contract', approvedContractFixture());
+    // 预置最终交付链：approved Manifest + final Output + passed Fidelity。
+    await projectStore.saveArtifact(project.id, 'composition-manifest', {
+      schema_version: '2.0', id: 'main-composition-final', version: 1, status: 'approved', mode: 'final',
+      source: {}, output: { path: 'screens/main/compositions/final-v1.png', hash: 'sha256:0' }
+    }, { screenId: 'main' });
+    await projectStore.saveArtifact(project.id, 'composition-output', {
+      schema_version: '1.0', id: 'main-composition-final-output', version: 1, status: 'generated', mode: 'final',
+      source: { composition_manifest: 'main-composition-final' }, path: 'screens/main/compositions/final-v1.png', hash: 'sha256:0', width: 540, height: 960
+    }, { screenId: 'main' });
+    await projectStore.saveArtifact(project.id, 'fidelity-report', {
+      schema_version: '2.0', id: 'main-fidelity-report', version: 1, status: 'passed', source: {}, issues: []
+    }, { screenId: 'main' });
+
+    const resolved = await projectStore.resolveProject(project.id);
+    const screenDir = path.join(resolved.workspacePath, 'screens', 'main');
+    const files = ['screen-contract.json', 'composition-manifest.json', 'composition-output.json', 'fidelity-report.json'];
+    const before = Object.fromEntries(await Promise.all(files.map(async (name) => [name, await fs.readFile(path.join(screenDir, name), 'utf8')])));
+    const workflowBefore = JSON.stringify((await projectStore.open(project.id)).workflow);
+
+    // 非法 label 编辑：拒绝且四个 Artifact 逐字节不变，Workflow 不变。
+    await assert.rejects(
+      pipeline.updateArtifact(project.id, 'screen-contract', {
+        screenId: 'main',
+        required_controls: [{ id: 'save', role: 'action', required: true, label: '删除角色' }]
+      }),
+      (error) => error.code === ERROR_CODES.SCREEN_CONTRACT_COVERAGE_INCOMPLETE
+    );
+    for (const name of files) {
+      assert.equal(await fs.readFile(path.join(screenDir, name), 'utf8'), before[name], `${name} must not change when the label edit is rejected`);
+    }
+    assert.equal(JSON.stringify((await projectStore.open(project.id)).workflow), workflowBefore, 'workflow must not change when the label edit is rejected');
+
+    // 合法 label 编辑：保持 approved，交付链（manifest → output → fidelity）
+    // 因旧文案失效而变 stale，Contract 本身升版本。
+    const edited = await pipeline.updateArtifact(project.id, 'screen-contract', {
+      screenId: 'main',
+      required_controls: [{ id: 'save', role: 'action', required: true, label: '保存阵容确认' }]
+    });
+    assert.equal(edited.artifacts.screenContract.status, 'approved');
+    assert.equal(edited.artifacts.screenContract.version, 2);
+    assert.equal(edited.artifacts.compositionManifest.status, 'stale');
+    assert.equal(edited.artifacts.compositionOutput.status, 'stale');
+    assert.equal(edited.artifacts.fidelityReport.status, 'stale');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});

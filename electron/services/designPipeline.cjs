@@ -697,13 +697,6 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (key === 'required_controls') return controlsSemanticSignature(artifactPatch[key]) !== controlsSemanticSignature(definition.artifact[key]);
       return JSON.stringify(artifactPatch[key]) !== JSON.stringify(definition.artifact[key]);
     });
-    if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
-    else {
-      // AUD-09：label-only 编辑不失效 Binding（控件语义未变），但已产出的
-      // 文字层/合成/保真事实仍写着旧文案，必须沿 manifest→output→fidelity
-      // 失效，逼使交付链用新 label 重建。
-      await invalidateArtifacts(projectId, 'composition-manifest', 'screen_contract_label_changed', { screenId: project.screen_id });
-    }
     // 编辑不是洗回路径：stale Artifact 被编辑后仍保持 stale，必须通过
     // 重新生成（或允许重验的资产重批）恢复；否则 stale 会被普通编辑
     // 静默清除，绕过新鲜度门禁。
@@ -725,9 +718,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       delete next.stale_reason;
     }
     if (kind === 'screen-contract' && !screenContractContentChanged && next.status === 'approved') {
-      // AUD-06：label-only 编辑保持 approved 的事实同样要用与批准相同的
-      // 确定性链路重验（normalize → 重算 coverage → 重跑校验）；改 label
-      // 使 source coverage 失真时拒绝保存，不允许带着旧 coverage 静默通过。
+      // AUD-06 + M4-H3：label-only 编辑保持 approved 的事实同样要用与批准相同
+      // 的确定性链路重验（normalize → 重算 coverage → 重跑校验）；校验必须在
+      // 失效下游之前——失败的编辑不得破坏仍然有效的交付链（失败原子性）。
       const normalized = normalizeArtifact('screen-contract', next);
       const revalidated = { ...normalized, coverage: recomputeCoverage(normalized) };
       const editErrors = validateArtifact('screen-contract', revalidated);
@@ -736,6 +729,20 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
         throw Object.assign(new Error(`Screen Contract 无法保存该 label 编辑：${editErrors.join('；')}`), { code: coverageProblem ? ERROR_CODES.SCREEN_CONTRACT_COVERAGE_INCOMPLETE : ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID });
       }
       next = { ...revalidated, status: next.status, version: next.version, source: next.source, edited_at: next.edited_at, approved_at: next.approved_at };
+    }
+    if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
+    else {
+      // AUD-09：label-only 编辑不失效 Binding（控件语义未变），但已产出的
+      // 文字层/合成/保真事实仍写着旧文案，必须沿 manifest→output→fidelity
+      // 失效，逼使交付链用新 label 重建。M4-H3：移到重验通过之后，非法编辑
+      // 不得触碰交付链；invalidateArtifacts 不置 stale 种子自身，Manifest
+      // 本体（携带旧文案的 text 层）须显式失效。
+      const currentManifest = project.artifacts.compositionManifest;
+      if (currentManifest && currentManifest.status !== 'stale') {
+        await projectStore.saveArtifact(projectId, 'composition-manifest', { ...currentManifest, status: 'stale', stale_at: new Date().toISOString(), stale_reason: 'screen_contract_label_changed' }, { screenId: project.screen_id });
+        await projectStore.updateWorkflow(projectId, 'composition', 'stale', undefined, { screenId: project.screen_id, progress: undefined });
+      }
+      await invalidateArtifacts(projectId, 'composition-manifest', 'screen_contract_label_changed', { screenId: project.screen_id });
     }
     if (kind === 'component-bindings') {
       // Editing demotes the artifact to reviewed; drop any stale approval
