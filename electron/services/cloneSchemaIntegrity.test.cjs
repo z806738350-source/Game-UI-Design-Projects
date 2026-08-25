@@ -1,18 +1,21 @@
-// AUD-13：Schema-aware Clone 完整性。先用真实 pipeline 在 main Screen 上
+// AUD-13 + M4-H1：Schema-aware Clone 完整性。先用真实 pipeline 在 main Screen 上
 // 生成完整 Strict Artifact 树（Contract → Layout → Style → Underlay Contract
-// → Visual Exploration → Critique → Repair），再 Duplicate Screen，递归扫描
-// 副本目录：除明确 provenance（duplicated_from_screen_id）外不得残留原
-// Screen 身份；task_id / visual_tasks / visual_results_id / underlay_id /
-// parent_underlay_id / repair_task_id / critique / layout_version 等生产
-// 字段必须全部重写到新 Screen。
+// → Visual Exploration → Critique → Repair → 真实合成 → 真实保真），再
+// Duplicate Screen，递归扫描副本目录：除明确 provenance
+//（duplicated_from_screen_id）外不得残留原 Screen 身份；task_id /
+// visual_tasks / visual_results_id / underlay_id / parent_underlay_id /
+// repair_task_id / critique / layout_version / underlay_critique / issue_id
+// 等生产字段必须全部重写到新 Screen。
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const fsSync = require('node:fs');
 const sharp = require('sharp');
 const { createDesignPipeline } = require('./designPipeline.cjs');
 const { createProjectStore } = require('./projectStore.cjs');
+const { inspectFont } = require('./typographyAssets.cjs');
 
 function pngHeader(width, height) {
   const bytes = Buffer.alloc(24);
@@ -140,13 +143,25 @@ test('duplicate screen rewrites every production identity field (AUD-13 schema-a
       schema_version: '2.0', id: 'components', version: 1, status: 'approved', source: {},
       families: [{
         id: 'button.primary', category: 'button', status: 'approved', reuse_mode: 'nine-slice',
+        slice: { margins: [8, 8, 8, 8] },
         states: { default: { asset_path: 'style/components/button.png' }, pressed: { asset_path: 'style/components/button_pressed.png' }, disabled: { asset_path: 'style/components/button_disabled.png' } }
       }]
     });
-    await projectStore.saveArtifact(project.id, 'font-manifest', {
-      schema_version: '2.0', id: 'fonts', version: 1, status: 'approved', source: {}, fonts: [],
-      roles: { 'button-label': { font_id: 'ui', fidelity_mode: 'exact' } }
-    });
+    await projectStore.saveArtifact(project.id, 'font-manifest', await (async () => {
+      // 真实 Compositor 的字体门禁要求 manifest 携带真实字体资产与 exact
+      // 确认证据：落盘一份真实系统 TTF 并用 inspectFont 提取元数据。
+      const systemFont = ['/System/Library/Fonts/Supplemental/Georgia.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf', '/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf'].find((candidate) => fsSync.existsSync(candidate));
+      assert.ok(systemFont, 'a real system TTF is required');
+      const fontPath = path.join(opened.workspacePath, 'style', 'fonts', 'ui.ttf');
+      await fs.mkdir(path.dirname(fontPath), { recursive: true });
+      await fs.copyFile(systemFont, fontPath);
+      const font = await inspectFont(fontPath);
+      return {
+        schema_version: '2.0', id: 'fonts', version: 1, status: 'approved', source: {},
+        fonts: [{ id: 'ui', family_name: font.family_name, postscript_name: font.postscript_name, format: 'ttf', local_path: 'style/fonts/ui.ttf', file_hash: font.file_hash, license_status: 'confirmed', license_confirmation: { confirmed: true }, coverage: { zh_cn: true } }],
+        roles: { 'button-label': { font_id: 'ui', fidelity_mode: 'exact', identity_critical: true, required_coverage: ['zh_cn'], exact_confirmation: { confirmed: true } } }
+      };
+    })());
     project = await pipeline.updateArtifact(project.id, 'component-bindings', {
       screenId: 'main',
       bindings: [{ control_id: 'continue', component_id: 'button.primary', state: 'default', slot_id: 'bottom', text: '继续', font_role: 'button-label' }]
@@ -191,12 +206,32 @@ test('duplicate screen rewrites every production identity field (AUD-13 schema-a
     assert.equal(repairedVariation.parent_underlay_id, variation.id);
     assert.equal(repairedVariation.repair_task_id, repairTask.id);
 
-    // Composition Manifest（生产 source 形态）：selected_variation_ids 数组引用。
-    await projectStore.saveArtifact(project.id, 'composition-manifest', {
-      schema_version: '2.0', id: 'main-composition-final', status: 'generated', mode: 'final',
-      source: { visual_results_id: project.artifacts.visualResults.id, visual_results_version: project.artifacts.visualResults.version, selected_variation_ids: [variation.id], review_hash: 'sha256:0' },
-      output: { path: 'screens/main/compositions/final-v1.png', hash: 'sha256:0' }
-    }, { screenId: 'main' });
+    // 对修复后的底图重新执行真实 Critique（source.underlay /
+    // visual_results_id 生产写入），随后注入一个与生产同形态的 Screen 前缀
+    // issue（underlayCritique.cjs 按 `${underlayId}-issue-N` 生成），再用
+    // 真实 waiver 链路豁免，使 Critique 携带 manual_waivers 证据。
+    project = await pipeline.critiqueUnderlay(project.id, { screenId: 'main', underlayId: repairedVariation.id });
+    assert.equal(project.artifacts.underlayCritique.source.underlay, repairedVariation.id);
+    const waivedIssueId = `${repairedVariation.id}-issue-1`;
+    const finalCritiquePath = path.join(project.workspacePath, 'screens', 'main', 'underlay-critique.json');
+    const finalCritiqueJson = JSON.parse(await fs.readFile(finalCritiquePath, 'utf8'));
+    finalCritiqueJson.result = 'failed';
+    finalCritiqueJson.issues = [{ issue_id: waivedIssueId, severity: 'major', type: 'button-like', slot_id: 'bottom', reason: 'residue near primary slot' }];
+    await fs.writeFile(finalCritiquePath, JSON.stringify(finalCritiqueJson, null, 2));
+    project = await pipeline.waiveUnderlayIssue(project.id, { screenId: 'main', issueId: waivedIssueId, reason: '设计负责人确认该残留属于场景元素，不构成功能入口' });
+    assert.equal(project.artifacts.underlayCritique.result, 'passed-with-waiver');
+    assert.equal(project.artifacts.underlayCritique.manual_waivers[0].issue_id, waivedIssueId);
+
+    // Composition Manifest / Output（真实 Compositor）：source.underlay_critique
+    // 由生产代码写入，不再手工保存简化对象。
+    project = await pipeline.composeVisual(project.id, { screenId: 'main', variationId: repairedVariation.id, mode: 'final' });
+    assert.ok(project.artifacts.compositionManifest.source.underlay_critique.startsWith('main-'), 'real compositor must stamp screen-scoped underlay_critique');
+
+    // Fidelity Report（真实 runFidelity）：source.underlay_critique 与
+    // underlay.manual_waivers[].issue_id 由生产代码写入。
+    project = await pipeline.runFidelity(project.id, { screenId: 'main' });
+    assert.ok(project.artifacts.fidelityReport.source.underlay_critique.startsWith('main-'), 'real fidelity must stamp screen-scoped underlay_critique');
+    assert.equal(project.artifacts.fidelityReport.underlay.manual_waivers[0].issue_id, waivedIssueId);
 
     // Duplicate Screen 后递归扫描副本：除 provenance 外不得残留 main 身份。
     await projectStore.duplicateScreen(project.id, 'main', { id: 'battle', name: '战斗页副本' });
@@ -221,13 +256,25 @@ test('duplicate screen rewrites every production identity field (AUD-13 schema-a
     const critique = await readArtifact('underlay-critique.json');
     assert.ok(critique.source.visual_results_id.startsWith('battle-'));
     assert.ok(critique.source.underlay.startsWith('battle-'));
+    // M4-H1：issue / waiver id 必须属于目标 Screen。
+    assert.ok(critique.issues[0].issue_id.startsWith('battle-'), 'cloned critique issue_id must belong to target screen');
+    assert.ok(critique.manual_waivers[0].issue_id.startsWith('battle-'), 'cloned waiver issue_id must belong to target screen');
     const repairTaskCloned = await readArtifact('underlay-repair-task.json');
     assert.ok(repairTaskCloned.source.critique.startsWith('battle-'));
     assert.ok(repairTaskCloned.output.underlay_id.startsWith('battle-'));
     assert.ok(repairTaskCloned.output.parent_underlay_id.startsWith('battle-'));
     const manifest = await readArtifact('composition-manifest.json');
     assert.ok(manifest.source.selected_variation_ids.every((id) => id.startsWith('battle-')));
-    assert.ok(manifest.source.visual_results_id.startsWith('battle-'));
+    // 未经视觉评审的合成不携带 visual_results_id（生产 Compositor 仅在
+    // visualResults 存在时写入），有值时必须属于目标 Screen。
+    if (manifest.source.visual_results_id !== undefined) assert.ok(manifest.source.visual_results_id.startsWith('battle-'));
+    // M4-H1：真实 Compositor 写入的 underlay_critique 引用属于目标 Screen。
+    assert.ok(manifest.source.underlay_critique.startsWith('battle-'), 'cloned manifest underlay_critique must belong to target screen');
+    assert.ok(manifest.output.artifact_id.startsWith('battle-'), 'cloned manifest output.artifact_id must belong to target screen');
+    const fidelity = await readArtifact('fidelity-report.json');
+    assert.ok(fidelity.source.underlay_critique.startsWith('battle-'), 'cloned fidelity underlay_critique must belong to target screen');
+    assert.ok(fidelity.underlay.critique_id.startsWith('battle-'), 'cloned fidelity critique_id must belong to target screen');
+    assert.ok(fidelity.underlay.manual_waivers[0].issue_id.startsWith('battle-'), 'cloned fidelity waiver issue_id must belong to target screen');
     // approved 事实不继承（既有策略不回退）。
     assert.notEqual(visualTask.status, 'approved');
   } finally {
