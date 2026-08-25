@@ -47,15 +47,29 @@ export function LayoutWorkspace({ project, busy, run, onNavigate }: WorkspacePro
   // 永远指向“生成底层图”而后端报 UNDERLAY_SPEC_REQUIRED 形成死循环。
   const contract = project.artifacts.underlayContract;
   const underlayStep = !contract ? 'none' : contract.status === 'stale' ? 'stale' : contract.status !== 'approved' ? 'review' : contract.layout_guide ? 'ready' : 'guide';
-  // AUD-14：外层 Footer 与工作台内部使用同一套 layoutStaleGuidance，按
-  // action 给出一致的恢复按钮，不再写死“先更新功能契约”。
+  // AUD-14 + M4-H2：外层 Footer 与工作台内部使用同一套 layoutStaleGuidance，
+  // 按 action 显式分派恢复按钮；update-strict-assets / regenerate-strict-layout
+  // 不得落到必然被后端严格资产 Gate 拒绝的 layout_design 兜底。
   const layoutsStale = project.artifacts.layouts?.status === 'stale';
   const staleGuidance = layoutsStale ? layoutStaleGuidance(project.artifacts.layouts?.stale_reason, pipelineProfileOf(project)) : null;
-  const staleAction = staleGuidance?.action === 'update-contract'
-    ? { label: '先更新功能契约', onClick: () => onNavigate('wireframe_interpretation') }
-    : staleGuidance?.action === 'legacy-repair'
-      ? { label: '执行一次性修复', onClick: () => run(() => copilotApi.repairRouteCycle(project.id), { label: '执行路线循环一次性修复', stage: 'layout_design' }) }
-      : { label: '重新生成布局', onClick: () => run(() => copilotApi.runStage(project.id, 'layout_design'), { label: '重新生成布局提案', stage: 'layout_design' }) };
+  // M4-H2：严格资产就绪条件与后端 layout_design 门禁一致（Font / Component /
+  // Bindings 均 approved）；未就绪时先发“补资产”导航，不发必然失败的请求。
+  const strictAssetsReady = project.artifacts.fontManifest?.status === 'approved'
+    && project.artifacts.componentContract?.status === 'approved'
+    && project.artifacts.bindings?.status === 'approved';
+  const regenerateLayout = () => run(() => copilotApi.runStage(project.id, 'layout_design'), { label: '重新生成布局提案', stage: 'layout_design' });
+  const navigateStrictAssets = () => onNavigate('style_resolution');
+  const staleAction = (() => {
+    switch (staleGuidance?.action) {
+      case 'update-contract': return { label: '先更新功能契约', onClick: () => onNavigate('wireframe_interpretation') };
+      case 'update-strict-assets': return { label: '先补齐字体、组件与绑定', onClick: navigateStrictAssets };
+      case 'legacy-repair': return { label: '执行一次性修复', onClick: () => run(() => copilotApi.repairRouteCycle(project.id), { label: '执行路线循环一次性修复', stage: 'layout_design' }) };
+      case 'regenerate-strict-layout': return strictAssetsReady
+        ? { label: '重新生成组件感知布局', onClick: regenerateLayout }
+        : { label: '先补齐字体、组件与绑定', onClick: navigateStrictAssets };
+      default: return { label: '重新生成布局', onClick: regenerateLayout };
+    }
+  })();
   const visualOmissionInput = omissionConfirmationInput(visualOmissionPack(project));
   return <>
     <div className="workspace-content">
