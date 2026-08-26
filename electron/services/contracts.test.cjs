@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { extractJson, validateArtifact, withCommonFields } = require('./contracts.cjs');
+const { extractJson, validateArtifact, coverageGateErrors, withCommonFields } = require('./contracts.cjs');
 
 test('extractJson accepts fenced model output', () => {
   assert.deepEqual(extractJson('```json\n{"ok":true}\n```'), { ok: true });
@@ -34,6 +34,21 @@ test('coverage validator accepts consolidated Chinese UI descriptions without re
     coverage: { covered_items: ['筛选侠客', '阵容拖拽调整', '底部导航', '返回按钮', '标题', '底部导航栏页签', '战力/铜钱文本', '推荐阵型/克制提示', '侠客立绘/卡片信息'], uncovered_items: [] }
   }, { id: 'semantic-contract', source: {} });
   assert.deepEqual(validateArtifact('screen-contract', artifact), []);
+});
+
+test('coverage superset is a generation-phase gate: validateArtifact no longer blocks uncovered, coverageGateErrors still does', () => {
+  const artifact = withCommonFields({
+    screen_id: 'main', screen_name: 'Main', purpose: 'P', primary_action: 'go',
+    secondary_actions: [], required_information: [], required_controls: [{ id: 'go', label: '出发', role: 'primary-action', required: true }],
+    states: [], edge_cases: [], data_dependencies: [], design_constraints: {},
+    source_inventory: { requirement_functions: ['出发', '返回'], wireframe_controls: [], wireframe_information: ['战力'] },
+    coverage: { covered_items: ['出发'], uncovered_items: ['返回', '战力'] }
+  }, { id: 'designer-truth', source: {} });
+  assert.deepEqual(validateArtifact('screen-contract', artifact), []);
+  const gate = coverageGateErrors(artifact);
+  assert.ok(gate.includes('coverage.uncovered_items must be empty'), gate.join('; '));
+  assert.ok(gate.some((error) => error.includes('required_controls missing source items: 返回')), gate.join('; '));
+  assert.ok(gate.some((error) => error.includes('required_information missing source items: 战力')), gate.join('; '));
 });
 
 test('layout validator rejects shallow numeric regions that would render as an empty canvas', () => {

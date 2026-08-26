@@ -40,33 +40,38 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
 | `data_dependencies` | string[] | 是 | 数据依赖清单 |
 | `design_constraints` | object | 是 | 画布/密度等约束 |
 | `source_inventory` | object | 是 | 含 `requirement_functions`、`wireframe_controls`、`wireframe_information` 三个数组 |
-| `coverage` | object | 是 | `covered_items` 数组；`uncovered_items` 必须为空数组 |
+| `coverage` | object | 是 | `covered_items`、`uncovered_items` 两个数组；uncovered 是审查期留痕差异，不作门禁 |
 
 `required_controls[]` 元素（`screenControls.cjs:normalizeControls` 归一化）：
 `id`（kebab-case 稳定 id，唯一）、`label`（非空）、`role`（非空，缺省归一为
 `action`）、`required`（boolean，缺省 true）。字符串形式的旧数据会被迁移为
 `{ id, label, role, required, migrated_from_label }`。
 
-## 4. 覆盖校验（领域策略）
+## 4. 覆盖校验（生成期门禁 + 审查期留痕）
 
-`validateArtifact('screen-contract')` 除结构校验外还做语义覆盖检查：
+覆盖超集约束分阶段生效（设计师权威语义：用户才是界面控件判定最准确的，
+「功能解读」阶段的调整结果是准确答案）：
 
-- `source_inventory.requirement_functions + wireframe_controls` 的每一项必须被
+- **生成期门禁**（`coverageGateErrors`，仅 kunpoClient 草稿修复循环使用）：
+  `source_inventory.requirement_functions + wireframe_controls` 的每一项必须被
   `required_controls` 标签、`secondary_actions` 或 `coverage.covered_items` 语义覆盖；
-- `source_inventory.wireframe_information` 的每一项必须被
-  `required_information` 或 `covered_items` 覆盖；
-- 覆盖采用中文语义词匹配（`semanticTerms`：去控件类后缀、长度≥2 的词必须全部出现）；
-- `coverage.uncovered_items` 非空直接失败。
+  `wireframe_information` 的每一项必须被 `required_information` 或 `covered_items`
+  覆盖——保证「功能解读」的起点完整；
+- **审查期留痕**：保存/批准/快照按当前 `source_inventory` 用 `recomputeCoverage`
+  重算覆盖差异并写回，工作台如实展示未保留项，但**不拦截批准**；
+- 覆盖匹配采用中文语义词匹配（`semanticTerms`：去控件类后缀、长度≥2 的词必须全部出现）；
+- `validateArtifact('screen-contract')` 仅做结构校验（coverage 形状与两个数组
+  必须存在），不再以 `uncovered_items` 非空拦截。
 
 ## 5. 批准与信任模型
 
 - 批准动作：`approveArtifact(kind='screen-contract')`。批准即完整确定性
-  重验（AUD-06）：不信任契约体内存储的 coverage——归一化全部字段、按
-  当前 `source_inventory` 重算 coverage、重跑控件/角色/required 校验；
-  通过后写入 `status='approved'` 与 `approved_at`，失败抛
-  `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` / `SCREEN_CONTRACT_APPROVAL_INVALID`
-  且不改变状态。人工编辑删掉必需控件后不得仍能批准并继续显示
-  “0 项遗漏”。
+  结构重验：不信任契约体内存储的 coverage——归一化全部字段、按当前
+  `source_inventory` 重算 coverage（留痕写回）、重跑控件/角色/required
+  结构校验；通过后写入 `status='approved'` 与 `approved_at`，失败抛
+  `SCREEN_CONTRACT_APPROVAL_INVALID` 且不改变状态。**覆盖差异不拦截
+  批准**——设计师在「功能解读」阶段的调整结果是准确答案，AI 盘点
+  清单的超集约束仅作用于生成期。
 - 编辑：`updateArtifact` 允许直接编辑；只有语义键
   （`screen_name/purpose/primary_action/required_controls/required_information/states/edge_cases`）
   变化才触发失效传播。`required_controls` 的语义签名只比较
@@ -82,6 +87,12 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
   仅含系统字段的 PATCH 是整体 no-op，不改变任何 Artifact 与 Workflow。
   `source_inventory` 只能由 Wireframe/Requirement 重新解析更新；`coverage`
   永远由后端重算——原始盘点不可被编辑覆盖，留痕差异才可信。
+- 保存与快照同一事实来源：`updateArtifact` 保存 screen-contract 时一律
+  归一化 + 重算 coverage（留痕，非门禁）+ 结构重验，畸形编辑在失效
+  下游之前被拒（失败原子性）；快照（`projectStore.open`）打开时同样
+  重算，工作台覆盖条如实以留痕态列出「本轮契约未保留」的来源条目，
+  但不禁用批准——历史项目残留的草稿期“全覆盖” coverage 不得透传成
+  假绿灯，也不得反过来拦截设计师的正当调整。
 
 ## 6. 状态机
 
@@ -104,8 +115,8 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
 | 错误码 | 场景 |
 | --- | --- |
 | `SCREEN_ID_REQUIRED` / `SCREEN_NOT_FOUND` / `SCREEN_CONTEXT_MISMATCH` | Screen 上下文校验失败 |
-| `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` | 批准时重算 coverage 发现 source_inventory 未被覆盖（AUD-06） |
-| `SCREEN_CONTRACT_APPROVAL_INVALID` | 批准时重验发现其他结构/语义校验失败（AUD-06） |
+| `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` | 历史码（AUD-06 时期批准时重算 coverage 发现未覆盖项即抛出）；设计师权威语义后覆盖差异不再拦截批准，保留以兼容历史执行日志 |
+| `SCREEN_CONTRACT_APPROVAL_INVALID` | 批准/保存时结构重验失败（归一化、控件/角色/required 校验） |
 | `BINDING_COVERAGE_INCOMPLETE` | 契约控件变化后绑定未重新批准即做 strict 布局 |
 
 ## 9. strict 与 guided 模式

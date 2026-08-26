@@ -61,3 +61,37 @@ describe('ContractWorkspace（路线感知 CTA）', () => {
     expect(screen.getByTestId('layout-generate')).toBeTruthy();
   });
 });
+
+// 覆盖条必须如实展示后端重算结果：有差异时显示留痕条列出未保留项，
+// 且不拦截批准（设计师调整结果为准确答案）；不得再显示假绿灯。
+const coverageProject = (coverage: Record<string, unknown>) => makeProject({
+  continuation_mode: 'exploration' as never,
+  artifacts: {
+    screenContract: makeArtifact({
+      id: 'screen-contract-1', status: 'reviewed', screen_name: '选择材料', purpose: '选择上阵材料', primary_action: '确认选择',
+      required_controls: [], required_information: [], states: [], edge_cases: [], coverage
+    })
+  }
+});
+
+describe('ContractWorkspace（诚实覆盖条与批准预对齐）', () => {
+  it('覆盖完整：绿条显示 0 项遗漏且批准可点击', () => {
+    const run: RunTask = async (task) => task();
+    render(<ContractWorkspace project={coverageProject({ covered_items: ['保存阵容'], uncovered_items: [] })} busy={false} run={run} onNavigate={vi.fn()} />);
+    const strip = screen.getByTestId('contract-coverage');
+    expect(strip.textContent).toContain('UE 来源覆盖校验通过');
+    expect(strip.textContent).toContain('0 项遗漏');
+    expect(screen.getByTestId('contract-approve').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('覆盖差异：留痕条展示未保留项且不拦截批准', () => {
+    const run: RunTask = async (task) => task();
+    render(<ContractWorkspace project={coverageProject({ covered_items: [], uncovered_items: ['底部导航-试炼按钮', '玩家头像'] })} busy={false} run={run} onNavigate={vi.fn()} />);
+    const strip = screen.getByTestId('contract-coverage');
+    expect(strip.textContent).toContain('来源清单对照');
+    expect(strip.textContent).toContain('2 项本轮契约未保留');
+    expect(strip.textContent).toContain('底部导航-试炼按钮');
+    expect(strip.textContent).toContain('批准与下游以你的调整结果为准');
+    expect(screen.getByTestId('contract-approve').hasAttribute('disabled')).toBe(false);
+  });
+});

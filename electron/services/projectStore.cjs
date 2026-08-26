@@ -6,6 +6,7 @@ const { ensureDir, readJson, writeJson } = require('./jsonStore.cjs');
 const { readImageMetadata } = require('./imageMetadata.cjs');
 const { artifactRelativePath, CLONE_FIELD_SCHEMA, GLOBAL_ARTIFACTS, SCREEN_ARTIFACTS } = require('./artifactRegistry.cjs');
 const { migrateProjectV2 } = require('./migrations.cjs');
+const { recomputeCoverage } = require('./contracts.cjs');
 
 function nextRevisions(project, keys) {
   const revisions = { requirement: 0, wireframe: 0, art_direction: 0, references: 0, ...(project.input_revisions || {}) };
@@ -220,6 +221,12 @@ function createProjectStore(options = {}) {
         })))
       })))
     } : componentContract;
+    // 设计师权威语义：快照不得透传契约体内存储的旧 coverage——每次 open 按
+    // 当前 source_inventory 重算覆盖差异（哪些来源条目本轮未保留）作为留痕
+    // 信息，供工作台如实展示；不再作为批准门禁。
+    const honestScreenContract = screenContract && typeof screenContract === 'object' && !Array.isArray(screenContract)
+      ? { ...screenContract, coverage: recomputeCoverage(screenContract) }
+      : screenContract;
     const screens = await readJson(path.join(projectPath, 'screens', 'index.json'), { active_screen_id: screenId, screens: [] });
     return {
       ...project,
@@ -241,7 +248,7 @@ function createProjectStore(options = {}) {
       reference_paths: reference_assets.map((asset) => asset.path),
       workflow,
       artifactHistory,
-      artifacts: { referenceInventory, screenContract, bindings, layouts, approvedLayout, referencePack, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract: hydratedComponentContract, visualTask, visualResults }
+      artifacts: { referenceInventory, screenContract: honestScreenContract, bindings, layouts, approvedLayout, referencePack, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract: hydratedComponentContract, visualTask, visualResults }
     };
   }
 

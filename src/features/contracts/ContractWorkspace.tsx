@@ -30,6 +30,13 @@ const contractCategories = [
 export function ContractWorkspace({ project, busy, run, onNavigate }: WorkspaceProps & { onNavigate: (stage: StageId) => void }) {
   const artifact = project.artifacts.screenContract;
   const profile = pipelineProfileOf(project);
+  // 覆盖差异以后端重算结果为准（快照打开时已按 source_inventory 重算）：
+  // 覆盖条如实展示哪些来源条目本轮未保留，仅作留痕参考、不拦截批准——
+  // 设计师的调整结果是准确答案。
+  const coverageRecord = (artifact?.coverage || {}) as { covered_items?: unknown; uncovered_items?: unknown };
+  const coveredCount = Array.isArray(coverageRecord.covered_items) ? (coverageRecord.covered_items as unknown[]).length : 0;
+  const uncoveredItems = Array.isArray(coverageRecord.uncovered_items) ? (coverageRecord.uncovered_items as unknown[]).map(String) : [];
+  const coverageIncomplete = uncoveredItems.length > 0;
   const [activeCategory, setActiveCategory] = useState<ContractCategoryKey>('required_controls');
   const [workbenchOpen, setWorkbenchOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContractEditingItem | null>(null);
@@ -116,7 +123,9 @@ export function ContractWorkspace({ project, busy, run, onNavigate }: WorkspaceP
       <div className="contract-overview-main"><span>页面名称</span><div className="summary-value"><h2>{String(artifact.screen_name)}</h2></div><span>页面目的</span><div className="summary-value"><p>{String(artifact.purpose)}</p></div></div>
       <div className="primary-action-card"><span>核心动作</span><b>{String(artifact.primary_action)}</b></div>
     </section>
-    {Boolean(artifact.coverage) && <div className="coverage-strip"><CheckSquare size={17} /><b>UE 来源覆盖校验通过</b><span>{((artifact.coverage as Record<string, unknown>).covered_items as string[])?.length || 0} 项已映射，0 项遗漏</span></div>}
+    {Boolean(artifact.coverage) && (coverageIncomplete
+      ? <div className="coverage-strip coverage-strip--info" data-testid="contract-coverage"><Search size={17} /><b>来源清单对照</b><span>{coveredCount} 项已保留，{uncoveredItems.length} 项本轮契约未保留</span><small>批准与下游以你的调整结果为准；未保留项仅作留痕：{uncoveredItems.join('；')}</small></div>
+      : <div className="coverage-strip" data-testid="contract-coverage"><CheckSquare size={17} /><b>UE 来源覆盖校验通过</b><span>{coveredCount} 项已映射，0 项遗漏</span></div>)}
     <section className="contract-category-overview"><header><div><span>四类关键信息</span><h3>选择一类开始检查</h3></div><small>进入后可连续滚动全部条目，无需翻页</small></header><div>{contractCategories.map((category) => { const stats = reviewStats(category.key); const total = itemsFor(category.key).length; return <button key={category.key} data-testid={`contract-open-${category.key}`} onClick={() => openWorkbench(category.key)}><span>{category.eyebrow}</span><div><h3>{category.label}</h3><em>{total} 项</em></div><p>{category.description}</p><footer><b>{stats.reviewed} / {total} 已检查</b><i style={{ '--progress': `${total ? stats.reviewed / total * 100 : 0}%` } as React.CSSProperties} /><small>{stats.changed ? `${stats.changed} 项修改` : '暂无修改'}{stats.questions ? ` · ${stats.questions} 项疑问` : ''}</small></footer><strong>检查与调整 <ArrowRight size={16} /></strong></button>; })}</div></section></>}
     </div>
     {artifact && <div className="workspace-footer"><button className="button button--ghost" data-testid="contract-rerun" disabled={busy} onClick={() => run(() => copilotApi.runStage(project.id, 'wireframe_interpretation'), { label: artifact.status === 'stale' ? '根据新输入重新解读功能' : '重新解读功能', stage: 'wireframe_interpretation' })}><RefreshCw size={16} />{artifact.status === 'stale' ? '输入已变化，重新解读' : '重新解读'}</button>{artifact.status === 'stale' ? <span className="stale-guidance">上游输入已变化，旧契约不能再次批准。</span> : artifact.status !== 'approved' ? <button className="button button--primary" data-testid="contract-approve" disabled={busy} onClick={() => run(() => copilotApi.approveArtifact(project.id, 'screen-contract'), { label: '批准功能契约', stage: 'wireframe_interpretation' })}><Check size={17} />批准功能契约</button> : profile === 'strict' ? <button className="button button--primary" data-testid="style-enter" disabled={busy} onClick={() => onNavigate('style_resolution')}><LockKeyhole size={17} />进入风格锁定</button> : <button className="button button--primary" data-testid="layout-generate" disabled={busy} onClick={() => run(() => copilotApi.runStage(project.id, 'layout_design'), { label: '生成布局提案', stage: 'layout_design' })}><Layers3 size={17} />生成布局提案</button>}</div>}

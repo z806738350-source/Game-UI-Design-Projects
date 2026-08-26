@@ -76,10 +76,14 @@ composition-manifest、composition-output、fidelity-report 的
   （`screen_contract_label_changed`），逼使交付链用新 label 重建；
   合成时最终文字的事实源是当前 Screen Contract 的 label，不是
   Binding 里冻结的旧文本（AUD-09）；
-- **screen-contract 批准即完整重验（AUD-06）**：批准边界不信任契约
-  体内存储的 coverage——归一化全部字段、按当前 source_inventory
-  重算 coverage、重跑控件/角色/required 校验；失败抛
-  `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` / `SCREEN_CONTRACT_APPROVAL_INVALID`；
+- **screen-contract 批准即完整结构重验（AUD-06，设计师权威语义）**：
+  批准边界不信任契约体内存储的 coverage——归一化全部字段、按当前
+  source_inventory 重算 coverage（留痕写回）、重跑控件/角色/required
+  结构校验；失败抛 `SCREEN_CONTRACT_APPROVAL_INVALID`。**覆盖差异
+  不拦截批准**——「功能解读」阶段设计师的调整结果是准确答案，AI
+  盘点清单的超集约束仅作用于生成期（kunpoClient 草稿修复循环，
+  `coverageGateErrors`）；保存路径同样归一化 + 重算 + 结构重验，畸形
+  编辑在失效下游之前被拒（失败原子性）；
 - **Reference 无变化操作是 no-op（AUD-07）**：`manageReference` 对
   move/role/details/approval 先做规范化比较，无变化时返回
   `{ project, changed: false }`：不写 project.json、不 bump
@@ -224,6 +228,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.9 | 2026-08-26 | 设计师权威语义裁定（PR-53）：AI 盘点清单超集约束收至生成期（`coverageGateErrors` 仅 kunpoClient 草稿修复循环使用）；批准/保存不再以覆盖差异拦截，重算写回降级为留痕信息并如实展示；保存升级统一归一化 + 重算 + 结构重验，畸形编辑拒于失效下游之前（失败原子性保留）；`SCREEN_CONTRACT_COVERAGE_INCOMPLETE` 降级为历史兼容码（注册表冻结保留） |
 | 2.8 | 2026-08-27 | M4-I2（PR-55，Screen Contract 不可变字段边界）：`updateArtifact` 对 screen-contract 实施设计师可编辑字段白名单，系统身份/证据字段（`id`/`screen_id`/`source_inventory`/`coverage`/`status`/时间戳等）静默忽略，仅含系统字段的 PATCH 整体 no-op；API 级负向测试按审核 §7.4 形态验证（独立源码审核 §7/§8.3） |
 | 2.7 | 2026-08-27 | M4-I1（PR-54，Clone 证据文件完整性）：副本中带原 Screen 前缀的物理文件重命名为目标前缀且 JSON 路径同步；内容被改写的证据文件重算 `hash`/`byte_length`（四向一致）；Fidelity `passed` 与 `approved` 一样降级 `reviewed`；完整性测试扩展文件名扫描与证据哈希复验（独立源码审核 §5/§6） |
 | 2.6 | 2026-08-25 | PR-47~51（M4-H1~H4，基线 `main@0f8e9ce` 复审整改）：Clone schema 补齐 `underlay_critique`/`issue_id`/waiver/`artifact_id` 并以真实交付链重验（MAJOR-01）、Layout stale 恢复动作显式分派全部 5 种 action（MAJOR-02）、label-only Contract 编辑先校验后 invalidate 的失败原子性（MAJOR-03）、legacy Critique 缺 version 时 UI fail closed（P1-01）、Web 导出改 fetch 并回传 409、URL 携带冻结 screenId（P1-03）、job_id 并发硬化登记 Issue #50（P1-02） |
