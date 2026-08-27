@@ -167,17 +167,14 @@ function recomputeCoverage(value) {
 // 生成期门禁（仅 kunpoClient 草稿修复循环使用）：AI 草稿必须完整覆盖
 // source_inventory，保证“功能解读”的起点完整；审查/批准阶段以设计师
 // 调整结果为准确答案，不再以此拦截。
+// M4-I3：判定完全基于服务端重算（recomputeCoverage 只比较
+// required_controls / secondary_actions / required_information 与
+// source_inventory），不读取模型自报的 coverage——模型不得通过自填
+// covered_items 自我声明已覆盖而不产出真实控件。
 function coverageGateErrors(value) {
+  const recomputed = recomputeCoverage(value);
   const errors = [];
-  if (Array.isArray(value.coverage?.uncovered_items) && value.coverage.uncovered_items.length) errors.push('coverage.uncovered_items must be empty');
-  const inventoryControls = [...(value.source_inventory?.requirement_functions || []), ...(value.source_inventory?.wireframe_controls || [])];
-  const controls = [...(value.required_controls || []).map((control) => control?.label || control?.id || control), ...(value.secondary_actions || []), ...(value.coverage?.covered_items || [])];
-  const uncoveredControls = inventoryControls.filter((item) => !sourceItemCovered(item, controls));
-  if (uncoveredControls.length) errors.push(`required_controls missing source items: ${uncoveredControls.join(', ')}`);
-  const inventoryInformation = value.source_inventory?.wireframe_information || [];
-  const information = [...(value.required_information || []), ...(value.coverage?.covered_items || [])];
-  const uncoveredInformation = inventoryInformation.filter((item) => !sourceItemCovered(item, information));
-  if (uncoveredInformation.length) errors.push(`required_information missing source items: ${uncoveredInformation.join(', ')}`);
+  if (recomputed.uncovered_items.length) errors.push(`required_controls missing source items: ${recomputed.uncovered_items.join(', ')}`);
   return errors;
 }
 

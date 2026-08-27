@@ -36,19 +36,35 @@ test('coverage validator accepts consolidated Chinese UI descriptions without re
   assert.deepEqual(validateArtifact('screen-contract', artifact), []);
 });
 
-test('coverage superset is a generation-phase gate: validateArtifact no longer blocks uncovered, coverageGateErrors still does', () => {
+test('coverage superset is a generation-phase gate: validateArtifact no longer blocks uncovered, coverageGateErrors judges by server-side recompute', () => {
   const artifact = withCommonFields({
     screen_id: 'main', screen_name: 'Main', purpose: 'P', primary_action: 'go',
     secondary_actions: [], required_information: [], required_controls: [{ id: 'go', label: '出发', role: 'primary-action', required: true }],
     states: [], edge_cases: [], data_dependencies: [], design_constraints: {},
     source_inventory: { requirement_functions: ['出发', '返回'], wireframe_controls: [], wireframe_information: ['战力'] },
-    coverage: { covered_items: ['出发'], uncovered_items: ['返回', '战力'] }
+    coverage: { covered_items: ['出发'], uncovered_items: [] }
   }, { id: 'designer-truth', source: {} });
   assert.deepEqual(validateArtifact('screen-contract', artifact), []);
   const gate = coverageGateErrors(artifact);
-  assert.ok(gate.includes('coverage.uncovered_items must be empty'), gate.join('; '));
-  assert.ok(gate.some((error) => error.includes('required_controls missing source items: 返回')), gate.join('; '));
-  assert.ok(gate.some((error) => error.includes('required_information missing source items: 战力')), gate.join('; '));
+  // 判定以服务端重算为准：即使模型自报无遗漏，未产出的来源条目仍必须
+  // 列入修复反馈（required_controls 与 required_information 一并重算）。
+  assert.ok(gate.some((error) => error.includes('返回') && error.includes('战力')), gate.join('; '));
+});
+
+test('M4-I3: model self-declared covered_items must not satisfy the generation gate (forged coverage enters repair loop)', () => {
+  // 来源清单有「返回」，草稿没有产出任何「返回」控件，模型却把「返回」
+  // 自填进 covered_items 并声称无遗漏——服务端重算必须识破，草稿必须
+  // 带着 missing source items 反馈进入修复轮。
+  const forged = withCommonFields({
+    screen_id: 'main', screen_name: 'Main', purpose: 'P', primary_action: '确认',
+    secondary_actions: [], required_information: [],
+    required_controls: [{ id: 'confirm', label: '确认', role: 'primary-action', required: true }],
+    states: [], edge_cases: [], data_dependencies: [], design_constraints: {},
+    source_inventory: { requirement_functions: ['返回', '确认'], wireframe_controls: [], wireframe_information: [] },
+    coverage: { covered_items: ['返回', '确认'], uncovered_items: [] }
+  }, { id: 'forged-coverage', source: {} });
+  const gate = coverageGateErrors(forged);
+  assert.ok(gate.some((error) => error.includes('missing source items') && error.includes('返回')), `伪造的 covered_items 必须被服务端重算识破：${gate.join('; ')}`);
 });
 
 test('layout validator rejects shallow numeric regions that would render as an empty canvas', () => {

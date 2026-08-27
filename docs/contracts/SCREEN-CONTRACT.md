@@ -53,10 +53,13 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
 「功能解读」阶段的调整结果是准确答案）：
 
 - **生成期门禁**（`coverageGateErrors`，仅 kunpoClient 草稿修复循环使用）：
+  判定完全基于服务端重算（`recomputeCoverage`）——
   `source_inventory.requirement_functions + wireframe_controls` 的每一项必须被
-  `required_controls` 标签、`secondary_actions` 或 `coverage.covered_items` 语义覆盖；
-  `wireframe_information` 的每一项必须被 `required_information` 或 `covered_items`
-  覆盖——保证「功能解读」的起点完整；
+  `required_controls` 标签或 `secondary_actions` 语义覆盖；
+  `wireframe_information` 的每一项必须被 `required_information` 覆盖——保证
+  「功能解读」的起点完整。**不读取模型自报的 `coverage`**（M4-I3）：
+  模型不得通过自填 `covered_items` 自我声明已覆盖而不产出真实控件，
+  伪造覆盖的草稿必须带着 `missing source items` 反馈进入修复轮；
 - **审查期留痕**：保存/批准/快照按当前 `source_inventory` 用 `recomputeCoverage`
   重算覆盖差异并写回，工作台如实展示未保留项，但**不拦截批准**；
 - 覆盖匹配采用中文语义词匹配（`semanticTerms`：去控件类后缀、长度≥2 的词必须全部出现）；
