@@ -44,7 +44,7 @@
 | --- | --- | --- | --- |
 | `STALE_REAPPROVAL_BLOCKED` | `electron/services/designPipeline.cjs` | 批准已因上游变化失效（stale）的 Artifact、风格基线已变化，或批准布局时提案已失效 | 重新生成对应阶段（或重批允许确定性重验的字体/组件/绑定）后再批准 |
 | `SCREEN_CONTRACT_APPROVAL_INVALID` | `electron/services/designPipeline.cjs` | 批准 Screen Contract 时批准即重验（归一化/契约校验）未通过 | 按校验信息修正 Screen Contract 内容后重新批准 |
-| `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` | `electron/services/designPipeline.cjs` | 批准 Screen Contract 时按 source_inventory 重算 coverage 仍存在未覆盖项 | 补全 source_inventory 对应来源或调整控件清单后重新批准 |
+| `SCREEN_CONTRACT_COVERAGE_INCOMPLETE` | `electron/services/designPipeline.cjs` | 历史码（AUD-06 时期）：批准 Screen Contract 时重算 coverage 存在未覆盖项即抛出；设计师权威语义后覆盖差异不再拦截批准，不再新抛 | 无需恢复；保留以兼容历史执行日志 |
 | `ROUTE_CYCLE_REPAIR_INELIGIBLE` | `electron/services/flowStateRepair.cjs` | 项目不满足旧版风格循环一次性修复的识别条件（strict 路线、失效原因不符、输入变化、校验失败等） | 按 stale 原因指引重新生成对应阶段 |
 
 ### 参考与输入

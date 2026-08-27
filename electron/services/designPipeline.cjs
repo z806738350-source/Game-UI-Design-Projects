@@ -508,15 +508,15 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       if (!current) throw new Error('Screen Contract does not exist.');
       assertApprovableFreshness(kind, current);
       assertSourceRevisionsFresh(kind, current, project);
-      // AUD-06：批准即完整确定性重验——归一化全部字段、按当前
-      // source_inventory 重算 coverage、重跑控件/角色/required 校验；
-      // 人工编辑删掉必需控件后不得仍能批准并继续显示“0 项遗漏”。
+      // 设计师权威语义：批准即完整确定性结构重验——归一化全部字段、按当前
+      // source_inventory 重算 coverage（留痕信息，非门禁）、重跑控件/角色/
+      // required 校验；覆盖差异不拦截批准，设计师审查调整结果为准确答案，
+      // AI 清单超集约束仅作用于生成期（kunpoClient 草稿修复）。
       const normalized = normalizeArtifact('screen-contract', current);
       const revalidated = { ...normalized, coverage: recomputeCoverage(normalized) };
       const approvalErrors = validateArtifact('screen-contract', revalidated);
       if (approvalErrors.length) {
-        const coverageProblem = approvalErrors.some((message) => message.includes('uncovered_items') || message.includes('missing source items'));
-        throw Object.assign(new Error(`Screen Contract 无法批准：${approvalErrors.join('；')}`), { code: coverageProblem ? ERROR_CODES.SCREEN_CONTRACT_COVERAGE_INCOMPLETE : ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID });
+        throw Object.assign(new Error(`Screen Contract 无法批准：${approvalErrors.join('；')}`), { code: ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID });
       }
       await projectStore.saveArtifact(projectId, kind, { ...revalidated, status: 'approved', approved_at: new Date().toISOString() });
       await projectStore.updateWorkflow(projectId, 'wireframe_interpretation', 'approved', `screens/${project.screen_id}/screen-contract.json`);
@@ -737,22 +737,21 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       source: { ...(definition.artifact.source || {}), edited_by: 'ui-designer' },
       edited_at: new Date().toISOString()
     };
-    if (next.status !== 'stale') {
-      delete next.stale_at;
-      delete next.stale_reason;
-    }
-    if (kind === 'screen-contract' && !screenContractContentChanged && next.status === 'approved') {
-      // AUD-06 + M4-H3：label-only 编辑保持 approved 的事实同样要用与批准相同
-      // 的确定性链路重验（normalize → 重算 coverage → 重跑校验）；校验必须在
-      // 失效下游之前——失败的编辑不得破坏仍然有效的交付链（失败原子性）。
+    if (kind === 'screen-contract') {
+      // 设计师权威语义：保存一律归一化 + 重算 coverage（留痕信息，非门禁）+
+      // 结构重验；畸形编辑在失效下游之前被拒（失败原子性）。AI 清单超集
+      // 约束仅作用于生成期，审查阶段以设计师调整结果为准确答案。
       const normalized = normalizeArtifact('screen-contract', next);
       const revalidated = { ...normalized, coverage: recomputeCoverage(normalized) };
       const editErrors = validateArtifact('screen-contract', revalidated);
       if (editErrors.length) {
-        const coverageProblem = editErrors.some((message) => message.includes('uncovered_items') || message.includes('missing source items'));
-        throw Object.assign(new Error(`Screen Contract 无法保存该 label 编辑：${editErrors.join('；')}`), { code: coverageProblem ? ERROR_CODES.SCREEN_CONTRACT_COVERAGE_INCOMPLETE : ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID });
+        throw Object.assign(new Error(`Screen Contract 无法保存该编辑：${editErrors.join('；')}`), { code: ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID });
       }
       next = { ...revalidated, status: next.status, version: next.version, source: next.source, edited_at: next.edited_at, approved_at: next.approved_at };
+    }
+    if (next.status !== 'stale') {
+      delete next.stale_at;
+      delete next.stale_reason;
     }
     if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
     else {

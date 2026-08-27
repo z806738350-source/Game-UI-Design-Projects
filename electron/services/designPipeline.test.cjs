@@ -330,7 +330,12 @@ test('AUD-01: strict contract semantic edit stales approved style and the full s
     for (const kind of ['screen-contract', 'component-bindings', 'layout-proposals', 'approved-layout', 'underlay-contract', 'visual-task', 'visual-results', 'underlay-critique', 'composition-manifest', 'composition-output', 'fidelity-report']) {
       await projectStore.saveArtifact(project.id, kind, {
         schema_version: '2.0', id: `main-${kind}`, version: 1, status: 'approved', source: {},
-        ...(kind === 'screen-contract' ? { purpose: 'Old purpose.', required_controls: [] } : {}),
+        ...(kind === 'screen-contract' ? {
+          screen_id: 'main', screen_name: 'Main', purpose: 'Old purpose.', primary_action: 'continue',
+          secondary_actions: [], required_information: [], required_controls: [], states: [], edge_cases: [], data_dependencies: [],
+          design_constraints: {}, source_inventory: { requirement_functions: [], wireframe_controls: [], wireframe_information: [] },
+          coverage: { covered_items: [], uncovered_items: [] }
+        } : {}),
         ...(kind === 'visual-results' ? { variations: [{ id: 'main-v1' }] } : {}),
         ...(kind === 'layout-proposals' ? { proposals: [] } : {})
       }, { screenId: 'main' });

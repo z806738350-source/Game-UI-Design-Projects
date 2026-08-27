@@ -1,6 +1,6 @@
 const fs = require('node:fs/promises');
 const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
-const { extractJson, normalizeArtifact, validateArtifact, withCommonFields } = require('./contracts.cjs');
+const { extractJson, normalizeArtifact, validateArtifact, coverageGateErrors, withCommonFields } = require('./contracts.cjs');
 const { imageMetadataFromBuffer, readImageMetadata } = require('./imageMetadata.cjs');
 
 function headers(config) {
@@ -65,7 +65,9 @@ async function requestArtifact(config, { kind, prompt, imagePaths = [], id, sour
     const text = responseText(payload);
     if (!text) throw new Error('Kunpo returned no readable text.');
     const artifact = withCommonFields(normalizeArtifact(kind, extractJson(text)), { id, source });
-    const errors = validateArtifact(kind, artifact);
+    // 生成期门禁：结构校验 + （screen-contract）AI 草稿必须完整覆盖
+    // source_inventory；审查阶段的覆盖差异留痕不在此拦截。
+    const errors = [...validateArtifact(kind, artifact), ...(kind === 'screen-contract' ? coverageGateErrors(artifact) : [])];
     return { artifact, errors };
   }
   let feedback = '';

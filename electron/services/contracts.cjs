@@ -103,16 +103,7 @@ function validateArtifact(kind, value) {
     else {
       requireArray(value.coverage, 'covered_items', errors);
       requireArray(value.coverage, 'uncovered_items', errors);
-      if (Array.isArray(value.coverage.uncovered_items) && value.coverage.uncovered_items.length) errors.push('coverage.uncovered_items must be empty');
     }
-    const inventoryControls = [...(value.source_inventory?.requirement_functions || []), ...(value.source_inventory?.wireframe_controls || [])];
-    const controls = [...(value.required_controls || []).map((control) => control?.label || control?.id || control), ...(value.secondary_actions || []), ...(value.coverage?.covered_items || [])];
-    const uncoveredControls = inventoryControls.filter((item) => !sourceItemCovered(item, controls));
-    if (uncoveredControls.length) errors.push(`required_controls missing source items: ${uncoveredControls.join(', ')}`);
-    const inventoryInformation = value.source_inventory?.wireframe_information || [];
-    const information = [...(value.required_information || []), ...(value.coverage?.covered_items || [])];
-    const uncoveredInformation = inventoryInformation.filter((item) => !sourceItemCovered(item, information));
-    if (uncoveredInformation.length) errors.push(`required_information missing source items: ${uncoveredInformation.join(', ')}`);
   } else if (kind === 'layout-proposals') {
     requireString(value, 'screen_id', errors);
     requireArray(value, 'proposals', errors);
@@ -158,9 +149,9 @@ function validateArtifact(kind, value) {
   return errors;
 }
 
-// AUD-06：批准边界不得信任契约体内存储的 coverage——人工编辑删掉
-// 必需控件/信息后，旧 coverage 仍会显示“0 项遗漏”。批准前必须按
-// 当前 source_inventory 与字段重算覆盖事实。
+// AUD-06：批准边界不得信任契约体内存储的 coverage——重算保证覆盖差异
+// （哪些来源条目本轮未保留）始终是当前事实，作为留痕信息写回与展示。
+// 设计师权威语义裁定后，该差异不再作为批准门禁。
 function recomputeCoverage(value) {
   const controls = [...(value.required_controls || []).map((control) => control?.label || control?.id || control), ...(value.secondary_actions || [])];
   const information = [...(value.required_information || [])];
@@ -171,6 +162,20 @@ function recomputeCoverage(value) {
   const coveredInformation = inventoryInformation.filter((item) => sourceItemCovered(item, information));
   const uncoveredInformation = inventoryInformation.filter((item) => !sourceItemCovered(item, information));
   return { covered_items: [...coveredControls, ...coveredInformation], uncovered_items: [...uncoveredControls, ...uncoveredInformation] };
+}
+
+// 生成期门禁（仅 kunpoClient 草稿修复循环使用）：AI 草稿必须完整覆盖
+// source_inventory，保证“功能解读”的起点完整；审查/批准阶段以设计师
+// 调整结果为准确答案，不再以此拦截。
+// M4-I3：判定完全基于服务端重算（recomputeCoverage 只比较
+// required_controls / secondary_actions / required_information 与
+// source_inventory），不读取模型自报的 coverage——模型不得通过自填
+// covered_items 自我声明已覆盖而不产出真实控件。
+function coverageGateErrors(value) {
+  const recomputed = recomputeCoverage(value);
+  const errors = [];
+  if (recomputed.uncovered_items.length) errors.push(`required_controls missing source items: ${recomputed.uncovered_items.join(', ')}`);
+  return errors;
 }
 
 function extractJson(text) {
@@ -216,4 +221,4 @@ function withCommonFields(value, defaults) {
   };
 }
 
-module.exports = { extractJson, normalizeArtifact, recomputeCoverage, validateArtifact, withCommonFields };
+module.exports = { extractJson, normalizeArtifact, recomputeCoverage, coverageGateErrors, validateArtifact, withCommonFields };

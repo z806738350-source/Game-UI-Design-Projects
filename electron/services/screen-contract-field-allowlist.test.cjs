@@ -54,9 +54,11 @@ test('M4-I2：系统字段伪造被静默忽略，设计师内容编辑与全量
     assert.equal(contract.status, 'reviewed', 'status 由系统控制，编辑降级为 reviewed');
     assert.notEqual(contract.approved_at, '1970-01-01T00:00:00.000Z', 'approved_at 不得被 PATCH 伪造');
     assert.equal(contract.purpose, '调整后的编成目的', '设计师内容编辑照常生效');
-    // 伪造的 coverage 被忽略：coverage 永远由服务端控制（批准/快照边界
-    // 负责重算），客户端写入的空覆盖不得生效。
-    assert.deepEqual(contract.coverage, before.coverage, 'coverage 不得被 PATCH 改写');
+    // 伪造的 coverage 被忽略：coverage 永远由服务端按原始清单重算——
+    // 「侠客立绘」不在当前控件清单中，重算必须如实留痕；客户端伪造的
+    // “全覆盖”不得生效。
+    assert.deepEqual(contract.coverage.covered_items, ['保存阵容'], 'coverage 必须由服务端按原清单重算');
+    assert.deepEqual(contract.coverage.uncovered_items, ['侠客立绘'], '未保留的来源条目必须如实留痕');
 
     // 负向 2：仅含系统字段的 PATCH 是整体 no-op——不升版本、不改字节、
     // 不动 Workflow。

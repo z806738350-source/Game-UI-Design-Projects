@@ -7,9 +7,10 @@ const { createDesignPipeline } = require('./designPipeline.cjs');
 const { createProjectStore } = require('./projectStore.cjs');
 const { ERROR_CODES } = require('./errorCodes.cjs');
 
-// M4-F3 / AUD-06：已批准 Contract 的 label-only 编辑不得绕过批准重验。
-// 保持 approved 的前提是写入前用与批准相同的确定性链路
-//（normalize → recomputeCoverage → validateArtifact）重验通过。
+// M4-F3 / 设计师权威语义：已批准 Contract 的编辑同样走与批准相同的
+// 确定性链路重验（normalize → recomputeCoverage → validateArtifact），
+// 但重验只做结构校验；coverage 差异作留痕信息写回，既不是保存门禁也
+// 不是批准门禁。畸形编辑在失效下游之前被拒（失败原子性，M4-H3）。
 
 function approvedContractFixture() {
   return {
@@ -33,28 +34,35 @@ test('AUD-06：已批准 Contract 的 label-only 编辑走批准同链重验', a
     const project = await projectStore.create({ name: 'Label Gate', projectType: 'new', requirement: 'Save the party.' });
     await projectStore.saveArtifact(project.id, 'screen-contract', approvedContractFixture());
 
-    // 负向：把 label 改成与 source_inventory 无关的文案，coverage 失真，
-    // 必须拒绝保存且 Contract 保持原版本、原批准状态。
+    // 设计师权威：破坏 coverage 的 label 编辑允许保存并保持 approved，
+    // 覆盖差异如实写回作留痕信息。
+    const relabeled = await pipeline.updateArtifact(project.id, 'screen-contract', {
+      screenId: 'main',
+      required_controls: [{ id: 'save', role: 'action', required: true, label: '删除角色' }]
+    });
+    assert.equal(relabeled.artifacts.screenContract.status, 'approved');
+    assert.equal(relabeled.artifacts.screenContract.version, 2);
+    assert.equal(relabeled.artifacts.screenContract.required_controls[0].label, '删除角色');
+    assert.deepEqual(relabeled.artifacts.screenContract.coverage.uncovered_items, ['保存阵容']);
+
+    // 负向：畸形编辑（空页面名称）被结构重验拒绝，Contract 保持当前版本与批准状态。
     await assert.rejects(
-      pipeline.updateArtifact(project.id, 'screen-contract', {
-        screenId: 'main',
-        required_controls: [{ id: 'save', role: 'action', required: true, label: '删除角色' }]
-      }),
-      (error) => error.code === ERROR_CODES.SCREEN_CONTRACT_COVERAGE_INCOMPLETE
+      pipeline.updateArtifact(project.id, 'screen-contract', { screenId: 'main', screen_name: '   ' }),
+      (error) => error.code === ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID
     );
-    let refused = await projectStore.open(project.id);
+    const refused = await projectStore.open(project.id);
     assert.equal(refused.artifacts.screenContract.status, 'approved');
-    assert.equal(refused.artifacts.screenContract.version, 1);
-    assert.equal(refused.artifacts.screenContract.required_controls[0].label, '保存阵容');
+    assert.equal(refused.artifacts.screenContract.version, 2);
+    assert.equal(refused.artifacts.screenContract.required_controls[0].label, '删除角色');
 
     // 正向：label 仍覆盖 source 语义（“保存阵容确认”包含“保存阵容”），
-    // 保持 approved，且 coverage 按新 label 重算、版本单调上升。
+    // 保持 approved，coverage 按新 label 重算、版本单调上升。
     const edited = await pipeline.updateArtifact(project.id, 'screen-contract', {
       screenId: 'main',
       required_controls: [{ id: 'save', role: 'action', required: true, label: '保存阵容确认' }]
     });
     assert.equal(edited.artifacts.screenContract.status, 'approved');
-    assert.equal(edited.artifacts.screenContract.version, 2);
+    assert.equal(edited.artifacts.screenContract.version, 3);
     assert.equal(edited.artifacts.screenContract.required_controls[0].label, '保存阵容确认');
     assert.deepEqual(edited.artifacts.screenContract.coverage.uncovered_items, []);
     assert.ok(edited.artifacts.screenContract.coverage.covered_items.includes('保存阵容'));
@@ -75,7 +83,7 @@ test('AUD-06：已批准 Contract 的 label-only 编辑走批准同链重验', a
   }
 });
 
-// M4-H3（MAJOR-03）：非法 label-only 编辑必须在失效下游之前被拒绝：
+// M4-H3（MAJOR-03）：非法编辑必须在失效下游之前被拒绝：
 // Contract / Manifest / Output / Fidelity 与 Workflow 全部保持原样；
 // 只有合法编辑才使交付链 stale。
 test('M4-H3：非法 label 编辑被拒绝前不得破坏交付链（失败原子性）', async () => {
@@ -106,13 +114,10 @@ test('M4-H3：非法 label 编辑被拒绝前不得破坏交付链（失败原�
     const before = Object.fromEntries(await Promise.all(files.map(async (name) => [name, await fs.readFile(path.join(screenDir, name), 'utf8')])));
     const workflowBefore = JSON.stringify((await projectStore.open(project.id)).workflow);
 
-    // 非法 label 编辑：拒绝且四个 Artifact 逐字节不变，Workflow 不变。
+    // 非法编辑：拒绝且四个 Artifact 逐字节不变，Workflow 不变。
     await assert.rejects(
-      pipeline.updateArtifact(project.id, 'screen-contract', {
-        screenId: 'main',
-        required_controls: [{ id: 'save', role: 'action', required: true, label: '删除角色' }]
-      }),
-      (error) => error.code === ERROR_CODES.SCREEN_CONTRACT_COVERAGE_INCOMPLETE
+      pipeline.updateArtifact(project.id, 'screen-contract', { screenId: 'main', screen_name: '   ' }),
+      (error) => error.code === ERROR_CODES.SCREEN_CONTRACT_APPROVAL_INVALID
     );
     for (const name of files) {
       assert.equal(await fs.readFile(path.join(screenDir, name), 'utf8'), before[name], `${name} must not change when the label edit is rejected`);
