@@ -8,6 +8,7 @@
 // 等生产字段必须全部重写到新 Screen。
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
@@ -89,6 +90,41 @@ async function collectJsonHits(directory, sourceId) {
     for (const hit of fileHits) hits.push({ file: entry.name, ...hit });
   }
   return hits;
+}
+
+function sha256(buffer) {
+  return `sha256:${crypto.createHash('sha256').update(buffer).digest('hex')}`;
+}
+
+async function listAllFiles(directory, files = []) {
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+  for (const entry of entries) {
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) await listAllFiles(full, files);
+    else files.push(full);
+  }
+  return files;
+}
+
+// M4-I1：深遍历「path + sha256 hash」证据记录——文件必须存在，
+// hash/byte_length 必须等于实际文件字节（四向一致）。
+function checkEvidenceRecords(node, workspacePath, trail, problems) {
+  if (Array.isArray(node)) {
+    node.forEach((item, index) => checkEvidenceRecords(item, workspacePath, [...trail, String(index)], problems));
+    return;
+  }
+  if (node && typeof node === 'object') {
+    if (typeof node.path === 'string' && typeof node.hash === 'string' && node.hash.startsWith('sha256:')) {
+      const absolute = path.join(workspacePath, node.path);
+      if (!fsSync.existsSync(absolute)) problems.push(`${trail.join('.')}: path ${node.path} 不存在`);
+      else {
+        const bytes = fsSync.readFileSync(absolute);
+        if (sha256(bytes) !== node.hash) problems.push(`${trail.join('.')}: hash 与实际字节不符（${node.path}）`);
+        if (typeof node.byte_length === 'number' && node.byte_length !== bytes.length) problems.push(`${trail.join('.')}: byte_length 与实际长度不符（${node.path}）`);
+      }
+    }
+    for (const [key, value] of Object.entries(node)) checkEvidenceRecords(value, workspacePath, [...trail, key], problems);
+  }
 }
 
 test('duplicate screen rewrites every production identity field (AUD-13 schema-aware clone)', async () => {
@@ -275,6 +311,27 @@ test('duplicate screen rewrites every production identity field (AUD-13 schema-a
     assert.ok(fidelity.source.underlay_critique.startsWith('battle-'), 'cloned fidelity underlay_critique must belong to target screen');
     assert.ok(fidelity.underlay.critique_id.startsWith('battle-'), 'cloned fidelity critique_id must belong to target screen');
     assert.ok(fidelity.underlay.manual_waivers[0].issue_id.startsWith('battle-'), 'cloned fidelity waiver issue_id must belong to target screen');
+    // M4-I1（审核 §5.2）：物理文件名本身也是身份扫描对象——副本目录里
+    // 不得出现仍带原 Screen 前缀的 basename。
+    const clonedFiles = await listAllFiles(path.join(resolved.workspacePath, 'screens', 'battle'));
+    const foreignBasenames = clonedFiles.filter((file) => path.basename(file).startsWith('main-'));
+    assert.deepEqual(foreignBasenames, [], '副本物理文件名不得保留原 Screen 前缀');
+    // M4-I1（审核 §5.3/§5.6）：每个「path + hash」证据记录必须与实际文件
+    // 四向一致——文件存在、hash 与字节相符、byte_length 与长度相符。
+    const evidenceProblems = [];
+    for (const file of clonedFiles.filter((item) => item.endsWith('.json'))) {
+      checkEvidenceRecords(JSON.parse(await fs.readFile(file, 'utf8')), resolved.workspacePath, [path.basename(file)], evidenceProblems);
+    }
+    assert.deepEqual(evidenceProblems, [], '副本证据记录必须与实际文件字节一致');
+    // 语义证据内容被重写后，冻结的 hash/byte_length 必须已重算，且路径与
+    // 其中记录的 underlay_id 均属于目标 Screen。
+    assert.match(critique.evidence.semantic_raw.path, /^screens\/battle\/reviews\/battle-/, '语义证据路径必须属于目标 Screen');
+    const semanticBytes = await fs.readFile(path.join(resolved.workspacePath, critique.evidence.semantic_raw.path));
+    assert.equal(critique.evidence.semantic_raw.hash, sha256(semanticBytes), 'semantic_raw.hash 必须等于重写后的实际字节');
+    assert.equal(critique.evidence.semantic_raw.byte_length, semanticBytes.length, 'semantic_raw.byte_length 必须等于实际长度');
+    assert.equal(JSON.parse(semanticBytes.toString('utf8')).source.underlay_id, critique.source.underlay, '重写后的语义证据必须指向克隆底图');
+    // M4-I1（审核 §6）：Fidelity 的 passed 状态不得原样继承到副本。
+    assert.notEqual(fidelity.status, 'passed', '副本 Fidelity 不得继承 passed 状态');
     // approved 事实不继承（既有策略不回退）。
     assert.notEqual(visualTask.status, 'approved');
   } finally {
