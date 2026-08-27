@@ -114,6 +114,11 @@ composition-manifest、composition-output、fidelity-report 的
   重算 `hash`/`byte_length`，保证文件/路径/哈希/长度四向一致；原页产物
   不受影响；完整性由 `cloneSchemaIntegrity.test.cjs` 用真实 pipeline 生成
   完整 Strict 树后递归扫描验证（含文件名本身与证据四向一致断言）；
+  M4-J2：证据重算前经安全解析——路径必须严格落在克隆目标 Screen 目录
+  内（resolve + realpath 双阶段 containment 防父路径穿越与 symlink 逃逸）、
+  仅普通文件、不超过 64MB 上限，非法证据显式失败；Clone 是原子操作，
+  失败删除部分复制的目标目录、不写 registry，重试前先清理未登记的残留
+  目录（M4-I 复审 §8）；
 - **bindings 编辑**：自动剥离 `approved`/`approval` stamp，回到待批准；
 - **screen-contract 编辑字段白名单（M4-I2，设计师权威的证据前提）**：
   通用 PATCH 仅接受设计师内容字段（`screen_name`/`purpose`/
@@ -236,6 +241,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.11 | 2026-08-27 | M4-J2（PR-59，Clone 证据安全解析与失败回滚，M4-I 复审 §8）：`recomputeClonedEvidence` 读取前经 `resolveClonedEvidencePath` 安全解析（克隆目标 Screen 目录 resolve+realpath 双阶段 containment、仅普通文件、64MB 上限），非法证据显式失败；`duplicateScreen` 原子化——失败删除部分复制目录、不写 registry，重试前清理未登记残留目录；负向测试覆盖父路径穿越、symlink 逃逸、超大文件、回滚与干净重试 |
 | 2.10 | 2026-08-27 | M4-J1（PR-58，Screen Contract 变更四类分类器，M4-I 复审 §7/§9/§10）：`updateArtifact` 显式分类 semantic/label-only/review-only/noop，补齐 `secondary_actions`/`data_dependencies`/`design_constraints` 的完整失效传播并清除旧批准印记；`review_metadata`-only 不再失效生产链；完全相同保存整体 no-op；系统字段 no-op 移到 Screen 上下文校验之后；生成期门禁反馈拆分控件/信息两类（§6.3） |
 | 2.9 | 2026-08-26 | 设计师权威语义裁定（PR-53）：AI 盘点清单超集约束收至生成期（`coverageGateErrors` 仅 kunpoClient 草稿修复循环使用）；批准/保存不再以覆盖差异拦截，重算写回降级为留痕信息并如实展示；保存升级统一归一化 + 重算 + 结构重验，畸形编辑拒于失效下游之前（失败原子性保留）；`SCREEN_CONTRACT_COVERAGE_INCOMPLETE` 降级为历史兼容码（注册表冻结保留）。M4-I3：生成期门禁改用服务端重算判定，不信任模型自报 `coverage.covered_items`，伪造覆盖的草稿必须进入修复轮（独立源码审核 §8.2） |
 | 2.8 | 2026-08-27 | M4-I2（PR-55，Screen Contract 不可变字段边界）：`updateArtifact` 对 screen-contract 实施设计师可编辑字段白名单，系统身份/证据字段（`id`/`screen_id`/`source_inventory`/`coverage`/`status`/时间戳等）静默忽略，仅含系统字段的 PATCH 整体 no-op；API 级负向测试按审核 §7.4 形态验证（独立源码审核 §7/§8.3） |

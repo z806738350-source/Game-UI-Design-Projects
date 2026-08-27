@@ -627,23 +627,56 @@ function createProjectStore(options = {}) {
     }
   }
 
+  // M4-J2（M4-I 复审 §8）：证据文件大小上限——防止被篡改项目指向超大/
+  // 特殊文件造成读取资源消耗。
+  const CLONE_EVIDENCE_MAX_BYTES = 64 * 1024 * 1024;
+
+  // M4-J2（M4-I 复审 §8）：证据路径安全解析。不再信任任意 { path, hash }
+  // 对直接 path.join 读取：解析后的路径必须严格位于克隆目标 Screen 目录内
+  //（先字符串 containment，再对真实路径做 realpath containment 防 symlink
+  // 逃逸），且必须是普通文件、不超过大小上限；任何不满足都显式失败，
+  // 由 duplicateScreen 的回滚把 Clone 作为整体原子操作处理。
+  async function resolveClonedEvidencePath(workspacePath, scopeDir, relative) {
+    if (typeof relative !== 'string' || !relative.trim() || path.isAbsolute(relative)) {
+      throw new Error(`Clone evidence path is not a workspace-relative path: ${relative}`);
+    }
+    const scopeResolved = path.resolve(scopeDir);
+    const resolved = path.resolve(workspacePath, relative);
+    if (resolved !== scopeResolved && !resolved.startsWith(`${scopeResolved}${path.sep}`)) {
+      throw new Error(`Clone evidence path escapes the cloned screen directory: ${relative}`);
+    }
+    const real = await fs.realpath(resolved).catch(() => null);
+    if (!real) throw new Error(`Clone evidence path does not exist: ${relative}`);
+    const realScope = await fs.realpath(scopeResolved).catch(() => null);
+    if (!realScope || (real !== realScope && !real.startsWith(`${realScope}${path.sep}`))) {
+      throw new Error(`Clone evidence path escapes via symlink: ${relative}`);
+    }
+    const stat = await fs.stat(real);
+    if (!stat.isFile()) throw new Error(`Clone evidence path is not a regular file: ${relative}`);
+    if (stat.size > CLONE_EVIDENCE_MAX_BYTES) {
+      throw new Error(`Clone evidence file exceeds the ${CLONE_EVIDENCE_MAX_BYTES} byte limit: ${relative}`);
+    }
+    return real;
+  }
+
   // M4-I1：Clone 会改写证据文件内容（如 semantic-response 的
   // source.underlay_id），Artifact 内冻结的 hash/byte_length 不再代表当前
   // 字节。深遍历重写结果，对所有「path + sha256 hash」记录按实际文件重算，
   // 保证文件/路径/哈希/长度四向一致；未改字节的文件重算结果不变。
-  async function recomputeClonedEvidence(workspacePath, node) {
+  // M4-J2：读取前经 resolveClonedEvidencePath 安全解析；非法证据路径显式
+  // 抛出，Clone 因此整体失败并回滚。
+  async function recomputeClonedEvidence(workspacePath, scopeDir, node) {
     if (Array.isArray(node)) {
-      for (const item of node) await recomputeClonedEvidence(workspacePath, item);
+      for (const item of node) await recomputeClonedEvidence(workspacePath, scopeDir, item);
       return node;
     }
     if (node && typeof node === 'object') {
-      for (const value of Object.values(node)) await recomputeClonedEvidence(workspacePath, value);
+      for (const value of Object.values(node)) await recomputeClonedEvidence(workspacePath, scopeDir, value);
       if (typeof node.path === 'string' && typeof node.hash === 'string' && node.hash.startsWith('sha256:')) {
-        const bytes = await fs.readFile(path.join(workspacePath, node.path)).catch(() => null);
-        if (bytes) {
-          node.hash = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
-          if (typeof node.byte_length === 'number') node.byte_length = bytes.length;
-        }
+        const real = await resolveClonedEvidencePath(workspacePath, scopeDir, node.path);
+        const bytes = await fs.readFile(real);
+        node.hash = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+        if (typeof node.byte_length === 'number') node.byte_length = bytes.length;
       }
     }
     return node;
@@ -668,7 +701,7 @@ function createProjectStore(options = {}) {
       const artifact = await readJson(filePath, null);
       if (!artifact || typeof artifact !== 'object') continue;
       let cloned = rewriteScreenClone(artifact, sourceId, targetId, cloneReferenceKeys(kind), '', renames);
-      await recomputeClonedEvidence(workspacePath, cloned);
+      await recomputeClonedEvidence(workspacePath, path.join(workspacePath, 'screens', targetId), cloned);
       // 已批准/已通过事实不继承：副本中 approved 与 passed（Fidelity）一律
       // 降级为 reviewed，证据身份已重写，必须重新确认或重跑（产品策略）。
       if (cloned.status === 'approved' || cloned.status === 'passed') {
@@ -688,16 +721,27 @@ function createProjectStore(options = {}) {
     const id = slugify(input.id || input.name || `${screenId}-copy`);
     if (registry.screens.some((screen) => screen.id === id)) throw new Error(`Screen already exists: ${id}`);
     const now = new Date().toISOString();
-    await fs.cp(path.join(project.workspacePath, 'screens', screenId), path.join(project.workspacePath, 'screens', id), { recursive: true });
-    // M4-I1：先重命名带原 Screen 前缀的物理文件，后续所有 JSON 重写共享
-    // 映射表，路径字符串与物理文件名保持一致。
+    const targetDir = path.join(project.workspacePath, 'screens', id);
+    // M4-J2：registry 中不存在的同名目录只能是上次失败 Clone 的残留，
+    // 先清理，保证重试不会合并到残留目录。
+    if (await fs.stat(targetDir).catch(() => null)) await fs.rm(targetDir, { recursive: true, force: true });
+    // M4-J2：Clone 是原子操作——复制与迁移任一步失败（含非法证据路径的
+    // 显式失败）都删除部分复制的目标目录，不写 Screen registry。
     const renames = new Map();
-    await renameClonedFiles(path.join(project.workspacePath, 'screens', id), screenId, id, renames);
-    await migrateClonedScreenArtifacts(project.workspacePath, screenId, id, renames);
-    // AUD-13：inputs.json 内的 wireframe_path 等路径指向原 Screen 目录，
-    // 副本必须重写到自己的目录（provenance 字段在其后覆盖，不受影响）。
-    const copiedInput = rewriteScreenClone(await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id)), screenId, id, CLONE_COMMON_REF_KEYS, '', renames);
-    await writeJson(screenInputPath(project.workspacePath, id), { ...copiedInput, screen_id: id, input_mode: 'own', duplicated_from_screen_id: screenId, updated_at: now });
+    try {
+      await fs.cp(path.join(project.workspacePath, 'screens', screenId), targetDir, { recursive: true });
+      // M4-I1：先重命名带原 Screen 前缀的物理文件，后续所有 JSON 重写共享
+      // 映射表，路径字符串与物理文件名保持一致。
+      await renameClonedFiles(targetDir, screenId, id, renames);
+      await migrateClonedScreenArtifacts(project.workspacePath, screenId, id, renames);
+      // AUD-13：inputs.json 内的 wireframe_path 等路径指向原 Screen 目录，
+      // 副本必须重写到自己的目录（provenance 字段在其后覆盖，不受影响）。
+      const copiedInput = rewriteScreenClone(await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id)), screenId, id, CLONE_COMMON_REF_KEYS, '', renames);
+      await writeJson(screenInputPath(project.workspacePath, id), { ...copiedInput, screen_id: id, input_mode: 'own', duplicated_from_screen_id: screenId, updated_at: now });
+    } catch (error) {
+      await fs.rm(targetDir, { recursive: true, force: true }).catch(() => {});
+      throw error;
+    }
     const entry = { id, name: String(input.name || `${source.name} · 副本`), status: 'active', input_mode: 'own', duplicated_from_screen_id: screenId, created_at: now, updated_at: now };
     await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens: [...registry.screens, entry] });
     const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
