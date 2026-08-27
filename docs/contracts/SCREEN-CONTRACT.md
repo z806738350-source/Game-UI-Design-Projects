@@ -75,19 +75,29 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
   `SCREEN_CONTRACT_APPROVAL_INVALID` 且不改变状态。**覆盖差异不拦截
   批准**——设计师在「功能解读」阶段的调整结果是准确答案，AI 盘点
   清单的超集约束仅作用于生成期。
-- 编辑：`updateArtifact` 允许直接编辑；只有语义键
-  （`screen_name/purpose/primary_action/required_controls/required_information/states/edge_cases`）
-  变化才触发失效传播。`required_controls` 的语义签名只比较
-  `{ id, role, required }`——**仅改 label 不会使绑定 stale**；但已产出的
-  交付链（composition → output → fidelity）会失效重建，且合成时最终文字
-  的事实源是当前契约的 `label`，不是 Binding 里冻结的旧文本（AUD-09）。
+- 编辑：`updateArtifact` 允许直接编辑；变化按四类显式分类（M4-J1，唯一
+  权威来源 `SCREEN_CONTRACT_SEMANTIC_KEYS`/`SCREEN_CONTRACT_REVIEW_ONLY_KEYS`）：
+  - **semantic**：`screen_name/purpose/primary_action/secondary_actions/required_information/states/edge_cases/data_dependencies/design_constraints`
+    变化，或 `required_controls` 的 `{ id, role, required }` 语义签名变化——
+    按路线依赖图完整传播失效，契约降级 `reviewed` 并清除旧
+    `approved_at`/`approval` 印记；
+  - **label-only**：`required_controls` 仅 label 变化——**不使绑定 stale**，
+    但已产出的交付链（composition → output → fidelity）失效重建，且合成时
+    最终文字的事实源是当前契约的 `label`，不是 Binding 里冻结的旧文本
+    （AUD-09）；
+  - **review-only**：仅 `review_metadata` 变化——只记录审查进度，**不失效
+    任何生产 Artifact**（M4-J1，审核 §9）；
+  - **noop**：允许字段经规范化后完全无变化——不升版本、不写文件、不动
+    Workflow、不失效下游。
 - 编辑字段边界（M4-I2，设计师权威语义的证据前提）：设计师可编辑字段为
   `screen_name/purpose/primary_action/secondary_actions/required_controls/required_information/states/edge_cases/data_dependencies/design_constraints/review_metadata`；
   系统身份与证据字段（`id`、`screen_id`、`schema_version`、`version`、
   `generation_id`、`content_hash`、`source`、`source_inventory`、`coverage`、
   `status`、`approved_at`、`stale_at`、`stale_reason`）由系统控制，通用
   PATCH 携带时**静默忽略**（UI 全量保存携带的值不变系统字段不受影响）；
-  仅含系统字段的 PATCH 是整体 no-op，不改变任何 Artifact 与 Workflow。
+  仅含系统字段的 PATCH 是整体 no-op——但判定发生在 Screen 上下文校验
+  （存在性与 Active）之后（M4-J1，审核 §10），不改变任何 Artifact 与
+  Workflow。
   `source_inventory` 只能由 Wireframe/Requirement 重新解析更新；`coverage`
   永远由后端重算——原始盘点不可被编辑覆盖，留痕差异才可信。
 - 保存与快照同一事实来源：`updateArtifact` 保存 screen-contract 时一律
