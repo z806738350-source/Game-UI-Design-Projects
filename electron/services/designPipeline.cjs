@@ -25,6 +25,18 @@ const { renderComposition, verifyCompositionOutput } = require('./compositionRen
 const { finalApprovalGate, runFidelityChecks } = require('./fidelity.cjs');
 const { inspectFidelityEvidence } = require('./fidelityInspector.cjs');
 
+// M4-I2：Screen Contract 的设计师可编辑字段白名单。身份与证据字段
+//（id / screen_id / schema_version / version / generation_id / content_hash /
+// source / source_inventory / coverage / status / approved_at / stale_at /
+// stale_reason 等）一律由系统控制：通用 PATCH 携带时静默忽略。
+// source_inventory 只能由 Wireframe/Requirement 重新解析更新；
+// coverage 永远由后端重算。
+const SCREEN_CONTRACT_EDITABLE_KEYS = new Set([
+  'screen_name', 'purpose', 'primary_action', 'secondary_actions',
+  'required_controls', 'required_information', 'states', 'edge_cases',
+  'data_dependencies', 'design_constraints', 'review_metadata'
+]);
+
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   const cancelledVisualJobs = new Set();
   // AUD-04：取消标记按“项目 + Screen”建键：取消某个 Screen 的生成不得误伤
@@ -666,6 +678,16 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
 
   async function updateArtifact(projectId, kind, patch = {}) {
     const { screenId, ...artifactPatch } = patch;
+    if (kind === 'screen-contract') {
+      // M4-I2（设计师权威边界）：系统身份与证据字段由系统控制，通用 PATCH
+      // 试图改写时静默忽略——UI 的全量保存携带值不变的系统字段，不受影响；
+      // source_inventory 只能由重新解析动作更新，coverage 永远由后端重算。
+      for (const key of Object.keys(artifactPatch)) {
+        if (!SCREEN_CONTRACT_EDITABLE_KEYS.has(key)) delete artifactPatch[key];
+      }
+      // 仅含系统字段的非法 PATCH 不得改变任何 Artifact 与 Workflow 状态。
+      if (!Object.keys(artifactPatch).length) return openProject(projectId);
+    }
     if (kind === 'component-bindings') {
       // Approval is a backend fact stamped by approveArtifact; ignore any
       // client-supplied approved/approval values instead of trusting them.

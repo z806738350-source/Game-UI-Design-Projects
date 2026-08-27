@@ -111,6 +111,14 @@ composition-manifest、composition-output、fidelity-report 的
   不受影响；完整性由 `cloneSchemaIntegrity.test.cjs` 用真实 pipeline 生成
   完整 Strict 树后递归扫描验证（含文件名本身与证据四向一致断言）；
 - **bindings 编辑**：自动剥离 `approved`/`approval` stamp，回到待批准；
+- **screen-contract 编辑字段白名单（M4-I2，设计师权威的证据前提）**：
+  通用 PATCH 仅接受设计师内容字段（`screen_name`/`purpose`/
+  `primary_action`/`secondary_actions`/`required_controls`/
+  `required_information`/`states`/`edge_cases`/`data_dependencies`/
+  `design_constraints`/`review_metadata`）；系统身份与证据字段（`id`/
+  `screen_id`/`source_inventory`/`coverage`/`status`/时间戳等）静默忽略，
+  仅含系统字段的 PATCH 整体 no-op；`source_inventory` 只能由重新解析
+  更新，`coverage` 永远由后端重算；
 - **font-manifest roles/fonts 编辑**：拒绝，抛
   `FONT_CONFIRMATION_ACTION_REQUIRED`（必须走导入+确认动作）；
 - **composition-manifest final 批准**：五重门禁，通过后
@@ -216,6 +224,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.8 | 2026-08-27 | M4-I2（PR-55，Screen Contract 不可变字段边界）：`updateArtifact` 对 screen-contract 实施设计师可编辑字段白名单，系统身份/证据字段（`id`/`screen_id`/`source_inventory`/`coverage`/`status`/时间戳等）静默忽略，仅含系统字段的 PATCH 整体 no-op；API 级负向测试按审核 §7.4 形态验证（独立源码审核 §7/§8.3） |
 | 2.7 | 2026-08-27 | M4-I1（PR-54，Clone 证据文件完整性）：副本中带原 Screen 前缀的物理文件重命名为目标前缀且 JSON 路径同步；内容被改写的证据文件重算 `hash`/`byte_length`（四向一致）；Fidelity `passed` 与 `approved` 一样降级 `reviewed`；完整性测试扩展文件名扫描与证据哈希复验（独立源码审核 §5/§6） |
 | 2.6 | 2026-08-25 | PR-47~51（M4-H1~H4，基线 `main@0f8e9ce` 复审整改）：Clone schema 补齐 `underlay_critique`/`issue_id`/waiver/`artifact_id` 并以真实交付链重验（MAJOR-01）、Layout stale 恢复动作显式分派全部 5 种 action（MAJOR-02）、label-only Contract 编辑先校验后 invalidate 的失败原子性（MAJOR-03）、legacy Critique 缺 version 时 UI fail closed（P1-01）、Web 导出改 fetch 并回传 409、URL 携带冻结 screenId（P1-03）、job_id 并发硬化登记 Issue #50（P1-02） |
 | 2.5 | 2026-08-24 | PR-40~45（M4-F1~F6）：Web/Desktop 统一最终交付门禁（WEB-DELIVERY-01，finalDeliveryGate，Web 阻断一律 409）、Job Identity 绑定与刷新错误隔离（AUD-03/04）、已批准 Contract label-only 编辑重验（AUD-06）、Web Reference no-op（AUD-07）、schema-aware Clone（AUD-13）、UI 证据守卫对齐/首版 V1/stale 恢复动作统一到 Footer（AUD-05/10/14） |

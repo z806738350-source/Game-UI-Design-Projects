@@ -73,6 +73,15 @@ Screen Contract 回答"这个界面必须有什么"。模型基于需求文本 +
   `{ id, role, required }`——**仅改 label 不会使绑定 stale**；但已产出的
   交付链（composition → output → fidelity）会失效重建，且合成时最终文字
   的事实源是当前契约的 `label`，不是 Binding 里冻结的旧文本（AUD-09）。
+- 编辑字段边界（M4-I2，设计师权威语义的证据前提）：设计师可编辑字段为
+  `screen_name/purpose/primary_action/secondary_actions/required_controls/required_information/states/edge_cases/data_dependencies/design_constraints/review_metadata`；
+  系统身份与证据字段（`id`、`screen_id`、`schema_version`、`version`、
+  `generation_id`、`content_hash`、`source`、`source_inventory`、`coverage`、
+  `status`、`approved_at`、`stale_at`、`stale_reason`）由系统控制，通用
+  PATCH 携带时**静默忽略**（UI 全量保存携带的值不变系统字段不受影响）；
+  仅含系统字段的 PATCH 是整体 no-op，不改变任何 Artifact 与 Workflow。
+  `source_inventory` 只能由 Wireframe/Requirement 重新解析更新；`coverage`
+  永远由后端重算——原始盘点不可被编辑覆盖，留痕差异才可信。
 
 ## 6. 状态机
 
