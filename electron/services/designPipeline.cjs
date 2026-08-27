@@ -31,10 +31,19 @@ const { inspectFidelityEvidence } = require('./fidelityInspector.cjs');
 // stale_reason 等）一律由系统控制：通用 PATCH 携带时静默忽略。
 // source_inventory 只能由 Wireframe/Requirement 重新解析更新；
 // coverage 永远由后端重算。
-const SCREEN_CONTRACT_EDITABLE_KEYS = new Set([
+// M4-J1（审核 §7）：可编辑集由变化分类推导——全部允许字段只有这一个
+// 权威来源，写权限与失效语义不再维护两套不同步的手工名单：
+// - SEMANTIC：变化按路线依赖图完整传播失效，契约降级并清除批准印记；
+// - REVIEW_ONLY：仅记录审查进度，不失效任何生产 Artifact；
+// - required_controls 单独按语义签名分类（仅改 label 属 label-only）。
+const SCREEN_CONTRACT_SEMANTIC_KEYS = new Set([
   'screen_name', 'purpose', 'primary_action', 'secondary_actions',
-  'required_controls', 'required_information', 'states', 'edge_cases',
-  'data_dependencies', 'design_constraints', 'review_metadata'
+  'required_information', 'states', 'edge_cases',
+  'data_dependencies', 'design_constraints'
+]);
+const SCREEN_CONTRACT_REVIEW_ONLY_KEYS = new Set(['review_metadata']);
+const SCREEN_CONTRACT_EDITABLE_KEYS = new Set([
+  ...SCREEN_CONTRACT_SEMANTIC_KEYS, ...SCREEN_CONTRACT_REVIEW_ONLY_KEYS, 'required_controls'
 ]);
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
@@ -685,8 +694,8 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       for (const key of Object.keys(artifactPatch)) {
         if (!SCREEN_CONTRACT_EDITABLE_KEYS.has(key)) delete artifactPatch[key];
       }
-      // 仅含系统字段的非法 PATCH 不得改变任何 Artifact 与 Workflow 状态。
-      if (!Object.keys(artifactPatch).length) return openProject(projectId);
+      // M4-J1（审核 §10）：no-op 判定在下方 openScreen 上下文校验之后执行，
+      // 仅含系统字段的伪造请求同样要经过 Screen 存在性与 Active 校验。
     }
     if (kind === 'component-bindings') {
       // Approval is a backend fact stamped by approveArtifact; ignore any
@@ -713,20 +722,37 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     };
     const definition = definitions[kind];
     if (!definition?.artifact) throw new Error('当前 Artifact 不存在。');
-    const screenContractContentKeys = ['screen_name', 'purpose', 'primary_action', 'required_controls', 'required_information', 'states', 'edge_cases'];
-    // Label-only edits must not invalidate bindings; role/required/id edits must.
-    const controlsSemanticSignature = (items) => JSON.stringify(normalizeControls(items || []).map(({ id, role, required }) => ({ id, role, required })));
-    const screenContractContentChanged = kind === 'screen-contract' && screenContractContentKeys.some((key) => {
-      if (!Object.prototype.hasOwnProperty.call(artifactPatch, key)) return false;
-      if (key === 'required_controls') return controlsSemanticSignature(artifactPatch[key]) !== controlsSemanticSignature(definition.artifact[key]);
-      return JSON.stringify(artifactPatch[key]) !== JSON.stringify(definition.artifact[key]);
-    });
+    // M4-J1（审核 §7）：Screen Contract 变化四类显式分类——唯一权威来源：
+    // semantic（含 secondary_actions / data_dependencies / design_constraints
+    // 等全部语义键）按路线依赖图完整传播失效并清除批准印记；label-only
+    //（required_controls 仅 label 变化）只失效文字/合成链；review-only
+    //（仅审查元数据）不失效任何生产 Artifact；noop（规范化后完全无变化）
+    // 不升版本、不写文件、不动 Workflow。
+    let screenContractChangeClass = null;
+    if (kind === 'screen-contract') {
+      // 审核 §10：仅含系统字段的非法 PATCH 在 Screen 上下文校验（上方
+      // openScreen）之后整体 no-op，不得改变任何 Artifact 与 Workflow 状态。
+      if (!Object.keys(artifactPatch).length) return project;
+      const baseline = normalizeArtifact('screen-contract', definition.artifact);
+      const candidate = normalizeArtifact('screen-contract', { ...definition.artifact, ...artifactPatch });
+      const semanticSignature = (items) => JSON.stringify(normalizeControls(items || []).map(({ id, role, required }) => ({ id, role, required })));
+      const cosmeticSignature = (items) => JSON.stringify(normalizeControls(items || []).map(({ id, label }) => ({ id, label })));
+      const nextControls = artifactPatch.required_controls ?? baseline.required_controls;
+      const semanticChanged = [...SCREEN_CONTRACT_SEMANTIC_KEYS].some((key) => JSON.stringify(candidate[key] ?? null) !== JSON.stringify(baseline[key] ?? null))
+        || semanticSignature(nextControls) !== semanticSignature(baseline.required_controls);
+      const labelsChanged = semanticSignature(nextControls) === semanticSignature(baseline.required_controls)
+        && cosmeticSignature(nextControls) !== cosmeticSignature(baseline.required_controls);
+      const reviewChanged = Object.prototype.hasOwnProperty.call(artifactPatch, 'review_metadata')
+        && JSON.stringify(candidate.review_metadata ?? null) !== JSON.stringify(baseline.review_metadata ?? null);
+      screenContractChangeClass = semanticChanged ? 'semantic' : labelsChanged ? 'label-only' : reviewChanged ? 'review-only' : 'noop';
+      if (screenContractChangeClass === 'noop') return project;
+    }
     // 编辑不是洗回路径：stale Artifact 被编辑后仍保持 stale，必须通过
     // 重新生成（或允许重验的资产重批）恢复；否则 stale 会被普通编辑
     // 静默清除，绕过新鲜度门禁。
     const nextStatus = artifactPatch.status === 'rejected'
       ? 'rejected'
-      : kind === 'screen-contract' && !screenContractContentChanged
+      : kind === 'screen-contract' && (screenContractChangeClass === 'label-only' || screenContractChangeClass === 'review-only')
         ? definition.artifact.status
         : definition.artifact.status === 'stale' ? 'stale' : 'reviewed';
     let next = {
@@ -753,8 +779,14 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       delete next.stale_at;
       delete next.stale_reason;
     }
-    if (kind !== 'screen-contract' || screenContractContentChanged) await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
-    else {
+    if (kind === 'screen-contract' && screenContractChangeClass === 'semantic') {
+      // M4-J1：语义编辑使旧批准事实失效——降级后的契约不得残留
+      // approved_at/approval，批准必须是当前事实。
+      delete next.approved_at;
+      delete next.approval;
+    }
+    if (kind !== 'screen-contract' || screenContractChangeClass === 'semantic') await invalidateArtifacts(projectId, kind, `${kind}_changed`, { screenId: project.screen_id });
+    else if (screenContractChangeClass === 'label-only') {
       // AUD-09：label-only 编辑不失效 Binding（控件语义未变），但已产出的
       // 文字层/合成/保真事实仍写着旧文案，必须沿 manifest→output→fidelity
       // 失效，逼使交付链用新 label 重建。M4-H3：移到重验通过之后，非法编辑
@@ -767,6 +799,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
       }
       await invalidateArtifacts(projectId, 'composition-manifest', 'screen_contract_label_changed', { screenId: project.screen_id });
     }
+    // M4-J1（审核 §9）：review-only 只记录审查进度，不失效任何生产
+    // Artifact——此前误落 label-only 分支，只勾选审查确认就会迫使
+    // Composition/Output/Fidelity 整链重跑，与 review_metadata 的定位不符。
     if (kind === 'component-bindings') {
       // Editing demotes the artifact to reviewed; drop any stale approval
       // stamp from the previous version so approval remains a current fact.

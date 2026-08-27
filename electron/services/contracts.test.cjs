@@ -47,8 +47,9 @@ test('coverage superset is a generation-phase gate: validateArtifact no longer b
   assert.deepEqual(validateArtifact('screen-contract', artifact), []);
   const gate = coverageGateErrors(artifact);
   // 判定以服务端重算为准：即使模型自报无遗漏，未产出的来源条目仍必须
-  // 列入修复反馈（required_controls 与 required_information 一并重算）。
-  assert.ok(gate.some((error) => error.includes('返回') && error.includes('战力')), gate.join('; '));
+  // 列入修复反馈；控件类与信息类遗漏分别输出，避免误导修复方向。
+  assert.ok(gate.some((error) => error.startsWith('required_controls missing source items') && error.includes('返回')), gate.join('; '));
+  assert.ok(gate.some((error) => error.startsWith('required_information missing source items') && error.includes('战力')), gate.join('; '));
 });
 
 test('M4-I3: model self-declared covered_items must not satisfy the generation gate (forged coverage enters repair loop)', () => {

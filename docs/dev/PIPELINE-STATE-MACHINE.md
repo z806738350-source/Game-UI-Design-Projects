@@ -121,8 +121,16 @@ composition-manifest、composition-output、fidelity-report 的
   `required_information`/`states`/`edge_cases`/`data_dependencies`/
   `design_constraints`/`review_metadata`）；系统身份与证据字段（`id`/
   `screen_id`/`source_inventory`/`coverage`/`status`/时间戳等）静默忽略，
-  仅含系统字段的 PATCH 整体 no-op；`source_inventory` 只能由重新解析
-  更新，`coverage` 永远由后端重算；
+  仅含系统字段的 PATCH 整体 no-op（判定在 Screen 上下文校验之后）；
+  `source_inventory` 只能由重新解析更新，`coverage` 永远由后端重算；
+- **screen-contract 变化四类分类（M4-J1，唯一权威来源）**：
+  **semantic**（含 `secondary_actions`/`data_dependencies`/
+  `design_constraints` 等全部语义键与控件 `{ id, role, required }` 签名
+  变化）按路线依赖图完整传播失效、契约降级并清除旧批准印记；
+  **label-only**（控件仅改 label）只失效 composition→output→fidelity 链；
+  **review-only**（仅 `review_metadata`）不失效任何生产 Artifact；
+  **noop**（规范化后无变化）不升版本、不写文件、不动 Workflow
+  （M4-I 复审 §7/§9/§10）；
 - **font-manifest roles/fonts 编辑**：拒绝，抛
   `FONT_CONFIRMATION_ACTION_REQUIRED`（必须走导入+确认动作）；
 - **composition-manifest final 批准**：五重门禁，通过后
@@ -228,6 +236,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.10 | 2026-08-27 | M4-J1（PR-58，Screen Contract 变更四类分类器，M4-I 复审 §7/§9/§10）：`updateArtifact` 显式分类 semantic/label-only/review-only/noop，补齐 `secondary_actions`/`data_dependencies`/`design_constraints` 的完整失效传播并清除旧批准印记；`review_metadata`-only 不再失效生产链；完全相同保存整体 no-op；系统字段 no-op 移到 Screen 上下文校验之后；生成期门禁反馈拆分控件/信息两类（§6.3） |
 | 2.9 | 2026-08-26 | 设计师权威语义裁定（PR-53）：AI 盘点清单超集约束收至生成期（`coverageGateErrors` 仅 kunpoClient 草稿修复循环使用）；批准/保存不再以覆盖差异拦截，重算写回降级为留痕信息并如实展示；保存升级统一归一化 + 重算 + 结构重验，畸形编辑拒于失效下游之前（失败原子性保留）；`SCREEN_CONTRACT_COVERAGE_INCOMPLETE` 降级为历史兼容码（注册表冻结保留）。M4-I3：生成期门禁改用服务端重算判定，不信任模型自报 `coverage.covered_items`，伪造覆盖的草稿必须进入修复轮（独立源码审核 §8.2） |
 | 2.8 | 2026-08-27 | M4-I2（PR-55，Screen Contract 不可变字段边界）：`updateArtifact` 对 screen-contract 实施设计师可编辑字段白名单，系统身份/证据字段（`id`/`screen_id`/`source_inventory`/`coverage`/`status`/时间戳等）静默忽略，仅含系统字段的 PATCH 整体 no-op；API 级负向测试按审核 §7.4 形态验证（独立源码审核 §7/§8.3） |
 | 2.7 | 2026-08-27 | M4-I1（PR-54，Clone 证据文件完整性）：副本中带原 Screen 前缀的物理文件重命名为目标前缀且 JSON 路径同步；内容被改写的证据文件重算 `hash`/`byte_length`（四向一致）；Fidelity `passed` 与 `approved` 一样降级 `reviewed`；完整性测试扩展文件名扫描与证据哈希复验（独立源码审核 §5/§6） |
