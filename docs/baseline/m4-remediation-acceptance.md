@@ -89,8 +89,26 @@
 | P1-03：Web `<a>` 下载看不到 409 | M4-H4（PR-51）：fetch 下载，非 2xx 读 JSON 错误并 throw；2xx 转 Blob；URL 携带冻结 screenId，`/visual/` 路由解析 | `src/api.ts` / `server/webServer.cjs` / `src/api.exportVisual.test.ts` |
 | 验收文档 4 处过度声明 | 本文档对应行已标注 ⚠→✅ M4-H 修订并补充整改证据 | 上文 Reference/Clone 与 UI 两节 |
 
+## M4-I 证据完整性与设计师权威收口补录（PR-53～55，基线 `main@759d05e`）
+
+M4-H/PR-53 独立源码审核判定「有条件不通过」：Clone 证据文件完整性未闭环、
+Screen Contract 不可变来源边界缺失、生成期门禁存在自我声明绕过。整改对照：
+
+| 审核发现 | 整改 | 证据 |
+| --- | --- | --- |
+| MAJOR-01（§5）：Clone 物理文件名保留原 Screen 前缀；改写内容后未重算 `hash`/`byte_length` | M4-I1（PR-54）：`renameClonedFiles` 重命名并同步 JSON 路径；`recomputeClonedEvidence` 按实际字节重算（四向一致）；测试扫描文件名本身 | `projectStore.cjs` / `cloneSchemaIntegrity.test.cjs` |
+| P1（§6）：Clone 后 Fidelity `passed` 原样继承 | M4-I1（PR-54）：`passed` 与 `approved` 一样降级 `reviewed`（含 workflow stage） | 同上 |
+| MAJOR-02（§7）/ PR53-MAJOR-02（§8.3）：通用 PATCH 可改写 `id`/`screen_id`/`source_inventory` 等系统字段 | M4-I2（PR-55）：`SCREEN_CONTRACT_EDITABLE_KEYS` 白名单静默忽略系统字段；仅系统字段的 PATCH 整体 no-op；API 级负向测试按 §7.4 形态 | `designPipeline.cjs` / `screen-contract-field-allowlist.test.cjs` |
+| PR53-MAJOR-01（§8.2）：生成期门禁信任模型自报 `covered_items` | M4-I3（并入 PR-53）：`coverageGateErrors` 改用服务端 `recomputeCoverage` 判定；伪造覆盖负向测试必须进修复轮 | `contracts.cjs` / `contracts.test.cjs` |
+| PR53-P1（§8.4）：缺设计师删减误判项的 Electron E2E | 核心用户故事已由维护者以真实用户在「新项目」线路完整走通验证；自动化 E2E 登记跟进 Issue（不阻断，其余线路实测留待后续） | 维护者实机验证（2026-08-27） |
+| §8.5：产品语义变更缺 ADR | ADR-008 记录设计师权威的新旧语义边界 | `docs/decisions/ADR-008-designer-authority-screen-contract.md` |
+
 ## 结论
 
 M4-F1～F6 全部合并后，报告第 12 节验收清单各项均有对应实现与负向回归证据；
-最终复审（`main@0f8e9ce`）提出的 3 项 MAJOR 与 3 项 P1 已由 M4-H1～H4（PR-47～51）逐项关闭，
-四个过度声明已按整改结果修订；可提交审核者复审，申请把 M4 改判为「完整闭环」。
+最终复审（`main@0f8e9ce`）提出的 3 项 MAJOR 与 3 项 P1 已由 M4-H1～H4（PR-47～51）逐项关闭。
+M4-H/PR-53 独立审核（2026-08-27）在 Clone 物理证据完整性与 Screen Contract
+信任边界上提出的新发现，已由 M4-I1～I3（PR-54/55 与并入 PR-53 的 M4-I3）逐项关闭，
+产品语义变更以 ADR-008 固化；「设计师权威」语义（PR-53）已在真实环境由维护者
+完整走通验证。自动化覆盖维持全绿；设计师删减误判项的自动化 Electron E2E
+作为跟进 Issue 管理，不作为本批归档前提。
