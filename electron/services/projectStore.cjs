@@ -572,12 +572,12 @@ function createProjectStore(options = {}) {
   function cloneReferenceKeys(kind) {
     return new Set([...CLONE_COMMON_REF_KEYS, ...(CLONE_FIELD_SCHEMA[kind]?.references || [])]);
   }
-  function rewriteScreenClone(node, sourceId, targetId, referenceKeys, parentKey = '') {
+  function rewriteScreenClone(node, sourceId, targetId, referenceKeys, parentKey = '', renames = new Map()) {
     if (Array.isArray(node)) {
       // AUD-13：进入数组后 key 上下文会丢失；引用类数组（如
       // selected_variation_ids）内的字符串元素也是 ID，必须同样重写。
       return node.map((item) => {
-        const rewritten = rewriteScreenClone(item, sourceId, targetId, referenceKeys, parentKey);
+        const rewritten = rewriteScreenClone(item, sourceId, targetId, referenceKeys, parentKey, renames);
         if (typeof rewritten === 'string' && referenceKeys.has(parentKey) && rewritten.startsWith(`${sourceId}-`)) {
           return `${targetId}-${rewritten.slice(sourceId.length + 1)}`;
         }
@@ -587,11 +587,16 @@ function createProjectStore(options = {}) {
     if (node && typeof node === 'object') {
       const next = {};
       for (const [key, value] of Object.entries(node)) {
-        let rewritten = rewriteScreenClone(value, sourceId, targetId, referenceKeys, key);
+        let rewritten = rewriteScreenClone(value, sourceId, targetId, referenceKeys, key, renames);
         if (typeof rewritten === 'string') {
           if (key === 'screen_id' && rewritten === sourceId) rewritten = targetId;
           else if (rewritten.startsWith(`${sourceId}-`) && (key === 'id' || referenceKeys.has(key))) rewritten = `${targetId}-${rewritten.slice(sourceId.length + 1)}`;
           else if (rewritten.includes(`screens/${sourceId}/`)) rewritten = rewritten.split(`screens/${sourceId}/`).join(`screens/${targetId}/`);
+          // M4-I1：物理文件已按目标前缀重命名，路径字符串里的旧 basename
+          // 必须同步替换，否则 path 指向不存在的文件。
+          for (const [oldName, newName] of renames) {
+            if (rewritten.includes(oldName)) rewritten = rewritten.split(oldName).join(newName);
+          }
         }
         next[key] = rewritten;
       }
@@ -600,30 +605,71 @@ function createProjectStore(options = {}) {
     return node;
   }
 
-  async function migrateClonedScreenArtifacts(workspacePath, sourceId, targetId) {
+  // M4-I1：副本里以原 Screen 前缀命名的物理文件（底图、语义证据等以
+  // Screen 作用域 ID 命名的文件）必须重命名为目标前缀；映射表交给
+  // rewriter，保证 JSON 路径字符串与物理文件同步。
+  async function renameClonedFiles(directory, sourceId, targetId, renames) {
+    const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) { await renameClonedFiles(full, sourceId, targetId, renames); continue; }
+      if (!entry.name.startsWith(`${sourceId}-`)) continue;
+      const renamed = `${targetId}-${entry.name.slice(sourceId.length + 1)}`;
+      await fs.rename(full, path.join(directory, renamed));
+      renames.set(entry.name, renamed);
+    }
+  }
+
+  // M4-I1：Clone 会改写证据文件内容（如 semantic-response 的
+  // source.underlay_id），Artifact 内冻结的 hash/byte_length 不再代表当前
+  // 字节。深遍历重写结果，对所有「path + sha256 hash」记录按实际文件重算，
+  // 保证文件/路径/哈希/长度四向一致；未改字节的文件重算结果不变。
+  async function recomputeClonedEvidence(workspacePath, node) {
+    if (Array.isArray(node)) {
+      for (const item of node) await recomputeClonedEvidence(workspacePath, item);
+      return node;
+    }
+    if (node && typeof node === 'object') {
+      for (const value of Object.values(node)) await recomputeClonedEvidence(workspacePath, value);
+      if (typeof node.path === 'string' && typeof node.hash === 'string' && node.hash.startsWith('sha256:')) {
+        const bytes = await fs.readFile(path.join(workspacePath, node.path)).catch(() => null);
+        if (bytes) {
+          node.hash = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+          if (typeof node.byte_length === 'number') node.byte_length = bytes.length;
+        }
+      }
+    }
+    return node;
+  }
+
+  async function migrateClonedScreenArtifacts(workspacePath, sourceId, targetId, renames) {
+    // AUD-13：reviews/ 下的 semantic-response 是 Critique 证据链文件，不在
+    // SCREEN_ARTIFACTS 注册表内但随目录整体复制；source.underlay_id 同样
+    // 是 Screen 作用域 ID，必须与 Artifact 同一套 rewriter 重写。
+    // M4-I1：先重写证据文件——其字节被改写，随后 Artifact 的证据哈希
+    // 重算必须以改写后的实际文件为准。
+    const reviewsDir = path.join(workspacePath, 'screens', targetId, 'reviews');
+    const reviewEntries = await fs.readdir(reviewsDir).catch(() => []);
+    for (const name of reviewEntries) {
+      const filePath = path.join(reviewsDir, renames.get(name) || name);
+      const evidence = await readJson(filePath, null);
+      if (!evidence || typeof evidence !== 'object') continue;
+      await writeJson(filePath, rewriteScreenClone(evidence, sourceId, targetId, new Set([...CLONE_COMMON_REF_KEYS, 'underlay_id']), '', renames));
+    }
     for (const [kind, relative] of Object.entries(SCREEN_ARTIFACTS)) {
       const filePath = path.join(workspacePath, 'screens', targetId, relative);
       const artifact = await readJson(filePath, null);
       if (!artifact || typeof artifact !== 'object') continue;
-      let cloned = rewriteScreenClone(artifact, sourceId, targetId, cloneReferenceKeys(kind));
-      if (cloned.status === 'approved') {
+      let cloned = rewriteScreenClone(artifact, sourceId, targetId, cloneReferenceKeys(kind), '', renames);
+      await recomputeClonedEvidence(workspacePath, cloned);
+      // 已批准/已通过事实不继承：副本中 approved 与 passed（Fidelity）一律
+      // 降级为 reviewed，证据身份已重写，必须重新确认或重跑（产品策略）。
+      if (cloned.status === 'approved' || cloned.status === 'passed') {
         cloned = { ...cloned, status: 'reviewed' };
         delete cloned.approved_at;
         delete cloned.approval;
       }
       await writeJson(filePath, cloned);
-    }
-    // AUD-13：reviews/ 下的 semantic-response 是 Critique 证据链文件，不在
-    // SCREEN_ARTIFACTS 注册表内但随目录整体复制；source.underlay_id 同样
-    // 是 Screen 作用域 ID，必须与 Artifact 同一套 rewriter 重写。
-    const reviewsDir = path.join(workspacePath, 'screens', targetId, 'reviews');
-    const reviewEntries = await fs.readdir(reviewsDir).catch(() => []);
-    for (const name of reviewEntries) {
-      if (!name.endsWith('-semantic-response.json')) continue;
-      const filePath = path.join(reviewsDir, name);
-      const evidence = await readJson(filePath, null);
-      if (!evidence || typeof evidence !== 'object') continue;
-      await writeJson(filePath, rewriteScreenClone(evidence, sourceId, targetId, new Set([...CLONE_COMMON_REF_KEYS, 'underlay_id'])));
     }
   }
 
@@ -636,10 +682,14 @@ function createProjectStore(options = {}) {
     if (registry.screens.some((screen) => screen.id === id)) throw new Error(`Screen already exists: ${id}`);
     const now = new Date().toISOString();
     await fs.cp(path.join(project.workspacePath, 'screens', screenId), path.join(project.workspacePath, 'screens', id), { recursive: true });
-    await migrateClonedScreenArtifacts(project.workspacePath, screenId, id);
+    // M4-I1：先重命名带原 Screen 前缀的物理文件，后续所有 JSON 重写共享
+    // 映射表，路径字符串与物理文件名保持一致。
+    const renames = new Map();
+    await renameClonedFiles(path.join(project.workspacePath, 'screens', id), screenId, id, renames);
+    await migrateClonedScreenArtifacts(project.workspacePath, screenId, id, renames);
     // AUD-13：inputs.json 内的 wireframe_path 等路径指向原 Screen 目录，
     // 副本必须重写到自己的目录（provenance 字段在其后覆盖，不受影响）。
-    const copiedInput = rewriteScreenClone(await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id)), screenId, id, CLONE_COMMON_REF_KEYS);
+    const copiedInput = rewriteScreenClone(await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id)), screenId, id, CLONE_COMMON_REF_KEYS, '', renames);
     await writeJson(screenInputPath(project.workspacePath, id), { ...copiedInput, screen_id: id, input_mode: 'own', duplicated_from_screen_id: screenId, updated_at: now });
     const entry = { id, name: String(input.name || `${source.name} · 副本`), status: 'active', input_mode: 'own', duplicated_from_screen_id: screenId, created_at: now, updated_at: now };
     await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens: [...registry.screens, entry] });
@@ -651,8 +701,8 @@ function createProjectStore(options = {}) {
     // 必须与 Artifact 同一套 rewriter 统一改写。
     const clonedStages = Object.fromEntries(Object.entries(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main).map(([stage, stageEntry]) => {
       if (!stageEntry) return [stage, stageEntry];
-      let rewritten = rewriteScreenClone(stageEntry, screenId, id, CLONE_COMMON_REF_KEYS);
-      if (rewritten.status === 'approved') rewritten = { ...rewritten, status: 'reviewed' };
+      let rewritten = rewriteScreenClone(stageEntry, screenId, id, CLONE_COMMON_REF_KEYS, '', renames);
+      if (rewritten.status === 'approved' || rewritten.status === 'passed') rewritten = { ...rewritten, status: 'reviewed' };
       return [stage, rewritten];
     }));
     await writeJson(statePath, { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: clonedStages }, updated_at: now });
