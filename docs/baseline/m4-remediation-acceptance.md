@@ -103,6 +103,38 @@ Screen Contract 不可变来源边界缺失、生成期门禁存在自我声明�
 | PR53-P1（§8.4）：缺设计师删减误判项的 Electron E2E | 核心用户故事已由维护者以真实用户在「新项目」线路完整走通验证；自动化 E2E 登记跟进 Issue（不阻断，其余线路实测留待后续） | 维护者实机验证（2026-08-27） |
 | §8.5：产品语义变更缺 ADR | ADR-008 记录设计师权威的新旧语义边界 | `docs/decisions/ADR-008-designer-authority-screen-contract.md` |
 
+## M4-J 变化分类器与 Clone 安全边界补录（PR-58～61，基线 `main@2c80c68`）
+
+M4-I 独立复审判定：变更分类漏掉三个白名单字段，Clone 证据解析仍有累计
+资源放大、迁移前 symlink 入口与事务尾段三项残留。整改对照：
+
+| 审核发现 | 整改 | 证据 |
+| --- | --- | --- |
+| NEW-MAJOR-01（§7）：`secondary_actions`/`data_dependencies`/`design_constraints` 未列入语义变化 | M4-J1（PR-58）：四类显式分类器（semantic/label-only/review-only/noop），可编辑集由分类集推导（单一权威来源）；语义编辑完整传播失效并清除旧批准印记 | `designPipeline.cjs` / `screen-contract-change-classifier.test.cjs` |
+| NEW-P1-01（§9）：`review_metadata`-only 保存破坏交付链 | M4-J1（PR-58）：review-only 分类只记录审查进度，不失效任何生产 Artifact | 同上 |
+| NEW-P2-01（§10）：系统字段 no-op 绕开 Screen 上下文校验 | M4-J1（PR-58）：no-op 判定移到 `openScreen` 上下文校验之后；完全相同保存整体 no-op | 同上 |
+| §6.3：生成期门禁反馈混淆控件/信息 | M4-J1（PR-58）：反馈拆分 `required_controls` / `required_information` 两类 | `contracts.cjs` / `contracts.test.cjs` |
+| SEC-MAJOR-01（§6）：证据遍历无预算、无去重，重复引用可放大 I/O | M4-K1（PR-60）：Clone 遍历上下文——深度 64、单 Artifact 节点 2048、单次 Clone 记录 512、唯一字节 256MB；同 realpath 只哈希一次，重复记录复用缓存；超限显式失败并入回滚 | `projectStore.cjs` / `cloneEvidenceSafety.test.cjs` |
+| SEC-P1-02（§7）：迁移期在证据解析器之前跟随目录/文件 symlink | M4-K2（PR-61）：复制后、任何读写前全树 `lstat` 扫描，任何 symlink 显式失败，链接目标不被触碰 | `projectStore.cjs` / `cloneTransactionSafety.test.cjs` |
+| TX-P1-01（§8）：Registry/Workflow 写入在回滚边界之外 | M4-K2（PR-61）：全事务——原始字节备份到 `workflow/transactions/clone-<id>/`，发布顺序目录→Workflow→Registry（发布点最后），任一失败自动还原备份并删除目录；回滚自身失败抛结构化 `CLONE_ROLLBACK_INCOMPLETE`（事务/步骤/备份路径/人工恢复顺序，诊断记录 best-effort，不做启动期自动恢复——审核者 §8.4 终稿裁定的降级项）；「有条目无 stage」不一致状态在再复制/切换/管线入口 Fail-Closed 阻断（仅检测，不自动修复） | 同上 |
+
+## 技术债台账（已接受的公开债务）
+
+| Issue | 内容 | 状态与口径 |
+| --- | --- | --- |
+| #50 | 同一 Screen 并行任务的独立 `job_id`（当前取消键为 `projectId:screenId`） | OPEN。M4-H 起登记的接受债务；桌面单窗口串行路径风险低，Web 多标签/多会话/直接 API/未来并行任务场景需要；不阻断当前归档 |
+| #57 | 设计师删除 AI 误判项的自动化 Electron E2E | OPEN。核心用户故事已由维护者以真实用户在「新项目」线路完整走通验证（2026-08-27）；其余线路（含 Clone）无人工实测，自动化覆盖作为回归投资跟进；不阻断当前归档 |
+
+既往汇报中「仅剩 Issue #57」的表述不准确，正确口径为上表两项并列披露。
+
+## L3 深度安全审查的证据位置
+
+L3 审查通过本地 `~/.qodersec/bin/qodersec review --layer=l3` 在每个提交
+推送前执行；当前七项 CI 不含独立 L3 Job，审核者无法从 CI 独立复核。
+每个批次审查输出的原文（`{"layer":"l3","findings_count":0,...}`）引用在
+对应 PR 描述与提交说明中（PR-53～61）。若后续引入无人值守部署，应将
+L3 纳入 CI 产出可下载报告。
+
 ## 结论
 
 M4-F1～F6 全部合并后，报告第 12 节验收清单各项均有对应实现与负向回归证据；
@@ -110,5 +142,16 @@ M4-F1～F6 全部合并后，报告第 12 节验收清单各项均有对应实�
 M4-H/PR-53 独立审核（2026-08-27）在 Clone 物理证据完整性与 Screen Contract
 信任边界上提出的新发现，已由 M4-I1～I3（PR-54/55 与并入 PR-53 的 M4-I3）逐项关闭，
 产品语义变更以 ADR-008 固化；「设计师权威」语义（PR-53）已在真实环境由维护者
-完整走通验证。自动化覆盖维持全绿；设计师删减误判项的自动化 Electron E2E
-作为跟进 Issue 管理，不作为本批归档前提。
+完整走通验证。
+M4-I 复审提出的变更分类与 Clone 安全/事务残留（NEW-MAJOR-01、NEW-P1-01、
+NEW-P2-01、SEC-MAJOR-01、SEC-P1-02、TX-P1-01），已由 M4-J1（PR-58）与
+M4-K1/K2（PR-60/61）逐项关闭；自 `main@6c7fa07` 起：
+
+- 变化分类以单一权威来源驱动，语义/文字/审查/无变化各有明确失效语义；
+- Clone 具备遍历资源预算、全树 symlink 拒绝、全事务回滚与双重故障的
+  结构化恢复指引；
+- 自动化覆盖维持全绿（Node 231 / ui-unit 146 / docs 26）。
+
+尚余已接受技术债：Issue #50（job_id 并发硬化）与 Issue #57（设计师权威
+自动化 E2E），见技术债台账；启动期自动恢复双重故障按审核者 §8.4 终稿
+裁定降为后续硬化项。本基线可提交审核者按 M4-K 口径复审。
