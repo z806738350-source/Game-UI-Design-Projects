@@ -122,6 +122,15 @@ composition-manifest、composition-output、fidelity-report 的
   单 Artifact 容器节点 2048、单次 Clone 证据记录 512、唯一字节 256MB），
   相同真实路径只读取哈希一次、重复记录复用缓存——重复引用放大 I/O 的
   路线关闭，超限显式失败并触发整体回滚（M4-J 复审 SEC-MAJOR-01）；
+  M4-K2：复制后的目标树不允许包含任何 symlink（迁移前全树 `lstat` 扫描，
+  发现即失败，链接目标不被触碰）；Clone 是全事务——原始 `index.json` /
+  `state.json` 字节先备份到 `workflow/transactions/clone-<id>/`，发布顺序
+  为目录→Workflow→Registry（Registry 是最后发布点），任一写入失败自动
+  还原备份并删除目标目录；回滚自身也失败时抛结构化错误
+  `CLONE_ROLLBACK_INCOMPLETE`（事务/步骤/备份路径/人工恢复顺序，诊断
+  记录 best-effort），不做启动期自动恢复（降为后续硬化项）；「有条目无
+  stage」的 Clone 不一致状态在再复制/切换/管线操作时 Fail-Closed 阻断
+  （M4-J 复审 SEC-P1-02 / TX-P1-01）；
 - **bindings 编辑**：自动剥离 `approved`/`approval` stamp，回到待批准；
 - **screen-contract 编辑字段白名单（M4-I2，设计师权威的证据前提）**：
   通用 PATCH 仅接受设计师内容字段（`screen_name`/`purpose`/
@@ -244,6 +253,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.13 | 2026-08-28 | M4-K2（PR-61，Clone 全树 symlink 策略 + 全事务回滚，M4-J 复审 SEC-P1-02 / TX-P1-01，审核者 §8.4 终稿口径）：迁移前全树拒绝任何 symlink（链接目标不被触碰）；原始 `index.json`/`state.json` 字节备份到 `workflow/transactions/clone-<id>/`；发布顺序目录→Workflow→Registry（发布点最后）；任一写入失败自动还原备份并删除目标目录；回滚自身失败抛结构化 `CLONE_ROLLBACK_INCOMPLETE`（含事务/步骤/备份路径/人工恢复顺序，诊断记录 best-effort，不做启动期自动恢复）；「有条目无 stage」不一致状态在再复制/切换/管线操作时 Fail-Closed 阻断；故障注入测试覆盖 Workflow/Registry 失败、双重故障、干净重试与一致性检测 |
 | 2.12 | 2026-08-28 | M4-K1（PR-60，Clone 遍历资源预算，M4-J 复审 SEC-MAJOR-01）：`recomputeClonedEvidence` 引入 Clone 遍历上下文——递归深度 64、单 Artifact 容器节点 2048、单次 Clone 证据记录 512、唯一字节 256MB 预算；相同真实路径只读取哈希一次（`fileCache` 去重），重复记录复用缓存；超限显式失败并入既有 Clone 回滚；4 个预算负向测试（去重/记录数/累计字节/深度） |
 | 2.11 | 2026-08-27 | M4-J2（PR-59，Clone 证据安全解析与失败回滚，M4-I 复审 §8）：`recomputeClonedEvidence` 读取前经 `resolveClonedEvidencePath` 安全解析（克隆目标 Screen 目录 resolve+realpath 双阶段 containment、仅普通文件、64MB 上限），非法证据显式失败；`duplicateScreen` 原子化——失败删除部分复制目录、不写 registry，重试前清理未登记残留目录；负向测试覆盖父路径穿越、symlink 逃逸、超大文件、回滚与干净重试 |
 | 2.10 | 2026-08-27 | M4-J1（PR-58，Screen Contract 变更四类分类器，M4-I 复审 §7/§9/§10）：`updateArtifact` 显式分类 semantic/label-only/review-only/noop，补齐 `secondary_actions`/`data_dependencies`/`design_constraints` 的完整失效传播并清除旧批准印记；`review_metadata`-only 不再失效生产链；完全相同保存整体 no-op；系统字段 no-op 移到 Screen 上下文校验之后；生成期门禁反馈拆分控件/信息两类（§6.3） |

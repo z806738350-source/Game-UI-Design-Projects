@@ -60,6 +60,9 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const screen = registry.screens.find((item) => item.id === screenId && item.status !== 'archived');
     if (!screen) throw Object.assign(new Error(`Screen not found or archived: ${screenId}`), { code: ERROR_CODES.SCREEN_NOT_FOUND });
     if (registry.active_screen_id !== screenId) throw Object.assign(new Error(`Screen context mismatch: activate ${screenId} before running its pipeline.`), { code: ERROR_CODES.SCREEN_CONTEXT_MISMATCH });
+    // M4-K2 Fail-Closed：Clone 双重故障残留（有条目但无 workflow stage）
+    // 不得继续任何管线操作；只检测并给出恢复指引，不自动修复。
+    await projectStore.assertClonedScreenConsistent(projectId, screenId);
     return openProject(projectId, screenId);
   }
 
