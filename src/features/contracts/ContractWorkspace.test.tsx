@@ -29,6 +29,45 @@ const approvedContractProject = (mode: string) => makeProject({
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
+// 语义角色门禁路线感知：strict 才强制解析具体角色（绑定策略前置）；
+// 探索/引导路线不生产绑定，通用 'action' 角色条目必须可直接保存。
+const controlEditProject = (mode: string) => makeProject({
+  continuation_mode: mode as never,
+  artifacts: {
+    screenContract: makeArtifact({
+      id: 'screen-contract-1', status: 'reviewed', screen_name: '队伍编成', purpose: '选择出战阵容', primary_action: '确认编成',
+      required_controls: [{ id: 'save-lineup', label: '保存阵容', role: 'action', required: true }],
+      required_information: [], states: [], edge_cases: []
+    })
+  }
+});
+
+describe('ContractWorkspace（语义角色门禁路线感知）', () => {
+  it('探索路线：角色可选，通用角色条目可直接保存，列表显示中文角色标签', async () => {
+    const user = userEvent.setup();
+    const view = render(<ContractWorkspace project={controlEditProject('exploration')} busy={false} run={async (task) => task()} onNavigate={vi.fn()} />);
+    await user.click(screen.getByTestId('contract-open-required_controls'));
+    await user.click(screen.getByTitle('编辑条目'));
+    const save = screen.getByRole('button', { name: '保存条目' });
+    expect(save.hasAttribute('disabled')).toBe(false);
+    await user.click(save);
+    expect(view.container.textContent).toContain('通用操作（待语义解析）');
+    expect(view.container.textContent).toContain('有未保存修改');
+  });
+
+  it('strict 路线：必须先解析具体角色才能保存，下拉显示中文标签', async () => {
+    const user = userEvent.setup();
+    render(<ContractWorkspace project={controlEditProject('existing-strict')} busy={false} run={async (task) => task()} onNavigate={vi.fn()} />);
+    await user.click(screen.getByTestId('contract-open-required_controls'));
+    await user.click(screen.getByTitle('编辑条目'));
+    const save = screen.getByRole('button', { name: '保存条目' });
+    expect(save.hasAttribute('disabled')).toBe(true);
+    await user.click(screen.getByRole('combobox', { name: '选择控件语义角色' }));
+    await user.click(screen.getByRole('option', { name: '主操作按钮' }));
+    expect(save.hasAttribute('disabled')).toBe(false);
+  });
+});
+
 describe('ContractWorkspace（路线感知 CTA）', () => {
   it('严格路线：批准契约后点击"进入风格锁定"只导航，不执行模型', async () => {
     const user = userEvent.setup();
