@@ -671,7 +671,8 @@ function createProjectStore(options = {}) {
     if (stat.size > CLONE_EVIDENCE_MAX_BYTES) {
       throw new Error(`Clone evidence file exceeds the ${CLONE_EVIDENCE_MAX_BYTES} byte limit: ${relative}`);
     }
-    return real;
+    // M4-L（审核 §3.3）：一并返回大小，供累计预算在读取前预检。
+    return { real, size: stat.size };
   }
 
   // M4-I1：Clone 会改写证据文件内容（如 semantic-response 的
@@ -706,20 +707,21 @@ function createProjectStore(options = {}) {
         if (context.records > CLONE_EVIDENCE_MAX_RECORDS) {
           throw new Error(`Clone exceeded the evidence record budget of ${CLONE_EVIDENCE_MAX_RECORDS}`);
         }
-        const real = await resolveClonedEvidencePath(workspacePath, scopeDir, node.path);
-        const cached = context.fileCache.get(real);
+        const resolved = await resolveClonedEvidencePath(workspacePath, scopeDir, node.path);
+        const cached = context.fileCache.get(resolved.real);
         if (cached) {
           node.hash = cached.hash;
           if (typeof node.byte_length === 'number') node.byte_length = cached.byteLength;
           return node;
         }
-        const bytes = await fs.readFile(real);
-        context.uniqueBytes += bytes.length;
-        if (context.uniqueBytes > CLONE_EVIDENCE_MAX_UNIQUE_BYTES) {
+        // M4-L（审核 §3.3）：读取前预检累计预算，超限文件不再被完整读入。
+        if (context.uniqueBytes + resolved.size > CLONE_EVIDENCE_MAX_UNIQUE_BYTES) {
           throw new Error(`Clone exceeded the cumulative evidence byte budget of ${CLONE_EVIDENCE_MAX_UNIQUE_BYTES}`);
         }
+        const bytes = await fs.readFile(resolved.real);
+        context.uniqueBytes += bytes.length;
         const hash = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
-        context.fileCache.set(real, { hash, byteLength: bytes.length });
+        context.fileCache.set(resolved.real, { hash, byteLength: bytes.length });
         node.hash = hash;
         if (typeof node.byte_length === 'number') node.byte_length = bytes.length;
       }
@@ -853,12 +855,11 @@ function createProjectStore(options = {}) {
     const transactionDir = path.join(project.workspacePath, 'workflow', 'transactions', `clone-${transactionId}`);
     const registryBackupPath = path.join(transactionDir, 'screens-index.before.json');
     const workflowBackupPath = path.join(transactionDir, 'workflow-state.before.json');
-    const tx = { targetDirCreated: false, backupsCreated: false, workflowWriteAttempted: false, registryWriteAttempted: false, step: 'copy-target-directory', completed: [] };
+    const tx = { backupsCreated: false, workflowWriteAttempted: false, registryWriteAttempted: false, step: 'copy-target-directory', completed: [] };
     const entry = { id, name: String(input.name || `${source.name} · 副本`), status: 'active', input_mode: 'own', duplicated_from_screen_id: screenId, created_at: now, updated_at: now };
     const renames = new Map();
     try {
       await fs.cp(path.join(project.workspacePath, 'screens', screenId), targetDir, { recursive: true });
-      tx.targetDirCreated = true;
       tx.completed.push('target-directory-copied');
       tx.step = 'reject-symlinks';
       await rejectClonedTreeSymlinks(targetDir);
@@ -914,7 +915,9 @@ function createProjectStore(options = {}) {
       return entry;
     } catch (error) {
       const rollbackFailures = [];
-      if (tx.targetDirCreated) {
+      // M4-L（审核 §7）：按存在性清理而非依赖布尔标志——fs.cp 中途失败
+      // 留下的部分复制目录也必须在首次失败时立即删除。
+      if (await fs.stat(targetDir).catch(() => null)) {
         await fs.rm(targetDir, { recursive: true, force: true }).catch((rollbackError) => rollbackFailures.push(`remove target directory: ${rollbackError.message}`));
       }
       if (tx.backupsCreated) {
@@ -984,7 +987,22 @@ function createProjectStore(options = {}) {
     await assertClonedScreenConsistent(project.workspacePath, registry, screenId);
   }
 
-  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow, resolveProject, hydrate, listScreens, createScreen, duplicateScreen, setActiveScreen, updateScreen, assertClonedScreenConsistent: assertClonedScreenConsistentFor };
+  // M4-L（M4-K 复审 §6）：项目级写锁——所有会写 `screens/index.json` 或
+  // `workflow/state.json` 的操作（创建/复制/切换/更新 Screen、Workflow
+  // 更新）在导出边界统一串行化。Web 多会话下，两个并发 Clone 不再基于
+  // 同一旧快照互相覆盖（丢失更新），失败事务的回滚也不会覆盖另一事务
+  // 已发布的结果。本产品为单进程部署（桌面主进程 / Web 服务各自一个
+  // store 实例），进程内锁即可覆盖全部会话；锁按项目隔离，跨项目不互斥。
+  // 内部实现之间是直接函数调用（不经导出边界），因此不存在重入死锁。
+  const projectWriteLocks = new Map();
+  function withProjectWriteLock(projectId, operation) {
+    const previous = projectWriteLocks.get(projectId) || Promise.resolve();
+    const run = previous.catch(() => {}).then(() => operation());
+    projectWriteLocks.set(projectId, run.catch(() => {}));
+    return run;
+  }
+
+  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow: (...args) => withProjectWriteLock(args[0], () => updateWorkflow(...args)), resolveProject, hydrate, listScreens, createScreen: (projectId, input) => withProjectWriteLock(projectId, () => createScreen(projectId, input)), duplicateScreen: (projectId, screenId, input) => withProjectWriteLock(projectId, () => duplicateScreen(projectId, screenId, input)), setActiveScreen: (projectId, screenId) => withProjectWriteLock(projectId, () => setActiveScreen(projectId, screenId)), updateScreen: (projectId, screenId, patch) => withProjectWriteLock(projectId, () => updateScreen(projectId, screenId, patch)), assertClonedScreenConsistent: assertClonedScreenConsistentFor };
 }
 
 module.exports = { createProjectStore };
