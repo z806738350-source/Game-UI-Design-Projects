@@ -130,7 +130,11 @@ composition-manifest、composition-output、fidelity-report 的
   `CLONE_ROLLBACK_INCOMPLETE`（事务/步骤/备份路径/人工恢复顺序，诊断
   记录 best-effort），不做启动期自动恢复（降为后续硬化项）；「有条目无
   stage」的 Clone 不一致状态在再复制/切换/管线操作时 Fail-Closed 阻断
-  （M4-J 复审 SEC-P1-02 / TX-P1-01）；
+  （M4-J 复审 SEC-P1-02 / TX-P1-01）；M4-L：项目级异步写锁把同项目全部
+  `screens/index.json` / `workflow/state.json` 写者（创建/复制/切换/更新
+  Screen、Workflow 更新）串行化——Web 多会话并发 Clone 不再基于旧快照
+  丢失更新或交叉回滚；`fs.cp` 中途失败的部分目录在首次失败时即删除；
+  证据累计字节预算改为读取前按 `stat.size` 预检（M4-K 复审 §6/§7/§3.3）；
 - **bindings 编辑**：自动剥离 `approved`/`approval` stamp，回到待批准；
 - **screen-contract 编辑字段白名单（M4-I2，设计师权威的证据前提）**：
   通用 PATCH 仅接受设计师内容字段（`screen_name`/`purpose`/
@@ -253,6 +257,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.15 | 2026-08-28 | M4-L（PR-63，Clone 并发事务隔离，M4-K 复审 §6/§7/§3.3）：项目级异步写锁（`withProjectWriteLock`，按项目隔离、单进程部署覆盖全部会话）串行化全部 Registry/Workflow 写者，关闭并发 Clone 丢失更新与交叉回滚；并发四必测（不同 ID 全保留/同 ID 一胜/败者不回滚胜者/Create+Duplicate 不丢条目）；`fs.cp` 中途失败即时清理部分目录（存在性清理替代布尔标志）+ 重试成功测试；证据累计字节预算 `stat.size` 预检前置，最坏读取量精确等于预算 |
 | 2.14 | 2026-08-28 | M4-K3（PR-62，验收文档归档与债务台账）：`m4-remediation-acceptance.md` 追加 M4-J/M4-K 整改补录；技术债台账并列披露 Issue #50 与 #57（修正「仅剩 Issue #57」表述）；说明 L3 证据位置（本地审查输出引用在 PR 描述/提交说明，CI 暂无独立 L3 Job）；结论改为按 M4-K 口径的准确归档表述 |
 | 2.13 | 2026-08-28 | M4-K2（PR-61，Clone 全树 symlink 策略 + 全事务回滚，M4-J 复审 SEC-P1-02 / TX-P1-01，审核者 §8.4 终稿口径）：迁移前全树拒绝任何 symlink（链接目标不被触碰）；原始 `index.json`/`state.json` 字节备份到 `workflow/transactions/clone-<id>/`；发布顺序目录→Workflow→Registry（发布点最后）；任一写入失败自动还原备份并删除目标目录；回滚自身失败抛结构化 `CLONE_ROLLBACK_INCOMPLETE`（含事务/步骤/备份路径/人工恢复顺序，诊断记录 best-effort，不做启动期自动恢复）；「有条目无 stage」不一致状态在再复制/切换/管线操作时 Fail-Closed 阻断；故障注入测试覆盖 Workflow/Registry 失败、双重故障、干净重试与一致性检测 |
 | 2.12 | 2026-08-28 | M4-K1（PR-60，Clone 遍历资源预算，M4-J 复审 SEC-MAJOR-01）：`recomputeClonedEvidence` 引入 Clone 遍历上下文——递归深度 64、单 Artifact 容器节点 2048、单次 Clone 证据记录 512、唯一字节 256MB 预算；相同真实路径只读取哈希一次（`fileCache` 去重），重复记录复用缓存；超限显式失败并入既有 Clone 回滚；4 个预算负向测试（去重/记录数/累计字节/深度） |
