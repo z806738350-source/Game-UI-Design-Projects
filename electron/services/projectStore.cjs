@@ -630,6 +630,20 @@ function createProjectStore(options = {}) {
   // M4-J2（M4-I 复审 §8）：证据文件大小上限——防止被篡改项目指向超大/
   // 特殊文件造成读取资源消耗。
   const CLONE_EVIDENCE_MAX_BYTES = 64 * 1024 * 1024;
+  // M4-K1（M4-J 复审 SEC-MAJOR-01）：单次 Clone 的证据遍历资源预算。
+  // 合法 Artifact 的证据记录仅寥寥数个、嵌套很浅，预算留有数量级余量；
+  // 被篡改项目提交的大量重复/深层/超量记录会在预算处显式失败并触发
+  // Clone 整体回滚，杜绝同文件反复读取哈希形成的 I/O 与 CPU 放大。
+  const CLONE_TRAVERSAL_MAX_DEPTH = 64;
+  const CLONE_TRAVERSAL_MAX_NODES = 2048;
+  const CLONE_EVIDENCE_MAX_RECORDS = 512;
+  const CLONE_EVIDENCE_MAX_UNIQUE_BYTES = 256 * 1024 * 1024;
+
+  // M4-K1：每次 Clone 一个遍历上下文——记录数与唯一字节按整次 Clone
+  // 累计，文件缓存按真实路径去重；节点计数在每个 Artifact 重算前归零。
+  function createCloneTraversalContext() {
+    return { records: 0, uniqueBytes: 0, nodes: 0, fileCache: new Map() };
+  }
 
   // M4-J2（M4-I 复审 §8）：证据路径安全解析。不再信任任意 { path, hash }
   // 对直接 path.join 读取：解析后的路径必须严格位于克隆目标 Screen 目录内
@@ -665,17 +679,47 @@ function createProjectStore(options = {}) {
   // 保证文件/路径/哈希/长度四向一致；未改字节的文件重算结果不变。
   // M4-J2：读取前经 resolveClonedEvidencePath 安全解析；非法证据路径显式
   // 抛出，Clone 因此整体失败并回滚。
-  async function recomputeClonedEvidence(workspacePath, scopeDir, node) {
+  // M4-K1：遍历受资源预算约束（深度/节点/记录/累计字节），相同真实路径
+  // 只读取哈希一次、重复记录复用缓存结果——被篡改项目用成千上万条重复
+  // { path, hash } 记录放大 I/O 的路线在此关闭。
+  async function recomputeClonedEvidence(workspacePath, scopeDir, node, context, depth = 0) {
+    if (depth > CLONE_TRAVERSAL_MAX_DEPTH) {
+      throw new Error(`Clone evidence traversal exceeded the depth budget of ${CLONE_TRAVERSAL_MAX_DEPTH}`);
+    }
     if (Array.isArray(node)) {
-      for (const item of node) await recomputeClonedEvidence(workspacePath, scopeDir, item);
+      context.nodes += 1;
+      if (context.nodes > CLONE_TRAVERSAL_MAX_NODES) {
+        throw new Error(`Clone evidence traversal exceeded the node budget of ${CLONE_TRAVERSAL_MAX_NODES}`);
+      }
+      for (const item of node) await recomputeClonedEvidence(workspacePath, scopeDir, item, context, depth + 1);
       return node;
     }
     if (node && typeof node === 'object') {
-      for (const value of Object.values(node)) await recomputeClonedEvidence(workspacePath, scopeDir, value);
+      context.nodes += 1;
+      if (context.nodes > CLONE_TRAVERSAL_MAX_NODES) {
+        throw new Error(`Clone evidence traversal exceeded the node budget of ${CLONE_TRAVERSAL_MAX_NODES}`);
+      }
+      for (const value of Object.values(node)) await recomputeClonedEvidence(workspacePath, scopeDir, value, context, depth + 1);
       if (typeof node.path === 'string' && typeof node.hash === 'string' && node.hash.startsWith('sha256:')) {
+        context.records += 1;
+        if (context.records > CLONE_EVIDENCE_MAX_RECORDS) {
+          throw new Error(`Clone exceeded the evidence record budget of ${CLONE_EVIDENCE_MAX_RECORDS}`);
+        }
         const real = await resolveClonedEvidencePath(workspacePath, scopeDir, node.path);
+        const cached = context.fileCache.get(real);
+        if (cached) {
+          node.hash = cached.hash;
+          if (typeof node.byte_length === 'number') node.byte_length = cached.byteLength;
+          return node;
+        }
         const bytes = await fs.readFile(real);
-        node.hash = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+        context.uniqueBytes += bytes.length;
+        if (context.uniqueBytes > CLONE_EVIDENCE_MAX_UNIQUE_BYTES) {
+          throw new Error(`Clone exceeded the cumulative evidence byte budget of ${CLONE_EVIDENCE_MAX_UNIQUE_BYTES}`);
+        }
+        const hash = `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+        context.fileCache.set(real, { hash, byteLength: bytes.length });
+        node.hash = hash;
         if (typeof node.byte_length === 'number') node.byte_length = bytes.length;
       }
     }
@@ -683,6 +727,9 @@ function createProjectStore(options = {}) {
   }
 
   async function migrateClonedScreenArtifacts(workspacePath, sourceId, targetId, renames) {
+    // M4-K1：整次 Clone 共用一个遍历上下文——证据记录数与唯一字节跨
+    // Artifact 累计，同一路径全局去重；节点预算按单个 Artifact 归零。
+    const traversal = createCloneTraversalContext();
     // AUD-13：reviews/ 下的 semantic-response 是 Critique 证据链文件，不在
     // SCREEN_ARTIFACTS 注册表内但随目录整体复制；source.underlay_id 同样
     // 是 Screen 作用域 ID，必须与 Artifact 同一套 rewriter 重写。
@@ -701,7 +748,8 @@ function createProjectStore(options = {}) {
       const artifact = await readJson(filePath, null);
       if (!artifact || typeof artifact !== 'object') continue;
       let cloned = rewriteScreenClone(artifact, sourceId, targetId, cloneReferenceKeys(kind), '', renames);
-      await recomputeClonedEvidence(workspacePath, path.join(workspacePath, 'screens', targetId), cloned);
+      traversal.nodes = 0;
+      await recomputeClonedEvidence(workspacePath, path.join(workspacePath, 'screens', targetId), cloned, traversal);
       // 已批准/已通过事实不继承：副本中 approved 与 passed（Fidelity）一律
       // 降级为 reviewed，证据身份已重写，必须重新确认或重跑（产品策略）。
       if (cloned.status === 'approved' || cloned.status === 'passed') {
