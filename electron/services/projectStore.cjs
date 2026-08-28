@@ -840,10 +840,20 @@ function createProjectStore(options = {}) {
       await assertClonedScreenConsistent(project.workspacePath, registry, id);
       throw new Error(`Screen already exists: ${id}`);
     }
+    // M4 收尾（M4-L 复审 §8.4）：竞态守卫——源 Screen 有阶段正在生成时，
+    // 复制会拿到不同时间点的 Artifact 组合（半新半旧），阻断复制并给出
+    // 明确文案；生成结束后复制照常可用。
+    const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
+    const preState = await readJson(statePath, defaultWorkflow(projectId));
+    const inProgressStages = Object.entries(preState.screen_stages?.[screenId] || {})
+      .filter(([, stageEntry]) => stageEntry?.status === 'in_progress')
+      .map(([stage]) => stage);
+    if (inProgressStages.length) {
+      throw new Error(`Screen ${screenId} 正在生成中（${inProgressStages.join('、')} 阶段运行中），请等待生成完成后再复制。`);
+    }
     const now = new Date().toISOString();
     const targetDir = path.join(project.workspacePath, 'screens', id);
     const indexPath = path.join(project.workspacePath, 'screens', 'index.json');
-    const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
     // M4-J2：registry 中不存在的同名目录只能是上次失败 Clone 的残留，
     // 先清理，保证重试不会合并到残留目录。
     if (await fs.stat(targetDir).catch(() => null)) await fs.rm(targetDir, { recursive: true, force: true });
@@ -998,7 +1008,14 @@ function createProjectStore(options = {}) {
   function withProjectWriteLock(projectId, operation) {
     const previous = projectWriteLocks.get(projectId) || Promise.resolve();
     const run = previous.catch(() => {}).then(() => operation());
-    projectWriteLocks.set(projectId, run.catch(() => {}));
+    const tail = run.catch(() => {});
+    projectWriteLocks.set(projectId, tail);
+    // M4 收尾（M4-L 复审 §8.2）：尾部完成且没有更新的操作排队时删除条目，
+    // 避免长期运行下 Map 无界增长；引用相等判定保证不误删已排在后面的
+    // 新尾部。
+    tail.finally(() => {
+      if (projectWriteLocks.get(projectId) === tail) projectWriteLocks.delete(projectId);
+    });
     return run;
   }
 
