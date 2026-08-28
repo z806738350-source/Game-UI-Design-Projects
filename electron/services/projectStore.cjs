@@ -5,6 +5,7 @@ const { createHash, randomUUID } = require('node:crypto');
 const { ensureDir, readJson, writeJson } = require('./jsonStore.cjs');
 const { readImageMetadata } = require('./imageMetadata.cjs');
 const { artifactRelativePath, CLONE_FIELD_SCHEMA, GLOBAL_ARTIFACTS, SCREEN_ARTIFACTS } = require('./artifactRegistry.cjs');
+const { ERROR_CODES } = require('./errorCodes.cjs');
 const { migrateProjectV2 } = require('./migrations.cjs');
 const { recomputeCoverage } = require('./contracts.cjs');
 
@@ -761,51 +762,191 @@ function createProjectStore(options = {}) {
     }
   }
 
+  // M4-K2（M4-J 复审 SEC-P1-02）：迁移前全树 symlink 策略——复制后的目标
+  // 树不允许包含任何 symlink（目录或文件）。否则迁移期的 readdir/readJson/
+  // writeJson 会在 Evidence Resolver 之前跟随链接，把写入带到树外；发现即
+  // 显式失败，由事务回滚整体处理。
+  async function rejectClonedTreeSymlinks(directory) {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) {
+        throw new Error(`Clone target tree contains a symlink, which is not allowed: ${full}`);
+      }
+      if (entry.isDirectory()) await rejectClonedTreeSymlinks(full);
+    }
+  }
+
+  // M4-K2（审核者 §8.4 终稿）：回滚自身也失败时的结构化错误——携带事务
+  // 身份、双方 Screen、原始失败步骤、回滚失败步骤、已完成步骤、全部相关
+  // 路径与可确定执行的人工恢复顺序；不做启动期自动恢复（降为后续硬化项）。
+  function cloneRollbackIncompleteError(details) {
+    const manualActions = [
+      `删除残留目标 Screen 目录：${details.target_dir}`,
+      details.rollback_failures.some((failure) => failure.includes('workflow/state.json')) && details.workflow_backup
+        ? `从备份还原 workflow/state.json：${details.workflow_backup}` : null,
+      details.rollback_failures.some((failure) => failure.includes('screens/index.json')) && details.registry_backup
+        ? `从备份还原 screens/index.json：${details.registry_backup}` : null,
+      `核对事务诊断记录（best-effort，可能未写成功）：${details.transaction_dir}/clone-context.json`
+    ].filter(Boolean);
+    const message = `Clone 事务回滚不完整（事务 ${details.transaction_id}）：原始失败于「${details.failed_step}」，回滚失败于「${details.rollback_failures.join('；')}」。人工恢复顺序：${manualActions.map((action, index) => `${index + 1}) ${action}`).join(' ')}`;
+    return Object.assign(new Error(message), {
+      code: ERROR_CODES.CLONE_ROLLBACK_INCOMPLETE,
+      transaction_id: details.transaction_id,
+      project_id: details.project_id,
+      source_screen_id: details.source_screen_id,
+      target_screen_id: details.target_screen_id,
+      failed_step: details.failed_step,
+      rollback_failures: details.rollback_failures,
+      completed_steps: details.completed_steps,
+      target_dir: details.target_dir,
+      screen_registry_path: details.registry_path,
+      workflow_state_path: details.workflow_path,
+      registry_backup_path: details.registry_backup,
+      workflow_backup_path: details.workflow_backup,
+      transaction_dir: details.transaction_dir,
+      manual_actions: manualActions
+    });
+  }
+
+  // M4-K2（Fail-Closed 检测）：克隆出来的 Screen 在 registry 有条目、
+  // workflow 却没有对应 stage，只能是回滚不完整的双重故障残留。识别即阻断
+  //（切换/再复制/管线操作都不得继续），给出同一份恢复说明；只检测，不做
+  // 启动期自动修复。非克隆（无 duplicated_from_screen_id）的 Screen 不受影响。
+  async function assertClonedScreenConsistent(workspacePath, registry, screenId) {
+    const entry = registry.screens.find((screen) => screen.id === screenId);
+    if (!entry || !entry.duplicated_from_screen_id) return;
+    const state = await readJson(path.join(workspacePath, 'workflow', 'state.json'), null);
+    if (state?.screen_stages?.[screenId]) return;
+    throw Object.assign(new Error(`检测到 Clone 不一致状态：Screen ${screenId} 在 registry 有条目但 workflow 无对应 stage（疑似 Clone 双重故障残留）。恢复方式：检查 workflow/transactions/ 下的 clone-* 事务备份，还原 screens/index.json 与 workflow/state.json，或删除该 Screen 的残留目录与 registry 条目。`), {
+      code: ERROR_CODES.CLONE_ROLLBACK_INCOMPLETE,
+      target_screen_id: screenId,
+      failed_step: 'consistency-check'
+    });
+  }
+
   async function duplicateScreen(projectId, screenId, input = {}) {
     const project = await resolveProject(projectId);
     const registry = await listScreens(projectId);
     const source = registry.screens.find((screen) => screen.id === screenId && screen.status !== 'archived');
     if (!source) throw new Error(`Screen not found or archived: ${screenId}`);
     const id = slugify(input.id || input.name || `${screenId}-copy`);
-    if (registry.screens.some((screen) => screen.id === id)) throw new Error(`Screen already exists: ${id}`);
+    const existing = registry.screens.find((screen) => screen.id === id);
+    if (existing) {
+      // M4-K2 Fail-Closed：已存在条目若缺 workflow stage，属于双重故障残留，
+      // 先给出结构化恢复指引，而不是让“Screen already exists”掩盖它。
+      await assertClonedScreenConsistent(project.workspacePath, registry, id);
+      throw new Error(`Screen already exists: ${id}`);
+    }
     const now = new Date().toISOString();
     const targetDir = path.join(project.workspacePath, 'screens', id);
+    const indexPath = path.join(project.workspacePath, 'screens', 'index.json');
+    const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
     // M4-J2：registry 中不存在的同名目录只能是上次失败 Clone 的残留，
     // 先清理，保证重试不会合并到残留目录。
     if (await fs.stat(targetDir).catch(() => null)) await fs.rm(targetDir, { recursive: true, force: true });
-    // M4-J2：Clone 是原子操作——复制与迁移任一步失败（含非法证据路径的
-    // 显式失败）都删除部分复制的目标目录，不写 Screen registry。
+    // M4-K2（审核者 §8.4 终稿）：Clone 是全事务——目录、Workflow、Registry
+    // 任一写入失败都自动回滚（还原备份 + 删除目录）；回滚前先把原始
+    // index/state 字节备份到事务目录；发布顺序为目录→Workflow→Registry，
+    // Registry 是最后发布点，把「已发布但未完成」的窗口压到最小。
+    const transactionId = randomUUID();
+    const transactionDir = path.join(project.workspacePath, 'workflow', 'transactions', `clone-${transactionId}`);
+    const registryBackupPath = path.join(transactionDir, 'screens-index.before.json');
+    const workflowBackupPath = path.join(transactionDir, 'workflow-state.before.json');
+    const tx = { targetDirCreated: false, backupsCreated: false, workflowWriteAttempted: false, registryWriteAttempted: false, step: 'copy-target-directory', completed: [] };
+    const entry = { id, name: String(input.name || `${source.name} · 副本`), status: 'active', input_mode: 'own', duplicated_from_screen_id: screenId, created_at: now, updated_at: now };
     const renames = new Map();
     try {
       await fs.cp(path.join(project.workspacePath, 'screens', screenId), targetDir, { recursive: true });
+      tx.targetDirCreated = true;
+      tx.completed.push('target-directory-copied');
+      tx.step = 'reject-symlinks';
+      await rejectClonedTreeSymlinks(targetDir);
+      tx.completed.push('symlink-policy-checked');
+      tx.step = 'rename-screen-prefixed-files';
       // M4-I1：先重命名带原 Screen 前缀的物理文件，后续所有 JSON 重写共享
       // 映射表，路径字符串与物理文件名保持一致。
       await renameClonedFiles(targetDir, screenId, id, renames);
+      tx.step = 'migrate-artifacts';
       await migrateClonedScreenArtifacts(project.workspacePath, screenId, id, renames);
+      tx.step = 'write-inputs';
       // AUD-13：inputs.json 内的 wireframe_path 等路径指向原 Screen 目录，
       // 副本必须重写到自己的目录（provenance 字段在其后覆盖，不受影响）。
       const copiedInput = rewriteScreenClone(await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id)), screenId, id, CLONE_COMMON_REF_KEYS, '', renames);
       await writeJson(screenInputPath(project.workspacePath, id), { ...copiedInput, screen_id: id, input_mode: 'own', duplicated_from_screen_id: screenId, updated_at: now });
+      tx.completed.push('artifacts-migrated');
+      tx.step = 'prepare-transaction-backups';
+      // P1-09：副本 workflow 继承原 Screen 进度，但 approved 阶段同步降级为
+      // reviewed，与 Artifact 降级策略保持一致。
+      // AUD-13：stage 的 output 等路径字段直接从原 Screen 复制会指向原目录，
+      // 必须与 Artifact 同一套 rewriter 统一改写。
+      const state = await readJson(statePath, defaultWorkflow(projectId));
+      const clonedStages = Object.fromEntries(Object.entries(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main).map(([stage, stageEntry]) => {
+        if (!stageEntry) return [stage, stageEntry];
+        let rewritten = rewriteScreenClone(stageEntry, screenId, id, CLONE_COMMON_REF_KEYS, '', renames);
+        if (rewritten.status === 'approved' || rewritten.status === 'passed') rewritten = { ...rewritten, status: 'reviewed' };
+        return [stage, rewritten];
+      }));
+      const newState = { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: clonedStages }, updated_at: now };
+      const newRegistry = { ...registry, screens: [...registry.screens, entry] };
+      // 回滚依据：原始字节备份与事务上下文先落盘，再动共享文件。
+      await fs.mkdir(transactionDir, { recursive: true });
+      await fs.writeFile(registryBackupPath, await fs.readFile(indexPath));
+      await fs.writeFile(workflowBackupPath, await fs.readFile(statePath));
+      await writeJson(path.join(transactionDir, 'clone-context.json'), {
+        status: 'in-progress', transaction_id: transactionId, project_id: projectId,
+        source_screen_id: screenId, target_screen_id: id, started_at: now,
+        completed_steps: tx.completed
+      });
+      tx.backupsCreated = true;
+      tx.completed.push('transaction-backups-written');
+      // 发布：先 Workflow，最后 Registry（发布点）。
+      tx.step = 'workflow-update';
+      tx.workflowWriteAttempted = true;
+      await writeJson(statePath, newState);
+      tx.completed.push('workflow-updated');
+      tx.step = 'registry-publish';
+      tx.registryWriteAttempted = true;
+      await writeJson(indexPath, newRegistry);
+      tx.completed.push('registry-published');
+      // 成功：事务目录完成使命即删除，仅回滚失败时才保留。
+      await fs.rm(transactionDir, { recursive: true, force: true });
+      return entry;
     } catch (error) {
-      await fs.rm(targetDir, { recursive: true, force: true }).catch(() => {});
+      const rollbackFailures = [];
+      if (tx.targetDirCreated) {
+        await fs.rm(targetDir, { recursive: true, force: true }).catch((rollbackError) => rollbackFailures.push(`remove target directory: ${rollbackError.message}`));
+      }
+      if (tx.backupsCreated) {
+        if (tx.workflowWriteAttempted) {
+          await fs.copyFile(workflowBackupPath, statePath).catch((rollbackError) => rollbackFailures.push(`restore workflow/state.json: ${rollbackError.message}`));
+        }
+        if (tx.registryWriteAttempted) {
+          await fs.copyFile(registryBackupPath, indexPath).catch((rollbackError) => rollbackFailures.push(`restore screens/index.json: ${rollbackError.message}`));
+        }
+      }
+      if (rollbackFailures.length) {
+        // 双重故障：回滚自身失败。诊断记录 best-effort——写不下也不影响
+        // 结构化错误携带全部恢复信息；不做启动期自动恢复。
+        await writeJson(path.join(transactionDir, 'clone-context.json'), {
+          status: 'rollback-incomplete', transaction_id: transactionId, project_id: projectId,
+          source_screen_id: screenId, target_screen_id: id, completed_steps: tx.completed,
+          failed_step: tx.step, rollback_failures: rollbackFailures,
+          backups: { screen_registry: registryBackupPath, workflow_state: workflowBackupPath }
+        }).catch(() => {});
+        throw cloneRollbackIncompleteError({
+          transaction_id: transactionId, project_id: projectId,
+          source_screen_id: screenId, target_screen_id: id,
+          failed_step: tx.step, rollback_failures: rollbackFailures, completed_steps: tx.completed,
+          target_dir: targetDir, registry_path: indexPath, workflow_path: statePath,
+          registry_backup: registryBackupPath, workflow_backup: workflowBackupPath,
+          transaction_dir: transactionDir
+        });
+      }
+      // 正常回滚成功：清理事务目录，原样抛出主操作错误。
+      if (tx.backupsCreated) await fs.rm(transactionDir, { recursive: true, force: true }).catch(() => {});
       throw error;
     }
-    const entry = { id, name: String(input.name || `${source.name} · 副本`), status: 'active', input_mode: 'own', duplicated_from_screen_id: screenId, created_at: now, updated_at: now };
-    await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, screens: [...registry.screens, entry] });
-    const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
-    const state = await readJson(statePath, defaultWorkflow(projectId));
-    // P1-09：副本 workflow 继承原 Screen 进度，但 approved 阶段同步降级为
-    // reviewed，与 Artifact 降级策略保持一致。
-    // AUD-13：stage 的 output 等路径字段直接从原 Screen 复制会指向原目录，
-    // 必须与 Artifact 同一套 rewriter 统一改写。
-    const clonedStages = Object.fromEntries(Object.entries(state.screen_stages?.[screenId] || defaultWorkflow(projectId).screen_stages.main).map(([stage, stageEntry]) => {
-      if (!stageEntry) return [stage, stageEntry];
-      let rewritten = rewriteScreenClone(stageEntry, screenId, id, CLONE_COMMON_REF_KEYS, '', renames);
-      if (rewritten.status === 'approved' || rewritten.status === 'passed') rewritten = { ...rewritten, status: 'reviewed' };
-      return [stage, rewritten];
-    }));
-    await writeJson(statePath, { ...state, screen_stages: { ...(state.screen_stages || {}), [id]: clonedStages }, updated_at: now });
-    return entry;
   }
 
   async function setActiveScreen(projectId, screenId) {
@@ -813,6 +954,8 @@ function createProjectStore(options = {}) {
     const registry = await listScreens(projectId);
     const screen = registry.screens.find((item) => item.id === screenId && item.status !== 'archived');
     if (!screen) throw new Error(`Screen not found or archived: ${screenId}`);
+    // M4-K2 Fail-Closed：切换 Screen 时识别 Clone 双重故障残留并阻断。
+    await assertClonedScreenConsistent(project.workspacePath, registry, screenId);
     const now = new Date().toISOString();
     await writeJson(path.join(project.workspacePath, 'screens', 'index.json'), { ...registry, active_screen_id: screenId });
     const stored = await readJson(path.join(project.workspacePath, 'project.json'), {});
@@ -835,7 +978,13 @@ function createProjectStore(options = {}) {
     return screens[index];
   }
 
-  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow, resolveProject, hydrate, listScreens, createScreen, duplicateScreen, setActiveScreen, updateScreen };
+  async function assertClonedScreenConsistentFor(projectId, screenId) {
+    const project = await resolveProject(projectId);
+    const registry = await listScreens(projectId);
+    await assertClonedScreenConsistent(project.workspacePath, registry, screenId);
+  }
+
+  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow, resolveProject, hydrate, listScreens, createScreen, duplicateScreen, setActiveScreen, updateScreen, assertClonedScreenConsistent: assertClonedScreenConsistentFor };
 }
 
 module.exports = { createProjectStore };

@@ -27,6 +27,12 @@
 | `SCREEN_NOT_FOUND` | `electron/services/designPipeline.cjs` | Screen 不存在或已归档 | 检查 Screen 列表，切换到有效 Screen |
 | `SCREEN_CONTEXT_MISMATCH` | `electron/services/designPipeline.cjs` | 活跃 Screen 与请求 Screen 不一致 | 先 `setActiveScreen` 再执行管线 |
 
+### Clone 事务完整性（M4-K2）
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `CLONE_ROLLBACK_INCOMPLETE` | `electron/services/projectStore.cjs` / `electron/services/designPipeline.cjs` | Clone 主操作失败后回滚自身也失败（目录/备份无法还原），或检测到「Registry 有条目但 Workflow 无对应 stage」的 Clone 不一致状态（Fail-Closed，不自动修复） | 按错误携带的事务信息与 `workflow/transactions/clone-*` 备份执行手工恢复：还原 `screens/index.json` 与 `workflow/state.json` 备份、删除残留目标 Screen 目录；不做启动期自动恢复 |
+
 ### 布局与绑定门禁
 
 | 错误码 | 抛出模块 | 触发条件 | 恢复动作 |

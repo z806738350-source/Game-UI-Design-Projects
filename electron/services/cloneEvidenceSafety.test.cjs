@@ -50,7 +50,7 @@ test('M4-J2：父路径穿越的证据路径使 Clone 显式失败并整体回�
   }
 });
 
-test('M4-J2：symlink 逃逸的证据路径被 realpath containment 拒绝', async () => {
+test('M4-J2/M4-K2：symlink 逃逸的证据路径被拒绝（全树策略为第一道防线，realpath containment 兜底）', async () => {
   const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-clone-symlink-'));
   const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
   process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
@@ -68,7 +68,9 @@ test('M4-J2：symlink 逃逸的证据路径被 realpath containment 拒绝', asy
     }));
     await assert.rejects(
       projectStore.duplicateScreen(project.id, 'main', { id: 'battle' }),
-      (error) => /escapes via symlink/.test(error.message)
+      // M4-K2 起，目标树中的任何 symlink 都在迁移前被整体拒绝（比证据
+      // 级 realpath containment 更早一层）；两道防线任一命中即阻断。
+      (error) => /symlink/.test(error.message)
     );
     await assertCloneRolledBack(projectStore, project.id, 'battle');
   } finally {
