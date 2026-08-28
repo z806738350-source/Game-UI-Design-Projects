@@ -163,3 +163,34 @@ test('M4-L（审核 §7）：fs.cp 中途失败立即清理部分目录，同 ID
     await fs.rm(temporaryRoot, { recursive: true, force: true });
   }
 });
+
+test('M4 收尾（审核 §8.4）：源 Screen 生成进行中禁止复制，生成结束后复制可用', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-conc-inprogress-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const { projectStore, project } = await setupProject('Conc InProgress');
+    const resolved = await projectStore.resolveProject(project.id);
+    const statePath = path.join(resolved.workspacePath, 'workflow', 'state.json');
+    // 模拟源 Screen 有阶段正在生成。
+    const state = JSON.parse(await fs.readFile(statePath, 'utf8'));
+    state.screen_stages.main = { ...(state.screen_stages.main || {}), wireframe_interpretation: { status: 'in_progress' } };
+    await fs.writeFile(statePath, JSON.stringify(state, null, 2));
+    await assert.rejects(
+      projectStore.duplicateScreen(project.id, 'main', { id: 'battle' }),
+      (error) => /正在生成中/.test(error.message)
+    );
+    const registry = await projectStore.listScreens(project.id);
+    assert.equal(registry.screens.some((screen) => screen.id === 'battle'), false, '生成中的复制不得发布条目');
+    await assert.rejects(fs.stat(path.join(resolved.workspacePath, 'screens', 'battle')), '生成中的复制不得残留目标目录');
+    // 生成结束（阶段回到 draft）后复制照常可用。
+    state.screen_stages.main.wireframe_interpretation = { status: 'draft' };
+    await fs.writeFile(statePath, JSON.stringify(state, null, 2));
+    const entry = await projectStore.duplicateScreen(project.id, 'main', { id: 'battle' });
+    assert.equal(entry.id, 'battle');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
