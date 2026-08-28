@@ -25,6 +25,21 @@ export const ROLE_POLICIES: Record<string, { allowed_categories: string[]; allow
 // created with it, and migrated 'action' controls must be resolved explicitly.
 export const CONTROL_ROLE_OPTIONS = Object.keys(ROLE_POLICIES).filter((role) => role !== 'action');
 
+// 角色词表的简体中文展示标签：仅用于前端下拉/列表提示，写入契约的 role
+// 值仍是英文受控词表键，后端语义不变。
+export const CONTROL_ROLE_LABELS: Record<string, string> = {
+  'primary-action': '主操作按钮',
+  'secondary-action': '次级操作按钮',
+  navigation: '导航入口',
+  tab: '页签切换',
+  resource: '资源条',
+  'icon-action': '图标按钮',
+  'status-badge': '状态徽标',
+  'list-row': '列表行',
+  'content-panel': '内容面板',
+  action: '通用操作（待语义解析）'
+};
+
 type BindingChoice = { component_id: string; state: string; font_role: string };
 type Control = { id: string; label: string; role?: string; required?: boolean };
 
