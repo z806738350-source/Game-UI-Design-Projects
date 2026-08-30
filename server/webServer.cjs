@@ -11,11 +11,27 @@ const { hashBuffer, resolveProjectPath } = require('../electron/services/composi
 const { assertFinalDeliveryReady } = require('../electron/services/finalDeliveryGate.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
 const kunpoClient = require('../electron/services/kunpoClient.cjs');
+const { ERROR_CODES } = require('../electron/services/errorCodes.cjs');
 
 const MAX_JSON_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const STATE_TTL_SECONDS = 10 * 60;
+
+// v1.4 §11.2：Intent 业务错误码 → HTTP 状态。并发/陈旧/已取代类映射 409，
+// 校验/门禁类映射 422，历史不存在映射 404；请求体超限由 readBody 直接 413。
+const INTENT_HTTP_STATUS = {
+  [ERROR_CODES.INTENT_REVISION_CONFLICT]: 409,
+  [ERROR_CODES.INTENT_CANDIDATE_REPLACEMENT_REQUIRED]: 409,
+  [ERROR_CODES.INTENT_CANDIDATE_STALE]: 409,
+  [ERROR_CODES.INTENT_REQUEST_SUPERSEDED]: 409,
+  [ERROR_CODES.INTENT_ANALYSIS_STALE]: 409,
+  [ERROR_CODES.INTENT_GENERATION_INTERRUPTED]: 409,
+  [ERROR_CODES.INTENT_REVIEW_INCOMPLETE]: 422,
+  [ERROR_CODES.INTENT_ANALYSIS_INVALID]: 422,
+  [ERROR_CODES.INTENT_HISTORY_LIMIT_REACHED]: 422,
+  [ERROR_CODES.INTENT_HISTORY_VERSION_NOT_FOUND]: 404
+};
 
 function base64url(value) {
   return Buffer.from(value).toString('base64url');
@@ -345,7 +361,7 @@ function createApplication(environment = process.env) {
   async function handleApi(request, response, url, session) {
     enforceOrigin(request);
     const context = tenantContext(session.tenant_id);
-    const { projectStore, designPipeline, kunpoConfig } = context;
+    const { projectStore, intentStateStore, designPipeline, kunpoConfig } = context;
     const binaryUpload = url.pathname.endsWith('/import') || /\/assets\/(font|component|forge-manifest)$/.test(url.pathname);
     const body = ['POST', 'PUT', 'PATCH'].includes(request.method) && !binaryUpload ? await readJsonBody(request) : {};
     let value;
@@ -430,7 +446,34 @@ function createApplication(environment = process.env) {
       else if (request.method === 'PATCH' && suffix.startsWith('/screens/')) value = await projectStore.updateScreen(projectId, decodeURIComponent(suffix.slice('/screens/'.length)), body);
       else if (request.method === 'POST' && suffix === '/pipeline/run') value = await designPipeline.runStage(projectId, body.stage, body.input);
       else if (request.method === 'POST' && suffix === '/requirement/draft') value = await designPipeline.draftRequirement(projectId, body);
-      else if (request.method === 'POST' && suffix === '/pipeline/cancel') value = await designPipeline.cancelStage(projectId, body.stage, body);
+      // v1.4 §11.1：structured-v2 Intent 同义接口，与桌面端调用同一
+      // pipeline / intentStateStore 业务方法；mutation 后统一回传最新项目。
+      else if (request.method === 'POST' && suffix === '/intent/generate') {
+        await designPipeline.prefillIntent(projectId, body);
+        value = await projectStore.open(projectId, { screenId: body.screenId });
+      } else if (request.method === 'POST' && suffix === '/intent/review/save') {
+        await intentStateStore.saveIntentReview(projectId, body.screenId, body);
+        value = await projectStore.open(projectId, { screenId: body.screenId });
+      } else if (request.method === 'POST' && suffix === '/intent/review/confirm') {
+        await intentStateStore.confirmIntentReview(projectId, body.screenId, body);
+        value = await projectStore.open(projectId, { screenId: body.screenId });
+      } else if (request.method === 'POST' && suffix === '/intent/candidate/adopt') {
+        await intentStateStore.adoptIntentCandidate(projectId, body.screenId, body);
+        value = await projectStore.open(projectId, { screenId: body.screenId });
+      } else if (request.method === 'POST' && suffix === '/intent/candidate/discard') {
+        await intentStateStore.discardIntentCandidate(projectId, body.screenId, body);
+        value = await projectStore.open(projectId, { screenId: body.screenId });
+      } else if (request.method === 'GET' && suffix === '/intent/candidate') {
+        value = await intentStateStore.getIntentCandidate(projectId, url.searchParams.get('screenId'));
+      } else if (request.method === 'GET' && suffix === '/intent/history') {
+        value = await intentStateStore.listIntentHistory(projectId, url.searchParams.get('screenId'));
+      } else if (request.method === 'POST' && suffix === '/intent/history/restore') {
+        await intentStateStore.restoreIntentHistory(projectId, body.screenId, body);
+        value = await projectStore.open(projectId, { screenId: body.screenId });
+      } else if (request.method === 'POST' && suffix === '/intent/history/delete') {
+        await intentStateStore.deleteIntentHistory(projectId, body.screenId, body);
+        value = await projectStore.open(projectId, { screenId: body.screenId });
+      } else if (request.method === 'POST' && suffix === '/pipeline/cancel') value = await designPipeline.cancelStage(projectId, body.stage, body);
       else if (request.method === 'POST' && suffix === '/pipeline/approve') value = await designPipeline.approveArtifact(projectId, body.kind, body.input);
       else if (request.method === 'POST' && suffix === '/pipeline/repair-route-cycle') value = await context.flowStateRepair.repairRouteCycle(projectId, body).then(() => projectStore.open(projectId, { includePreviews: false, screenId: body.screenId }));
       else if (request.method === 'PATCH' && suffix === '/artifact') value = await designPipeline.updateArtifact(projectId, body.kind, body.patch);
@@ -516,7 +559,7 @@ function createApplication(environment = process.env) {
       if (request.method === 'HEAD') return response.end();
       response.end(await fs.readFile(filePath));
     } catch (error) {
-      const status = Number(error.status) || 500;
+      const status = Number(error.status) || INTENT_HTTP_STATUS[error.code] || 500;
       if (!response.headersSent) sendJson(response, status, { error: status >= 500 && !error.code ? 'internal_error' : error.message, ...(error.code ? { code: error.code } : {}), ...(error.stage ? { stage: error.stage } : {}), ...(error.missing_requirements ? { missing_requirements: error.missing_requirements } : {}) });
       else response.destroy();
       const safeMessage = String(error?.message || 'unknown error').replace(/[?&](code|state|token)=[^&\s]+/gi, '$1=[redacted]');

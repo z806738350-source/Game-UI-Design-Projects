@@ -83,6 +83,60 @@ export type ScreenEntry = {
 
 export type ScreenControl = { id: string; label: string; role: string; required: boolean; migrated_from_label?: string };
 
+// v1.4 structured-v2 Intent 状态（六段评审、候选、历史与生成态）。
+export type IntentMode = 'legacy' | 'structured-v2';
+
+export type IntentReview = {
+  page_purpose?: Record<string, unknown>;
+  player_tasks?: Array<Record<string, unknown>>;
+  core_flow?: Array<Record<string, unknown>>;
+  visible_controls?: Array<Record<string, unknown>>;
+  visible_information_and_states?: Array<Record<string, unknown>>;
+  uncertainties?: Array<Record<string, unknown>>;
+  source_analysis_id?: string | null;
+  source_wireframe_revision?: number;
+  revision?: number;
+  confirmed_at?: string | null;
+} & Record<string, unknown>;
+
+export type IntentGeneration = {
+  request_id: string;
+  status: 'running' | 'ready' | 'failed' | 'superseded' | 'interrupted' | string;
+  purpose?: 'first-draft' | 'candidate' | string;
+  wireframe_revision?: number;
+  project_type?: string;
+  started_at?: string;
+  finished_at?: string | null;
+  error_code?: string | null;
+};
+
+export type IntentCandidate = {
+  schema_version?: string;
+  candidate_id: string;
+  request_id?: string;
+  screen_id?: string;
+  status?: 'ready' | string;
+  generated_at?: string;
+  source_context?: { wireframe_revision?: number; project_type?: string };
+  base_current_revisions?: Record<string, number>;
+  analysis?: Record<string, unknown>;
+  review?: IntentReview;
+  warnings?: string[];
+};
+
+export type IntentHistoryEntry = {
+  history_id: string;
+  screen_id?: string;
+  created_at?: string;
+  reason?: string;
+  was_confirmed?: boolean;
+  wireframe_revision?: number;
+  requirement_revision?: number;
+  intent_review_revision?: number;
+  intent_context_revision?: number;
+  intent_context_hash?: string | null;
+};
+
 export type DesignProject = {
   id: string;
   name: string;
@@ -92,7 +146,13 @@ export type DesignProject = {
   requirement: string;
   requirement_source?: 'none' | 'user' | 'ai';
   requirement_confirmed?: boolean;
-  intent_analysis?: { requirement_draft?: string; inferred_page_type?: string; inferred_rules?: string[]; uncertainties?: string[]; generated_at?: string };
+  intent_analysis?: { requirement_draft?: string; inferred_page_type?: string; inferred_rules?: string[]; uncertainties?: string[]; generated_at?: string } & Record<string, unknown>;
+  // v1.4 structured-v2：structured-v2 下 intent_analysis 为归一化分析对象，
+  // 真实形态以服务端为准，此处仅保证字段可访问。
+  intent_mode?: IntentMode;
+  intent_review?: IntentReview | null;
+  intent_generation?: IntentGeneration | null;
+  intent_context?: { revision: number; hash: string } | null;
   screen_id: string;
   active_screen_id?: string;
   screens?: ScreenEntry[];

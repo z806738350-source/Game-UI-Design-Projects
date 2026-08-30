@@ -1,6 +1,24 @@
-import type { AppConfig, CreateProjectInput, DesignProject, ProjectSummary } from './types';
+import type { AppConfig, CreateProjectInput, DesignProject, IntentCandidate, IntentReview, ProjectSummary } from './types';
 
 const previewProjects: DesignProject[] = [];
+const previewIntentCandidates = new Map<string, IntentCandidate>();
+const previewCandidateKey = (id: string, screenId: string) => `${id}::${screenId}`;
+
+// 预览模式的 structured-v2 草稿：只模拟形状与状态机，不模拟真实分析。
+function previewIntentDraft(): IntentReview {
+  return {
+    page_purpose: { text: 'AI 预填：让玩家快速理解当前页面的核心目标。', evidence: 'preview', designer_modified: false },
+    player_tasks: [{ text: 'AI 预填：确认页面主任务并完成关键操作。', evidence: 'preview', designer_modified: false }],
+    core_flow: [{ text: 'AI 预填：进入页面 → 完成主操作 → 离开。', evidence: 'preview', designer_modified: false }],
+    visible_controls: [{ text: 'AI 预填：主操作按钮', evidence: 'preview', designer_modified: false }],
+    visible_information_and_states: [{ text: 'AI 预填：默认态与禁用态说明', evidence: 'preview', designer_modified: false }],
+    uncertainties: []
+  };
+}
+
+function previewRevisionError(): Error {
+  return Object.assign(new Error('Intent Review 已被更新，请刷新后基于最新版本重试。'), { code: 'INTENT_REVISION_CONFLICT' });
+}
 
 function previewApi(): DesignCopilotApi {
   const find = (id: string) => {
@@ -74,6 +92,88 @@ function previewApi(): DesignCopilotApi {
       project.workflow.stages.input = { status: 'reviewed' };
       return project;
     },
+    // v1.4 §11.1：预览模式的 structured-v2 同义接口（内存模拟）。
+    generateIntentCandidate: async (id, screenId) => {
+      const project = find(id);
+      if (!project.wireframe_path) throw new Error('请先导入 UE Wireframe。');
+      const now = new Date().toISOString();
+      const requestId = `preview-intent-${Date.now()}`;
+      const screenKey = screenId || project.screen_id;
+      if (previewIntentCandidates.has(previewCandidateKey(id, screenKey))) {
+        throw Object.assign(new Error('已存在待处理的 Intent candidate，请先采用或丢弃。'), { code: 'INTENT_CANDIDATE_REPLACEMENT_REQUIRED' });
+      }
+      if (project.intent_review) {
+        previewIntentCandidates.set(previewCandidateKey(id, screenKey), {
+          candidate_id: `preview-candidate-${Date.now()}`, request_id: requestId, screen_id: screenKey, status: 'ready', generated_at: now,
+          source_context: { wireframe_revision: project.input_revisions?.wireframe ?? 0, project_type: project.project_type },
+          base_current_revisions: { requirement: project.input_revisions?.requirement ?? 0, intent_review: project.input_revisions?.intent_review ?? 0, intent_context: project.input_revisions?.intent_context ?? 0 },
+          review: previewIntentDraft(), warnings: []
+        });
+        project.intent_generation = { request_id: requestId, status: 'ready', purpose: 'candidate', finished_at: now, error_code: null };
+      } else {
+        project.intent_mode = 'structured-v2';
+        project.intent_review = { ...previewIntentDraft(), revision: 1, confirmed_at: null };
+        project.intent_generation = { request_id: requestId, status: 'ready', purpose: 'first-draft', finished_at: now, error_code: null };
+        project.requirement = '这是 AI 基于 UE 线框预填的结构化设计意图草稿。请逐段确认页面目标、玩家任务、核心流程、可见控件与信息状态后继续。';
+        project.requirement_source = 'ai';
+        project.requirement_confirmed = false;
+      }
+      project.workflow.current_stage = 'input';
+      project.workflow.stages.input = { status: 'reviewed' };
+      return project;
+    },
+    saveIntentReview: async (id, input) => {
+      const project = find(id);
+      const current = Number(project.input_revisions?.intent_review ?? 0);
+      if (!Number.isFinite(Number(input.expectedIntentReviewRevision)) || Number(input.expectedIntentReviewRevision) !== current) throw previewRevisionError();
+      const revision = current + 1;
+      project.intent_mode = 'structured-v2';
+      project.intent_review = { ...input.draft, revision, confirmed_at: null };
+      project.requirement = `【Intent Review】revision ${revision}（预览模拟渲染，以服务端渲染为准）`;
+      project.requirement_source = 'user';
+      project.requirement_confirmed = false;
+      project.input_revisions = { ...(project.input_revisions || {}), intent_review: revision, requirement: (project.input_revisions?.requirement ?? 0) + 1 };
+      return project;
+    },
+    confirmIntentReview: async (id, input) => {
+      const project = find(id);
+      if (!project.intent_review) throw Object.assign(new Error('当前 Screen 没有可确认的 Intent Review。'), { code: 'INTENT_REVIEW_INCOMPLETE' });
+      const current = Number(project.input_revisions?.intent_review ?? 0);
+      if (!Number.isFinite(Number(input.expectedIntentReviewRevision)) || Number(input.expectedIntentReviewRevision) !== current) throw previewRevisionError();
+      project.intent_review = { ...project.intent_review, confirmed_at: new Date().toISOString() };
+      project.requirement_confirmed = true;
+      return project;
+    },
+    adoptIntentCandidate: async (id, input) => {
+      const project = find(id);
+      const candidate = previewIntentCandidates.get(previewCandidateKey(id, input.screenId || project.screen_id));
+      if (!candidate || candidate.candidate_id !== input.candidateId) throw Object.assign(new Error('Intent candidate 不存在或已被处理。'), { code: 'INTENT_CANDIDATE_STALE' });
+      const current = Number(project.input_revisions?.intent_review ?? 0);
+      if (!Number.isFinite(Number(input.expectedIntentReviewRevision)) || Number(input.expectedIntentReviewRevision) !== current) throw previewRevisionError();
+      previewIntentCandidates.delete(previewCandidateKey(id, input.screenId || project.screen_id));
+      const revision = current + 1;
+      project.intent_mode = 'structured-v2';
+      project.intent_review = { ...(candidate.review || {}), revision, confirmed_at: null };
+      project.requirement = `【Intent Review】revision ${revision}（预览模拟渲染，以服务端渲染为准）`;
+      project.requirement_source = 'ai';
+      project.requirement_confirmed = false;
+      project.input_revisions = { ...(project.input_revisions || {}), intent_review: revision, requirement: (project.input_revisions?.requirement ?? 0) + 1 };
+      if (project.intent_generation && candidate.request_id && project.intent_generation.request_id === candidate.request_id) project.intent_generation = { ...project.intent_generation, status: 'superseded' };
+      return project;
+    },
+    discardIntentCandidate: async (id, input) => {
+      const project = find(id);
+      const key = previewCandidateKey(id, input.screenId || project.screen_id);
+      const candidate = previewIntentCandidates.get(key);
+      if (!candidate || candidate.candidate_id !== input.candidateId) throw Object.assign(new Error('Intent candidate 不存在或已被处理。'), { code: 'INTENT_CANDIDATE_STALE' });
+      previewIntentCandidates.delete(key);
+      if (project.intent_generation && candidate.request_id && project.intent_generation.request_id === candidate.request_id) project.intent_generation = { ...project.intent_generation, status: 'superseded' };
+      return project;
+    },
+    getIntentCandidate: async (id, screenId) => previewIntentCandidates.get(previewCandidateKey(id, screenId || find(id).screen_id)) ?? null,
+    listIntentHistory: async () => [],
+    restoreIntentHistory: async () => { throw Object.assign(new Error('预览模式没有可恢复的历史版本。'), { code: 'INTENT_HISTORY_VERSION_NOT_FOUND' }); },
+    deleteIntentHistory: async () => { throw Object.assign(new Error('预览模式没有可删除的历史版本。'), { code: 'INTENT_HISTORY_VERSION_NOT_FOUND' }); },
     cancelStage: async (id) => find(id),
     approveArtifact: async (id, kind) => {
       const project = find(id);
@@ -195,6 +295,16 @@ function webApi(): DesignCopilotApi {
     openUserGuide: async () => ({ ok: false }),
     runStage: (id, stage, input) => request(`${projectPath(id)}/pipeline/run`, { method: 'POST', body: JSON.stringify({ stage, input }) }),
     draftRequirement: (id, screenId) => request(`${projectPath(id)}/requirement/draft`, { method: 'POST', body: JSON.stringify({ screenId }) }),
+    // v1.4 §11.1：structured-v2 Intent 同义路由（与桌面端同一业务方法）。
+    generateIntentCandidate: (id, screenId) => request(`${projectPath(id)}/intent/generate`, { method: 'POST', body: JSON.stringify({ screenId }) }),
+    saveIntentReview: (id, input) => request(`${projectPath(id)}/intent/review/save`, { method: 'POST', body: JSON.stringify(input) }),
+    confirmIntentReview: (id, input) => request(`${projectPath(id)}/intent/review/confirm`, { method: 'POST', body: JSON.stringify(input) }),
+    adoptIntentCandidate: (id, input) => request(`${projectPath(id)}/intent/candidate/adopt`, { method: 'POST', body: JSON.stringify(input) }),
+    discardIntentCandidate: (id, input) => request(`${projectPath(id)}/intent/candidate/discard`, { method: 'POST', body: JSON.stringify(input) }),
+    getIntentCandidate: (id, screenId) => request(`${projectPath(id)}/intent/candidate?screenId=${encodeURIComponent(screenId)}`),
+    listIntentHistory: (id, screenId) => request(`${projectPath(id)}/intent/history?screenId=${encodeURIComponent(screenId)}`),
+    restoreIntentHistory: (id, screenId, input) => request(`${projectPath(id)}/intent/history/restore`, { method: 'POST', body: JSON.stringify({ screenId, ...input }) }),
+    deleteIntentHistory: (id, screenId, input) => request(`${projectPath(id)}/intent/history/delete`, { method: 'POST', body: JSON.stringify({ screenId, ...input }) }),
     cancelStage: (id, stage, screenId) => request(`${projectPath(id)}/pipeline/cancel`, { method: 'POST', body: JSON.stringify({ stage, screenId }) }),
     approveArtifact: (id, kind, input) => request(`${projectPath(id)}/pipeline/approve`, { method: 'POST', body: JSON.stringify({ kind, input }) }),
     repairRouteCycle: (id, input) => request(`${projectPath(id)}/pipeline/repair-route-cycle`, { method: 'POST', body: JSON.stringify(input) }),
@@ -284,6 +394,15 @@ export const copilotApi = {
   openUserGuide: () => api().openUserGuide(),
   runStage: async (id: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject> => rememberScreen(await api().runStage(id, stage, withScreen(id, input))),
   draftRequirement: async (id: string, screenId?: string): Promise<DesignProject> => rememberScreen(await api().draftRequirement(id, screenIdFor(id, screenId))),
+  generateIntentCandidate: async (id: string, screenId?: string): Promise<DesignProject> => rememberScreen(await api().generateIntentCandidate(id, screenIdFor(id, screenId))),
+  saveIntentReview: async (id: string, input: { expectedIntentReviewRevision: number; draft: IntentReview; screenId?: string }): Promise<DesignProject> => rememberScreen(await api().saveIntentReview(id, withScreen(id, input))),
+  confirmIntentReview: async (id: string, input: { expectedIntentReviewRevision: number; screenId?: string }): Promise<DesignProject> => rememberScreen(await api().confirmIntentReview(id, withScreen(id, input))),
+  adoptIntentCandidate: async (id: string, input: { candidateId: string; expectedIntentReviewRevision: number; screenId?: string }): Promise<DesignProject> => rememberScreen(await api().adoptIntentCandidate(id, withScreen(id, input))),
+  discardIntentCandidate: async (id: string, input: { candidateId: string; screenId?: string }): Promise<DesignProject> => rememberScreen(await api().discardIntentCandidate(id, withScreen(id, input))),
+  getIntentCandidate: (id: string, screenId?: string): Promise<IntentCandidate | null> => api().getIntentCandidate(id, screenIdFor(id, screenId)),
+  listIntentHistory: (id: string, screenId?: string) => api().listIntentHistory(id, screenIdFor(id, screenId)),
+  restoreIntentHistory: async (id: string, screenId?: string, input?: { historyId: string; expectedIntentReviewRevision: number }): Promise<DesignProject> => rememberScreen(await api().restoreIntentHistory(id, screenIdFor(id, screenId), input as { historyId: string; expectedIntentReviewRevision: number })),
+  deleteIntentHistory: async (id: string, screenId?: string, input?: { historyId: string }): Promise<DesignProject> => rememberScreen(await api().deleteIntentHistory(id, screenIdFor(id, screenId), input as { historyId: string })),
   cancelStage: async (id: string, stage: PipelineStage, screenId?: string): Promise<DesignProject> => rememberScreen(await api().cancelStage(id, stage, screenIdFor(id, screenId))),
   approveArtifact: async (id: string, kind: 'reference-inventory' | 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'composition-manifest' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject> => rememberScreen(await api().approveArtifact(id, kind, withScreen(id, input))),
   repairRouteCycle: async (id: string, screenId?: string): Promise<DesignProject> => rememberScreen(await api().repairRouteCycle(id, withScreen(id, { screenId: screenIdFor(id, screenId) }))),

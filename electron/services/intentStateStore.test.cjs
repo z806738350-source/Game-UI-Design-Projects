@@ -109,6 +109,11 @@ async function readInputs(project, screenId = 'main') {
   return readJson(inputsPath(project, screenId), null);
 }
 
+async function reviewRevision(ctx, screenId = 'main') {
+  const inputs = await readInputs(ctx.project, screenId);
+  return Number(inputs?.input_revisions?.intent_review || 0);
+}
+
 async function rejectWithCode(promise, code) {
   await assert.rejects(promise, (error) => {
     assert.equal(error.code, code, `expected ${code}, got ${error.code}: ${error.message}`);
@@ -433,6 +438,58 @@ test('saveIntentReview enforces the expected revision (CAS)', async () => {
   }
 });
 
+test('missing expected revision is an explicit conflict on every intent mutation (§11.1)', async () => {
+  const ctx = await setup();
+  try {
+    const inputs = await adoptFirstDraft(ctx);
+    const draft = answeredDraft(inputs.intent_review);
+    // save / confirm / restore：缺失或非数字的 expected revision 必须显式报
+    // 冲突，而不是隐式落入 NaN≠current。
+    await assert.rejects(
+      ctx.intentStore.saveIntentReview(ctx.project.id, 'main', { draft }),
+      (error) => {
+        assert.equal(error.code, ERROR_CODES.INTENT_REVISION_CONFLICT);
+        assert.equal(error.expected, null);
+        assert.equal(error.current, inputs.input_revisions.intent_review);
+        assert.match(error.message, /缺少 expectedIntentReviewRevision/);
+        return true;
+      }
+    );
+    await rejectWithCode(
+      ctx.intentStore.confirmIntentReview(ctx.project.id, 'main', { expectedIntentReviewRevision: 'not-a-number' }),
+      ERROR_CODES.INTENT_REVISION_CONFLICT
+    );
+    const entries = await ctx.intentStore.listIntentHistory(ctx.project.id, 'main');
+    assert.ok(entries.length === 0, 'no history yet; restore still requires the revision first');
+    // adopt / restore：先制造候选与历史，再验证必填门禁。
+    const before = await readInputs(ctx.project);
+    await saveDraft(ctx, answeredDraft(before.intent_review, '制造历史'), before.input_revisions.intent_review);
+    const [entry] = await ctx.intentStore.listIntentHistory(ctx.project.id, 'main');
+    await rejectWithCode(
+      ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: entry.history_id }),
+      ERROR_CODES.INTENT_REVISION_CONFLICT
+    );
+  } finally {
+    await ctx.cleanup();
+  }
+});
+
+test('adopting a candidate without expected revision is rejected even when the baseline matches', async () => {
+  const ctx = await setup({ requirement: '手工需求' });
+  try {
+    const candidateId = await generateCandidate(ctx);
+    await rejectWithCode(
+      ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId }),
+      ERROR_CODES.INTENT_REVISION_CONFLICT
+    );
+    // 补上必填字段后同一候选仍可正常采用。
+    const result = await ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId, expectedIntentReviewRevision: await reviewRevision(ctx) });
+    assert.equal(result.adopted, true);
+  } finally {
+    await ctx.cleanup();
+  }
+});
+
 test('answering an uncertainty keeps the Intent Context stable and downstream fresh', async () => {
   const ctx = await setup();
   try {
@@ -520,7 +577,7 @@ test('adopting a ready candidate replaces the authority atomically', async () =>
   const ctx = await setup({ requirement: '手工需求' });
   try {
     const candidateId = await generateCandidate(ctx);
-    const result = await ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId });
+    const result = await ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId, expectedIntentReviewRevision: await reviewRevision(ctx) });
     assert.equal(result.adopted, true);
     const inputs = result.inputs;
     assert.ok(inputs.requirement.includes('【页面目的】'));
@@ -540,9 +597,9 @@ test('a consumed candidate cannot be adopted again', async () => {
   const ctx = await setup({ requirement: '手工需求' });
   try {
     const candidateId = await generateCandidate(ctx);
-    await ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId });
+    await ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId, expectedIntentReviewRevision: await reviewRevision(ctx) });
     await rejectWithCode(
-      ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId }),
+      ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId, expectedIntentReviewRevision: await reviewRevision(ctx) }),
       ERROR_CODES.INTENT_CANDIDATE_STALE
     );
   } finally {
@@ -558,7 +615,7 @@ test('editing the review after a candidate landed stale-blocks adoption', async 
     const before = await readInputs(ctx.project);
     await saveDraft(ctx, answeredDraft(candidate.review), before.input_revisions.intent_review || 0);
     await rejectWithCode(
-      ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId }),
+      ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId, expectedIntentReviewRevision: await reviewRevision(ctx) }),
       ERROR_CODES.INTENT_CANDIDATE_STALE
     );
   } finally {
@@ -598,7 +655,7 @@ test('restoring history never revives confirmation and records a restore-before 
     const target = entries.find((entry) => entry.reason === 'review-save');
     assert.ok(target);
     assert.equal(target.was_confirmed, true, 'the snapshotted version was confirmed');
-    const result = await ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: target.history_id });
+    const result = await ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: target.history_id, expectedIntentReviewRevision: await reviewRevision(ctx) });
     assert.equal(result.inputs.requirement_confirmed, false, 'restore never revives confirmation');
     assert.equal(result.inputs.intent_review.confirmed_at, null);
     const after = await ctx.intentStore.listIntentHistory(ctx.project.id, 'main');
@@ -650,14 +707,14 @@ test('a snapshot write failure aborts restore without touching current inputs', 
       if (point === 'history-snapshot') throw new Error('injected snapshot crash');
     });
     await assert.rejects(
-      ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: entry.history_id }),
+      ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: entry.history_id, expectedIntentReviewRevision: await reviewRevision(ctx) }),
       /injected snapshot crash/
     );
     const untouched = await readInputs(ctx.project);
     assert.equal(untouched.input_revisions.intent_review, before.input_revisions.intent_review);
     assert.equal(untouched.requirement, before.requirement);
     ctx.intentStore.setFaultAt(null);
-    const result = await ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: entry.history_id });
+    const result = await ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: entry.history_id, expectedIntentReviewRevision: await reviewRevision(ctx) });
     assert.equal(result.restored, true);
   } finally {
     await ctx.cleanup();
@@ -681,7 +738,7 @@ test('restoring a pre-wireframe snapshot restores a derived-stale draft', async 
     await ctx.projectStore.importFile(ctx.project.id, sourceImage, 'wireframe');
     const now = await readInputs(ctx.project);
     assert.equal(now.input_revisions.wireframe, 1);
-    const result = await ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: target.history_id });
+    const result = await ctx.intentStore.restoreIntentHistory(ctx.project.id, 'main', { historyId: target.history_id, expectedIntentReviewRevision: await reviewRevision(ctx) });
     assert.equal(intent.analysisIsFresh(result.inputs.intent_analysis, { wireframeRevision: 1, projectType: 'new' }), false, 'old-wireframe analysis is derived-stale');
     const recomputed = intent.buildScreenContractIntentContext({
       intent_review: result.inputs.intent_review,
@@ -804,7 +861,7 @@ test('a crash after candidate deletion completes the terminal generation state f
       if (point === 'before-publish') throw new Error('injected crash');
     });
     await assert.rejects(
-      ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId }),
+      ctx.intentStore.adoptIntentCandidate(ctx.project.id, 'main', { candidateId, expectedIntentReviewRevision: await reviewRevision(ctx) }),
       /injected crash/
     );
     ctx.intentStore.setFaultAt(null);

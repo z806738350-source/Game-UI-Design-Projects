@@ -26,6 +26,17 @@ interface DesignCopilotApi {
   revealProject(projectId: string): Promise<{ ok: boolean }>;
   runStage(projectId: string, stage: PipelineStage, input?: Record<string, unknown>): Promise<DesignProject>;
   draftRequirement(projectId: string, screenId: string): Promise<DesignProject>;
+  // v1.4 §11.1：structured-v2 Intent 同义接口；所有 mutation 必填 expected
+  // revision，缺失/落后时服务端返回 INTENT_REVISION_CONFLICT。
+  generateIntentCandidate(projectId: string, screenId: string): Promise<DesignProject>;
+  saveIntentReview(projectId: string, input: { screenId: string; expectedIntentReviewRevision: number; draft: IntentReview }): Promise<DesignProject>;
+  confirmIntentReview(projectId: string, input: { screenId: string; expectedIntentReviewRevision: number }): Promise<DesignProject>;
+  adoptIntentCandidate(projectId: string, input: { screenId: string; candidateId: string; expectedIntentReviewRevision: number }): Promise<DesignProject>;
+  discardIntentCandidate(projectId: string, input: { screenId: string; candidateId: string }): Promise<DesignProject>;
+  getIntentCandidate(projectId: string, screenId: string): Promise<IntentCandidate | null>;
+  listIntentHistory(projectId: string, screenId: string): Promise<IntentHistoryEntry[]>;
+  restoreIntentHistory(projectId: string, screenId: string, input: { historyId: string; expectedIntentReviewRevision: number }): Promise<DesignProject>;
+  deleteIntentHistory(projectId: string, screenId: string, input: { historyId: string }): Promise<DesignProject>;
   cancelStage(projectId: string, stage: PipelineStage, screenId: string): Promise<DesignProject>;
   approveArtifact(projectId: string, kind: 'reference-inventory' | 'screen-contract' | 'component-bindings' | 'approved-layout' | 'underlay-contract' | 'composition-manifest' | 'style-contract' | 'font-manifest' | 'component-contract' | 'visual-results', input?: Record<string, unknown>): Promise<DesignProject>;
   repairRouteCycle(projectId: string, input: { screenId: string }): Promise<DesignProject>;
