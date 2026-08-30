@@ -81,6 +81,12 @@ function inventoryFromAssets(assets, previous = null) {
 function createProjectStore(options = {}) {
   const workspaceRoot = options.workspaceRoot || process.env.DESIGN_COPILOT_WORKSPACE || path.join(os.homedir(), 'Game UI Design Projects');
 
+  // v1.4 §8 Intent hooks：由 intentStateStore 通过 __attachIntentStore 注入。
+  // 全部在调用方已持有的项目写锁内执行（或像 heal 一样幂等无锁），因此这
+  // 里的实现绝不能再排队 withProjectWriteLock，否则自等待。该命名空间仅进程
+  // 内部使用，不得经 IPC/preload/HTTP 暴露给 Renderer。
+  const intentHooks = { heal: null, projectTypeChanged: null, wireframeReplaced: null, assertProjectCloneable: null, sanitizeProjectClone: null, assertScreenCloneable: null, sanitizeScreenClone: null };
+
   async function list() {
     await ensureDir(workspaceRoot);
     const entries = await fs.readdir(workspaceRoot, { withFileTypes: true }).catch(() => []);
@@ -157,7 +163,9 @@ function createProjectStore(options = {}) {
     const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const screenPath = path.join(projectPath, 'screens', screenId);
     const storedScreenInput = await readJson(screenInputPath(projectPath, screenId), null);
-    const screenInput = storedScreenInput || {
+    // v1.4 §8.7 读取时自愈：幂等、只向前补齐、绝不回滚权威、绝不复活确认，
+    // 半状态永不向用户 Fail-Closed。legacy 屏幕（无 intent 字段）直接跳过。
+    let screenInput = storedScreenInput || {
       ...baseScreenInput(project, screenId), requirement: project.requirement || '',
       requirement_source: project.requirement_source || (project.requirement ? 'user' : 'none'),
       requirement_confirmed: project.requirement_confirmed ?? Boolean(project.requirement),
@@ -165,6 +173,9 @@ function createProjectStore(options = {}) {
       wireframe_metadata: project.wireframe_metadata, canvas_spec: project.canvas_spec,
       input_revisions: project.input_revisions
     };
+    if (storedScreenInput && intentHooks.heal) {
+      screenInput = (await intentHooks.heal(projectPath, screenId, screenInput)) || screenInput;
+    }
     const [workflow, referenceInventory, screenContract, bindings, layouts, approvedLayout, referencePack, underlayContract, underlayCritique, underlayRepairTask, compositionManifest, compositionOutput, fidelityReport, styleContract, fontManifest, componentContract, visualTask, visualResults, artifactHistory] = await Promise.all([
       readJson(path.join(projectPath, 'workflow', 'state.json'), defaultWorkflow(project.id)),
       readJson(path.join(projectPath, 'style', 'reference-inventory.json'), null),
@@ -234,7 +245,11 @@ function createProjectStore(options = {}) {
       requirement: screenInput.requirement || '',
       requirement_source: screenInput.requirement_source || 'none',
       requirement_confirmed: Boolean(screenInput.requirement_confirmed),
+      intent_mode: screenInput.intent_mode,
       intent_analysis: screenInput.intent_analysis,
+      intent_review: screenInput.intent_review,
+      intent_generation: screenInput.intent_generation,
+      intent_context: screenInput.intent_context,
       input_revisions: { ...(project.input_revisions || {}), ...(screenInput.input_revisions || {}) },
       wireframe_path: screenInput.wireframe_path,
       wireframe_name: screenInput.wireframe_name,
@@ -258,12 +273,20 @@ function createProjectStore(options = {}) {
     return hydrate(project.workspacePath, options);
   }
 
-  async function saveProject(projectId, patch = {}) {
+  // v1.4 §8.2：structured-v2 屏幕的 requirement 是后端 renderer 的确定性投影，
+  // 普通 PATCH 中的 requirement / requirementSource / requirementConfirmed /
+  // intentAnalysis 一律忽略（UI 只读展示，降级需显式动作）；Project Type 修改则必须
+  // 在同锁内委托 intentStateStore 执行 §8.14 完整 freshness 转换。调用方必须已持有
+  // 项目写锁（公开入口在导出边界包装）。
+  async function saveProjectUnsafe(projectId, patch = {}) {
     const project = await resolveProject(projectId);
     const screenId = patch.screenId || project.active_screen_id || project.screen_id || 'main';
     const storedScreenInput = await readJson(screenInputPath(project.workspacePath, screenId), null);
     const currentInput = storedScreenInput || { ...baseScreenInput(project, screenId), requirement: project.requirement || '', requirement_source: project.requirement_source, requirement_confirmed: project.requirement_confirmed, intent_analysis: project.intent_analysis, input_revisions: project.input_revisions };
-    const requirement = typeof patch.requirement === 'string' ? patch.requirement : currentInput.requirement;
+    const structured = currentInput.intent_mode === 'structured-v2';
+    const requirement = structured
+      ? currentInput.requirement
+      : (typeof patch.requirement === 'string' ? patch.requirement : currentInput.requirement);
     const projectType = patch.projectType === 'existing' ? 'existing' : patch.projectType === 'new' ? 'new' : project.project_type;
     const requestedMode = ['exploration', 'existing-strict', 'existing-guided', 'locked-continuation'].includes(patch.continuationMode)
       ? patch.continuationMode
@@ -273,12 +296,16 @@ function createProjectStore(options = {}) {
       : (requestedMode === 'locked-continuation' ? 'locked-continuation' : 'exploration');
     const artDirection = typeof patch.artDirection === 'string' ? patch.artDirection : project.art_direction;
     const requirementChanged = requirement !== currentInput.requirement;
-    const requirementSource = ['none', 'user', 'ai'].includes(patch.requirementSource)
-      ? patch.requirementSource
-      : requirementChanged ? (requirement ? 'user' : 'none') : currentInput.requirement_source;
-    const requirementConfirmed = typeof patch.requirementConfirmed === 'boolean'
-      ? patch.requirementConfirmed
-      : requirementChanged ? false : currentInput.requirement_confirmed;
+    const requirementSource = structured
+      ? currentInput.requirement_source
+      : (['none', 'user', 'ai'].includes(patch.requirementSource)
+        ? patch.requirementSource
+        : requirementChanged ? (requirement ? 'user' : 'none') : currentInput.requirement_source);
+    const requirementConfirmed = structured
+      ? currentInput.requirement_confirmed
+      : (typeof patch.requirementConfirmed === 'boolean'
+        ? patch.requirementConfirmed
+        : requirementChanged ? false : currentInput.requirement_confirmed);
     const revisionKeys = [];
     if (requirementChanged) revisionKeys.push('requirement');
     if (artDirection !== project.art_direction || projectType !== project.project_type) revisionKeys.push('art_direction');
@@ -288,7 +315,9 @@ function createProjectStore(options = {}) {
       requirement,
       requirement_source: requirement ? (requirementSource || 'user') : 'none',
       requirement_confirmed: requirement ? Boolean(requirementConfirmed) : false,
-      intent_analysis: patch.intentAnalysis && typeof patch.intentAnalysis === 'object' ? patch.intentAnalysis : project.intent_analysis,
+      intent_analysis: structured || !(patch.intentAnalysis && typeof patch.intentAnalysis === 'object')
+        ? (currentInput.intent_analysis ?? project.intent_analysis)
+        : patch.intentAnalysis,
       project_type: projectType,
       continuation_mode: continuationMode,
       art_direction: artDirection,
@@ -306,10 +335,16 @@ function createProjectStore(options = {}) {
     await writeJson(screenInputPath(project.workspacePath, screenId), nextScreenInput);
     await ensureDir(path.join(project.workspacePath, 'screens', screenId, 'inputs'));
     await fs.writeFile(path.join(project.workspacePath, 'screens', screenId, 'inputs', 'requirement.md'), `${requirement}\n`, 'utf8');
+    // v1.4 §8.14：Project Type 参与 Intent Prompt 且写入 analysis source_revision，
+    // 变更必须在同一项目锁内完成完整 freshness 转换（标 stale、取消确认、重算 Context）。
+    if (projectType !== project.project_type) await intentHooks.projectTypeChanged?.(projectId, screenId);
     return hydrate(project.workspacePath, { screenId });
   }
 
-  async function importFile(projectId, sourcePath, kind, options = {}) {
+  // v1.4 §8.13：UE 替换的 Intent freshness 转换唯一实现在 intentStateStore；
+  // 同锁内委托，保证 wireframe revision 、取消确认与下游标 stale 不被拆开。
+  // 调用方必须已持有项目写锁；锁内一律使用 unsafe 原语避免自等待。
+  async function importFileUnsafe(projectId, sourcePath, kind, options = {}) {
     const project = await resolveProject(projectId);
     const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const metadata = await readImageMetadata(sourcePath);
@@ -356,15 +391,16 @@ function createProjectStore(options = {}) {
     await writeJson(path.join(project.workspacePath, 'project.json'), nextProject);
     if (key === 'reference') {
       const previous = await readJson(path.join(project.workspacePath, 'style', 'reference-inventory.json'), null);
-      await saveArtifact(projectId, 'reference-inventory', inventoryFromAssets(nextProject.reference_assets, previous));
+      await saveArtifactUnsafe(projectId, 'reference-inventory', inventoryFromAssets(nextProject.reference_assets, previous));
     }
+    if (key === 'wireframe') await intentHooks.wireframeReplaced?.(projectId, screenId);
     return hydrate(project.workspacePath, { screenId });
   }
 
   // AUD-07：参考图管理必须先检测真实变化——聚焦后离开输入框、移动到原位置、
   // 重复设置同角色、重复批准相同状态都是 no-op：不写 project.json、不 bump
   // input_revisions、不写 Reference Inventory，调用方据此决定是否失效下游。
-  async function manageReference(projectId, input = {}) {
+  async function manageReferenceUnsafe(projectId, input = {}) {
     const project = await resolveProject(projectId);
     const nextProject = await readJson(path.join(project.workspacePath, 'project.json'), {});
     let assets = nextProject.reference_assets?.length
@@ -422,11 +458,12 @@ function createProjectStore(options = {}) {
     nextProject.updated_at = new Date().toISOString();
     await writeJson(path.join(project.workspacePath, 'project.json'), nextProject);
     const previous = await readJson(path.join(project.workspacePath, 'style', 'reference-inventory.json'), null);
-    await saveArtifact(projectId, 'reference-inventory', inventoryFromAssets(assets, previous));
+    await saveArtifactUnsafe(projectId, 'reference-inventory', inventoryFromAssets(assets, previous));
     return { project: await hydrate(project.workspacePath), changed: true };
   }
 
-  async function saveArtifact(projectId, kind, artifact, options = {}) {
+  // 调用方必须已持有项目写锁；版本语义（AUD-10）不变。
+  async function saveArtifactUnsafe(projectId, kind, artifact, options = {}) {
     const project = await resolveProject(projectId);
     const screenId = options.screenId || project.active_screen_id || project.screen_id || 'main';
     const artifactPath = path.join(project.workspacePath, artifactRelativePath(kind, screenId));
@@ -460,7 +497,8 @@ function createProjectStore(options = {}) {
     return stored;
   }
 
-  async function updateWorkflow(projectId, stage, status, output, details = {}) {
+  // 调用方必须已持有项目写锁（供锁内复合操作使用）；公开入口在导出边界包装。
+  async function updateWorkflowUnsafe(projectId, stage, status, output, details = {}) {
     const project = await resolveProject(projectId);
     const statePath = path.join(project.workspacePath, 'workflow', 'state.json');
     const state = await readJson(statePath, defaultWorkflow(projectId));
@@ -482,8 +520,12 @@ function createProjectStore(options = {}) {
     return next;
   }
 
-  async function duplicate(projectId) {
+  // v1.4 §4.5 Project Duplicate：先取得源项目同一写锁（导出边界包装），锁内重新检查
+  // Intent 运行态（任一 Screen 有 running generation 即 Fail-Closed）；副本不复制活动
+  // request/process ID，generation 归零，ready candidate 转 stale。
+  async function duplicateUnsafe(projectId) {
     const project = await resolveProject(projectId);
+    await intentHooks.assertProjectCloneable?.(project.workspacePath);
     const name = `${project.name} · 副本`;
     const id = `${slugify(name)}-${Date.now().toString(36)}`;
     const destination = path.join(workspaceRoot, id);
@@ -530,6 +572,7 @@ function createProjectStore(options = {}) {
         ? path.join(destination, path.relative(project.workspacePath, value)) : value;
       await writeJson(inputPath, { ...screenInput, wireframe_path: rewrite(screenInput.wireframe_path), updated_at: now });
     }
+    await intentHooks.sanitizeProjectClone?.(destination);
     const workflowPath = path.join(destination, 'workflow', 'state.json');
     const workflow = await readJson(workflowPath, defaultWorkflow(id));
     await writeJson(workflowPath, { ...workflow, project_id: id, updated_at: now });
@@ -851,6 +894,9 @@ function createProjectStore(options = {}) {
     if (inProgressStages.length) {
       throw new Error(`Screen ${screenId} 正在生成中（${inProgressStages.join('、')} 阶段运行中），请等待生成完成后再复制。`);
     }
+    // v1.4 §4.5 Screen Duplicate：额外检查源 Screen 的 Intent 运行态（不能只检查
+    // Workflow stage 的 in_progress）；进行中的 adopt/restore 复合操作由同一项目写锁天然排除。
+    await intentHooks.assertScreenCloneable?.(project.workspacePath, screenId);
     const now = new Date().toISOString();
     const targetDir = path.join(project.workspacePath, 'screens', id);
     const indexPath = path.join(project.workspacePath, 'screens', 'index.json');
@@ -885,6 +931,8 @@ function createProjectStore(options = {}) {
       // 副本必须重写到自己的目录（provenance 字段在其后覆盖，不受影响）。
       const copiedInput = rewriteScreenClone(await readJson(screenInputPath(project.workspacePath, id), baseScreenInput(project, id)), screenId, id, CLONE_COMMON_REF_KEYS, '', renames);
       await writeJson(screenInputPath(project.workspacePath, id), { ...copiedInput, screen_id: id, input_mode: 'own', duplicated_from_screen_id: screenId, updated_at: now });
+      // v1.4 §4.5：副本取消确认、generation 归零、candidate 转 stale，不可直接采用。
+      await intentHooks.sanitizeScreenClone?.(project.workspacePath, id);
       tx.completed.push('artifacts-migrated');
       tx.step = 'prepare-transaction-backups';
       // P1-09：副本 workflow 继承原 Screen 进度，但 approved 阶段同步降级为
@@ -1019,7 +1067,18 @@ function createProjectStore(options = {}) {
     return run;
   }
 
-  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate, open, saveProject, importFile, manageReference, saveArtifact, updateWorkflow: (...args) => withProjectWriteLock(args[0], () => updateWorkflow(...args)), resolveProject, hydrate, listScreens, createScreen: (projectId, input) => withProjectWriteLock(projectId, () => createScreen(projectId, input)), duplicateScreen: (projectId, screenId, input) => withProjectWriteLock(projectId, () => duplicateScreen(projectId, screenId, input)), setActiveScreen: (projectId, screenId) => withProjectWriteLock(projectId, () => setActiveScreen(projectId, screenId)), updateScreen: (projectId, screenId, patch) => withProjectWriteLock(projectId, () => updateScreen(projectId, screenId, patch)), assertClonedScreenConsistent: assertClonedScreenConsistentFor };
+  // v1.4 §8.8：写锁接线——所有会写项目文件的变更在导出边界统一串行化；锁内复合操作只能调用 *Unsafe 原语，公开方法在锁内调用会自等待。
+  function attachIntentStore(intentStore) {
+    intentHooks.heal = intentStore.healScreenIntentState || null;
+    intentHooks.projectTypeChanged = intentStore.applyProjectTypeChangeUnsafe || null;
+    intentHooks.wireframeReplaced = intentStore.applyWireframeReplacementUnsafe || null;
+    intentHooks.assertProjectCloneable = intentStore.assertProjectCloneable || null;
+    intentHooks.sanitizeProjectClone = intentStore.sanitizeProjectClone || null;
+    intentHooks.assertScreenCloneable = intentStore.assertScreenCloneable || null;
+    intentHooks.sanitizeScreenClone = intentStore.sanitizeScreenClone || null;
+  }
+
+  return { workspaceRoot, artifactKinds: [...Object.keys(GLOBAL_ARTIFACTS), ...Object.keys(SCREEN_ARTIFACTS)], list, create, duplicate: (projectId) => withProjectWriteLock(projectId, () => duplicateUnsafe(projectId)), open, saveProject: (...args) => withProjectWriteLock(args[0], () => saveProjectUnsafe(...args)), importFile: (...args) => withProjectWriteLock(args[0], () => importFileUnsafe(...args)), manageReference: (...args) => withProjectWriteLock(args[0], () => manageReferenceUnsafe(...args)), saveArtifact: (...args) => withProjectWriteLock(args[0], () => saveArtifactUnsafe(...args)), updateWorkflow: (...args) => withProjectWriteLock(args[0], () => updateWorkflowUnsafe(...args)), resolveProject, hydrate, listScreens, createScreen: (projectId, input) => withProjectWriteLock(projectId, () => createScreen(projectId, input)), duplicateScreen: (projectId, screenId, input) => withProjectWriteLock(projectId, () => duplicateScreen(projectId, screenId, input)), setActiveScreen: (projectId, screenId) => withProjectWriteLock(projectId, () => setActiveScreen(projectId, screenId)), updateScreen: (projectId, screenId, patch) => withProjectWriteLock(projectId, () => updateScreen(projectId, screenId, patch)), assertClonedScreenConsistent: assertClonedScreenConsistentFor, __attachIntentStore: attachIntentStore, __unsafe: { withProjectWriteLock, saveProjectUnsafe, importFileUnsafe, manageReferenceUnsafe, saveArtifactUnsafe, updateWorkflowUnsafe } };
 }
 
 module.exports = { createProjectStore };

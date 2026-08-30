@@ -6,6 +6,7 @@ const { pipeline } = require('node:stream/promises');
 const { createProjectStore } = require('../electron/services/projectStore.cjs');
 const { createDesignPipeline } = require('../electron/services/designPipeline.cjs');
 const { createFlowStateRepair } = require('../electron/services/flowStateRepair.cjs');
+const { createIntentStateStore } = require('../electron/services/intentStateStore.cjs');
 const { hashBuffer, resolveProjectPath } = require('../electron/services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('../electron/services/finalDeliveryGate.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
@@ -249,10 +250,13 @@ function createApplication(environment = process.env) {
     const modelConfigPath = path.join(tenantRoot, 'user', 'settings', 'models.json');
     const projectRoot = path.join(__dirname, '..');
     const projectStore = createProjectStore({ workspaceRoot });
+    // v1.4 PR-I1：Intent 状态存储接入同一项目写锁（每租户一个进程实例）。
+    const intentStateStore = createIntentStateStore({ projectStore });
+    projectStore.__attachIntentStore(intentStateStore);
     const kunpoConfig = loadKunpoConfig(projectRoot, environment, { modelConfigPath });
     const designPipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig });
     const flowStateRepair = createFlowStateRepair({ projectStore });
-    const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, kunpoConfig, designPipeline, flowStateRepair };
+    const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, intentStateStore, kunpoConfig, designPipeline, flowStateRepair };
     contexts.set(tenantId, context);
     return context;
   }
