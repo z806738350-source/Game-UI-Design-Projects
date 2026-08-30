@@ -7,6 +7,7 @@ const kunpoClient = require('./services/kunpoClient.cjs');
 const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
 const { createFlowStateRepair } = require('./services/flowStateRepair.cjs');
+const { createIntentStateStore } = require('./services/intentStateStore.cjs');
 const { exportCompositionOutput, hashBuffer, resolveProjectPath } = require('./services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('./services/finalDeliveryGate.cjs');
 
@@ -65,6 +66,10 @@ function registerIpc() {
   const modelConfigPath = path.join(app.getPath('userData'), 'models.json');
   const kunpoConfig = loadKunpoConfig(projectRoot, process.env, { modelConfigPath });
   const projectStore = createProjectStore();
+  // v1.4 PR-I1：Intent 状态存储接入同一项目写锁；读取时自愈、UE/Project Type
+  // freshness 与 Clone 运行态检查通过 hooks 生效。专用 IPC 在 PR-I3 接入。
+  const intentStateStore = createIntentStateStore({ projectStore });
+  projectStore.__attachIntentStore(intentStateStore);
   const pipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig });
   const flowStateRepair = createFlowStateRepair({ projectStore });
 

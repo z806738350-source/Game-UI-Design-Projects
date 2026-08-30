@@ -17,7 +17,7 @@
 `COMPOSITION_OUTPUT_UNREADABLE` 既是管线错误码，也被像素检查器作为 issue code 使用；
 它们只定义在 `ERROR_CODES` 中，检查器直接引用 `ERROR_CODES.*`。
 
-## 一、管线错误码（ERROR_CODES，54 个）
+## 一、管线错误码（ERROR_CODES，68 个）
 
 ### Screen 上下文
 
@@ -131,6 +131,21 @@
 | `TRANSIENT_IMAGE_DOWNLOAD_FAILED` | `electron/services/kunpoClient.cjs` | 下载 provider 图像失败 | 检查网络与 gateway |
 | `UNTRUSTED_IMAGE_LOCATION` | `electron/services/kunpoClient.cjs` | provider 返回不可信图像地址（未拉取未落盘） | 重试生成；持续出现则检查 provider 返回格式 |
 
+### Intent 预填 v2
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `INTENT_ANALYSIS_INVALID` | `electron/services/intentStateStore.cjs` | 模型返回经纠正后仍不符合 Intent Analysis v2 合同 | 重新发起预填或手工填写 |
+| `INTENT_ANALYSIS_STALE` | `electron/services/intentStateStore.cjs` | 提交结果时 UE/Project Type 已变化 | 基于当前输入重新预填 |
+| `INTENT_REVIEW_INCOMPLETE` | `electron/services/intentStateStore.cjs` | 确认门禁未通过（blocking 未处理、内容为空等） | 处理待确认项后再确认 |
+| `INTENT_CANDIDATE_STALE` | `electron/services/intentStateStore.cjs` | candidate 基线 revision 与当前不匹配 | 丢弃 candidate 后重新预填 |
+| `INTENT_CANDIDATE_REPLACEMENT_REQUIRED` | `electron/services/intentStateStore.cjs` | 已有 ready candidate 时再次发起生成 | 先采用或丢弃现有 candidate |
+| `INTENT_HISTORY_VERSION_NOT_FOUND` | `electron/services/intentStateStore.cjs` | 历史 ID 不存在或不属当前 Screen | 刷新历史列表 |
+| `INTENT_REQUEST_SUPERSEDED` | `electron/services/intentStateStore.cjs` | 旧 AI 响应晚于新请求到达 | 无需处理，以新请求为准 |
+| `INTENT_GENERATION_INTERRUPTED` | `electron/services/intentStateStore.cjs` | 旧进程留下的 running 任务被重启中断 | 重新发起预填 |
+| `INTENT_REVISION_CONFLICT` | `electron/services/intentStateStore.cjs` | 保存/确认/恢复时 expected revision CAS 冲突 | 刷新后基于最新版本重试 |
+| `INTENT_HISTORY_LIMIT_REACHED` | `electron/services/intentStateStore.cjs` | 历史达到 100 条或 64 MiB 上限 | 删除或导出旧历史后重试 |
+
 ### 迁移
 
 | 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
@@ -238,3 +253,4 @@ font_role 时也以 `Error.code` 直接抛出 `BINDING_FONT_ROLE_REQUIRED`。完
 | --- | --- | --- |
 | 1.0 | 2026-08-19 | PR-18 首次建立错误码事实目录（0.2.1） |
 | 1.1 | 2026-08-19 | F-01：新增 `BINDING_VALIDATION_CODES`（10 个）完整表格；`BINDING_FONT_ROLE_REQUIRED` 标注 strict 合成器抛错路径 |
+| 1.2 | 2026-08-30 | PR-I1：新增 Intent 预填 v2 错误码（10 个）；`ERROR_CODES` 总数 58 → 68 |
