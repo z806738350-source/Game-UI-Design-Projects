@@ -176,6 +176,38 @@ function registerIpc() {
   });
   ipcMain.handle('copilot:pipeline:run', (_event, projectId, stage, input) => pipeline.runStage(projectId, stage, input));
   ipcMain.handle('copilot:input:draft-requirement', (_event, projectId, input) => pipeline.draftRequirement(projectId, input));
+  // v1.4 §11.1：structured-v2 Intent 同义接口；与 Web 端调用同一业务方法，
+  // mutation 后统一回传最新项目。
+  ipcMain.handle('copilot:intent:generate', async (_event, projectId, input) => {
+    await pipeline.prefillIntent(projectId, input);
+    return projectStore.open(projectId, { screenId: input?.screenId });
+  });
+  ipcMain.handle('copilot:intent:review-save', async (_event, projectId, input) => {
+    await intentStateStore.saveIntentReview(projectId, input?.screenId, input);
+    return projectStore.open(projectId, { screenId: input?.screenId });
+  });
+  ipcMain.handle('copilot:intent:review-confirm', async (_event, projectId, input) => {
+    await intentStateStore.confirmIntentReview(projectId, input?.screenId, input);
+    return projectStore.open(projectId, { screenId: input?.screenId });
+  });
+  ipcMain.handle('copilot:intent:candidate-adopt', async (_event, projectId, input) => {
+    await intentStateStore.adoptIntentCandidate(projectId, input?.screenId, input);
+    return projectStore.open(projectId, { screenId: input?.screenId });
+  });
+  ipcMain.handle('copilot:intent:candidate-discard', async (_event, projectId, input) => {
+    await intentStateStore.discardIntentCandidate(projectId, input?.screenId, input);
+    return projectStore.open(projectId, { screenId: input?.screenId });
+  });
+  ipcMain.handle('copilot:intent:candidate-get', (_event, projectId, input) => intentStateStore.getIntentCandidate(projectId, input?.screenId));
+  ipcMain.handle('copilot:intent:history-list', (_event, projectId, input) => intentStateStore.listIntentHistory(projectId, input?.screenId));
+  ipcMain.handle('copilot:intent:history-restore', async (_event, projectId, input) => {
+    await intentStateStore.restoreIntentHistory(projectId, input?.screenId, input);
+    return projectStore.open(projectId, { screenId: input?.screenId });
+  });
+  ipcMain.handle('copilot:intent:history-delete', async (_event, projectId, input) => {
+    await intentStateStore.deleteIntentHistory(projectId, input?.screenId, input);
+    return projectStore.open(projectId, { screenId: input?.screenId });
+  });
   ipcMain.handle('copilot:pipeline:cancel', (_event, projectId, stage, input) => pipeline.cancelStage(projectId, stage, input));
   ipcMain.handle('copilot:pipeline:approve', (_event, projectId, kind, input) => pipeline.approveArtifact(projectId, kind, input));
   ipcMain.handle('copilot:pipeline:repair-route-cycle', async (_event, projectId, input) => {

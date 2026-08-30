@@ -393,12 +393,21 @@ function createIntentStateStore(options = {}) {
     return rest;
   }
 
+  // §11.1：所有 Intent mutation 的 expected revision 必填。缺失时显式报
+  // 冲突（而非 NaN≠current 的隐式冲突），让客户端明确知道要刷新。
+  function assertExpectedRevision(value, current, action) {
+    if (!Number.isFinite(Number(value))) {
+      throw intentError(ERROR_CODES.INTENT_REVISION_CONFLICT, `缺少 expectedIntentReviewRevision，无法${action}；请刷新后基于最新版本重试。`, { expected: null, current });
+    }
+  }
+
   async function saveIntentReview(projectId, screenId, input = {}) {
     return unsafe.withProjectWriteLock(projectId, async () => {
       const project = await projectStore.resolveProject(projectId);
       const projectPath = project.workspacePath;
       const inputs = (await requireScreen(projectPath, screenId)) || {};
       if (!structuredMode(inputs)) throw new Error('Screen is not in structured-v2 mode.');
+      assertExpectedRevision(input.expectedIntentReviewRevision, rev(inputs, 'intent_review'), '保存 Intent Review');
       if (Number(input.expectedIntentReviewRevision) !== rev(inputs, 'intent_review')) {
         throw intentError(ERROR_CODES.INTENT_REVISION_CONFLICT, 'Intent Review 已被更新，请刷新后基于最新版本保存。', { expected: Number(input.expectedIntentReviewRevision), current: rev(inputs, 'intent_review') });
       }
@@ -451,6 +460,7 @@ function createIntentStateStore(options = {}) {
       const projectPath = project.workspacePath;
       const inputs = (await requireScreen(projectPath, screenId)) || {};
       if (!inputs.intent_review) throw intentError(ERROR_CODES.INTENT_REVIEW_INCOMPLETE, '当前 Screen 没有可确认的 Intent Review。');
+      assertExpectedRevision(input.expectedIntentReviewRevision, rev(inputs, 'intent_review'), '确认 Intent Review');
       if (Number(input.expectedIntentReviewRevision) !== rev(inputs, 'intent_review')) {
         throw intentError(ERROR_CODES.INTENT_REVISION_CONFLICT, 'Intent Review 已被更新，请刷新后再确认。', { expected: Number(input.expectedIntentReviewRevision), current: rev(inputs, 'intent_review') });
       }
@@ -503,7 +513,8 @@ function createIntentStateStore(options = {}) {
       if (stale) {
         throw intentError(ERROR_CODES.INTENT_CANDIDATE_STALE, 'Intent candidate 已过期（基线或来源与当前输入不一致），请丢弃后重新生成。', { candidate_id: input.candidateId });
       }
-      if (input.expectedIntentReviewRevision !== undefined && Number(input.expectedIntentReviewRevision) !== rev(inputs, 'intent_review')) {
+      assertExpectedRevision(input.expectedIntentReviewRevision, rev(inputs, 'intent_review'), '采用 Intent candidate');
+      if (Number(input.expectedIntentReviewRevision) !== rev(inputs, 'intent_review')) {
         throw intentError(ERROR_CODES.INTENT_REVISION_CONFLICT, 'Intent Review 已被更新，请刷新后再采用。');
       }
       const { errors } = intent.validateIntentReview(candidate.review);
@@ -602,7 +613,8 @@ function createIntentStateStore(options = {}) {
       if (!snapshot || snapshot.screen_id !== screenId) {
         throw intentError(ERROR_CODES.INTENT_HISTORY_VERSION_NOT_FOUND, `历史不属于当前 Screen：${input.historyId}`);
       }
-      if (input.expectedIntentReviewRevision !== undefined && Number(input.expectedIntentReviewRevision) !== rev(inputs, 'intent_review')) {
+      assertExpectedRevision(input.expectedIntentReviewRevision, rev(inputs, 'intent_review'), '恢复历史版本');
+      if (Number(input.expectedIntentReviewRevision) !== rev(inputs, 'intent_review')) {
         throw intentError(ERROR_CODES.INTENT_REVISION_CONFLICT, 'Intent Review 已被更新，请刷新后再恢复。');
       }
       const now = new Date().toISOString();
