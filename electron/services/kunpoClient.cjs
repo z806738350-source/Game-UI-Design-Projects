@@ -91,7 +91,53 @@ async function requestArtifact(config, { kind, prompt, imagePaths = [], id, sour
   throw new Error(`结构化结果连续 3 次未通过自动修复：${lastError?.message || '未知格式错误'}`);
 }
 
-async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys = [], captureRaw = false }) {
+// v1.4 §7.5 Provider 纠正反馈限流：errors 才触发重试（最多 3 次），
+// warnings 只随结果返回；反馈整体受字节上限保护，绝不回显 Key。
+const FEEDBACK_MAX_ERRORS = 20;
+const FEEDBACK_MAX_ERROR_CHARS = 300;
+const FEEDBACK_MAX_REPAIR_BYTES = 64 * 1024;
+const FEEDBACK_MAX_TOTAL_BYTES = 96 * 1024;
+
+function truncateUtf8(text, maxBytes, marker = '…[truncated]') {
+  const bytes = Buffer.from(text, 'utf8');
+  if (bytes.length <= maxBytes) return text;
+  return `${bytes.subarray(0, maxBytes).toString('utf8').replace(/\uFFFD+$/, '')}${marker}`;
+}
+
+// repairContext 去敏：任何 base64 data URL（图片载荷）不得回显进 Prompt。
+function sanitizeRepairContext(value) {
+  if (value === undefined || value === null || value === '') return '';
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  const redacted = text.replace(/data:[^;",\s]*;base64,[A-Za-z0-9+/=]+/g, '[redacted-image-data]');
+  return truncateUtf8(redacted, FEEDBACK_MAX_REPAIR_BYTES);
+}
+
+function validationFeedback(attempt, processed) {
+  const errors = (processed.errors || [])
+    .slice(0, FEEDBACK_MAX_ERRORS)
+    .map((error) => truncateUtf8(String(error), FEEDBACK_MAX_ERROR_CHARS, ''));
+  let feedback = `\n\nAttempt ${attempt} failed validation with ${errors.length} error(s):\n${errors.map((error) => `- ${error}`).join('\n')}\n`;
+  const repair = sanitizeRepairContext(processed.repairContext);
+  if (repair.trim()) {
+    feedback += `Repair the JSON draft below instead of regenerating it from scratch. Preserve every valid field and value.\nINVALID_DRAFT:\n${repair}\n`;
+  }
+  feedback += `Return one corrected complete JSON object only, with no markdown or trailing content.`;
+  return truncateUtf8(feedback, FEEDBACK_MAX_TOTAL_BYTES);
+}
+
+function providerMeta(payload, config) {
+  return {
+    response_id: typeof payload?.id === 'string' ? payload.id : undefined,
+    model: typeof payload?.model === 'string' ? payload.model : config.visionModel,
+    created: payload?.created
+  };
+}
+
+// v1.4 §7.5：processValue(raw) => { value, errors, warnings, repairContext }
+// —— 可归一化但接触不到 Key；errors 触发纠正（最多 3 次），warnings 不重试；
+// captureMeta 与 captureRaw 语义分开：meta 载荷绝不含 raw text / Key / data URL。
+// 图片在任务开始时读取一次并在全部尝试内复用。
+async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys = [], captureRaw = false, captureMeta = false, processValue, failureCode }) {
   if (!config.configured) throw new Error('Kunpo is not configured. Set a Gateway URL or local API URL + key.');
   const images = await Promise.all(imagePaths.filter(Boolean).map(fileDataUrl));
   let feedback = '';
@@ -113,6 +159,18 @@ async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys
       if (!text) throw new Error('Kunpo returned no readable text.');
       const value = extractJson(text);
       if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('result must be a JSON object');
+      if (processValue) {
+        const processed = processValue(value) || {};
+        if ((processed.errors || []).length) {
+          const failure = new Error(`validation failed: ${(processed.errors || []).slice(0, 3).map((error) => truncateUtf8(String(error), 100, '')).join('; ')}`);
+          failure.processed = processed;
+          throw failure;
+        }
+        const finalValue = processed.value ?? value;
+        const warnings = processed.warnings || [];
+        if (captureMeta) return { capture_version: '1.0', value: finalValue, warnings, attempt, provider: providerMeta(payload, config) };
+        return { value: finalValue, warnings };
+      }
       const missing = requiredStringKeys.filter((key) => typeof value[key] !== 'string' || !value[key].trim());
       if (missing.length) throw new Error(`missing required text: ${missing.join(', ')}`);
       if (captureRaw) {
@@ -128,13 +186,18 @@ async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys
           }
         };
       }
+      if (captureMeta) return { capture_version: '1.0', value, warnings: [], attempt, provider: providerMeta(payload, config) };
       return value;
     } catch (error) {
       lastError = error;
-      feedback = `\n\nAttempt ${attempt} failed (${error.message}). Return one corrected complete JSON object only, with no markdown or trailing content.`;
+      feedback = error.processed
+        ? validationFeedback(attempt, error.processed)
+        : `\n\nAttempt ${attempt} failed (${error.message}). Return one corrected complete JSON object only, with no markdown or trailing content.`;
     }
   }
-  throw new Error(`UE 预解读连续 3 次未返回有效内容：${lastError?.message || '未知格式错误'}`);
+  const final = new Error(`连续 3 次未返回有效内容：${lastError?.message || '未知格式错误'}`);
+  if (failureCode) final.code = failureCode;
+  throw final;
 }
 
 function nestedObjects(payload, maxDepth = 6, maxNodes = 500) {

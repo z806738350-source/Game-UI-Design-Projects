@@ -70,7 +70,7 @@ function registerIpc() {
   // freshness 与 Clone 运行态检查通过 hooks 生效。专用 IPC 在 PR-I3 接入。
   const intentStateStore = createIntentStateStore({ projectStore });
   projectStore.__attachIntentStore(intentStateStore);
-  const pipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig });
+  const pipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore });
   const flowStateRepair = createFlowStateRepair({ projectStore });
 
   ipcMain.handle('copilot:config', async () => ({

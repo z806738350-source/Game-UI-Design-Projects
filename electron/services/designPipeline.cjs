@@ -2,7 +2,8 @@ const fs = require('node:fs/promises');
 const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const path = require('node:path');
 const sharp = require('sharp');
-const { intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask } = require('./prompts.cjs');
+const intent = require('./intentAnalysis.cjs');
+const { intentAnalysisV2Prompt, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask } = require('./prompts.cjs');
 const { providerCapabilities } = require('./providerCapabilities.cjs');
 const { buildReferencePack } = require('./referencePack.cjs');
 const { normalizeArtifact, recomputeCoverage, validateArtifact } = require('./contracts.cjs');
@@ -46,7 +47,7 @@ const SCREEN_CONTRACT_EDITABLE_KEYS = new Set([
   ...SCREEN_CONTRACT_SEMANTIC_KEYS, ...SCREEN_CONTRACT_REVIEW_ONLY_KEYS, 'required_controls'
 ]);
 
-function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
+function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore = null }) {
   const cancelledVisualJobs = new Set();
   // AUD-04：取消标记按“项目 + Screen”建键：取消某个 Screen 的生成不得误伤
   // 同项目其他 Screen 的任务（Web 多会话/并行任务下的串线防线）。
@@ -265,6 +266,39 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     const stageConfig = { ...kunpoConfig };
     if (stage === 'wireframe_interpretation') {
       if (!project.wireframe_path) throw new Error('请先导入 UE Wireframe。');
+      const structured = project.intent_mode === 'structured-v2' || Boolean(project.intent_review);
+      if (structured) {
+        // §9.2 生成前门禁：结构化 Intent 必须经设计师确认后才能进入
+        // Screen Contract 生成；确认后的 Intent 内容以 canonical hash 绑定。
+        if (!project.requirement_confirmed) {
+          throw Object.assign(new Error('请先审查并确认 Intent Review，再生成 Screen Contract。'), { code: ERROR_CODES.INTENT_REVIEW_INCOMPLETE });
+        }
+        if (project.intent_generation?.status === 'running') throw new Error('Intent 预填正在运行，请等待完成并确认结果后再生成 Screen Contract。');
+        // 纯函数重算当前 canonical context：确认后 Intent 又被改动时，
+        // 不得拿旧确认状态生成新契约。
+        const ctx = intent.buildScreenContractIntentContext(project);
+        if (!project.intent_context?.hash || ctx.hash !== project.intent_context.hash) {
+          throw Object.assign(new Error('Intent 内容在确认后已变化，请基于最新 Intent 重新确认并生成。'), { code: ERROR_CODES.INTENT_REVISION_CONFLICT });
+        }
+        await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, { keepCurrentStage: Boolean(input.stayOnInputUntilComplete) });
+        // 事务安全：先调模型、成功后才失效下游；失败的尝试不得让
+        // 现有可用链路变 stale。
+        const intentBinding = {
+          wireframe_revision: project.input_revisions?.wireframe ?? 0,
+          intent_context_revision: project.intent_context?.revision ?? 0,
+          intent_context_hash: ctx.hash
+        };
+        const artifact = await kunpoClient.requestArtifact(stageConfig, {
+          kind: 'screen-contract', prompt: screenContractPrompt(project, { intentContext: ctx }), imagePaths: [project.wireframe_path],
+          id: `${project.screen_id}-screen-contract`,
+          source: { requirement: 'inputs/requirement.md', wireframe: 'inputs/wireframe', ...inputSource(project), intent_context: intentBinding }
+        });
+        await invalidateArtifacts(projectId, 'screen-contract', 'screen_contract_regenerated', { screenId: project.screen_id });
+        await projectStore.saveArtifact(projectId, 'screen-contract', artifact);
+        await projectStore.updateWorkflow(projectId, stage, 'reviewed', `screens/${project.screen_id}/screen-contract.json`);
+        return openProject(projectId);
+      }
+      // Legacy 非结构化路径：手工需求文本项目，无 Intent Review。
       const intentConfirmed = project.requirement_confirmed ?? Boolean(project.requirement.trim());
       if (!project.requirement.trim() || !intentConfirmed) throw new Error('请先在项目输入中确认 AI 预填的设计意图，或填写自己的补充说明。');
       await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, { keepCurrentStage: Boolean(input.stayOnInputUntilComplete) });
@@ -438,6 +472,51 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     }
   }
 
+  // §7.5：Intent 分析的权威校验入口。先归一化、再套用无证据主张策略；
+  // errors 交给 provider 有界纠正反馈环（最多 3 次），warnings 不触发重试。
+  function intentProcessValue(raw) {
+    const normalized = intent.normalizeIntentAnalysis(raw);
+    if (!normalized.value) {
+      return { value: null, errors: normalized.errors, warnings: normalized.warnings, repairContext: raw };
+    }
+    const policy = intent.applyUnsupportedClaimPolicy(normalized.value);
+    return { value: policy.value, errors: [], warnings: [...normalized.warnings, ...policy.warnings] };
+  }
+
+  // §8.3 两阶段提交：Phase 1 短锁 begin → Phase 2 无锁模型调用（纠正循环在
+  // requestJson 内）→ Phase 3 短锁提交。全部 CAS 在 intentStateStore 内，
+  // 管线只负责编排；失败必须写回终态，不得留下永久 running。
+  async function prefillIntent(projectId, input = {}) {
+    if (!intentStateStore) throw new Error('Intent state store is not configured for this pipeline.');
+    const project = await openScreen(projectId, input.screenId);
+    if (!project.wireframe_path) throw new Error('请先导入 UE Wireframe。');
+    const begun = await intentStateStore.beginIntentGeneration(projectId, project.screen_id);
+    let envelope;
+    try {
+      envelope = await kunpoClient.requestJson({ ...kunpoConfig }, {
+        prompt: intentAnalysisV2Prompt(project),
+        imagePaths: [project.wireframe_path],
+        captureMeta: true,
+        failureCode: ERROR_CODES.INTENT_ANALYSIS_INVALID,
+        processValue: intentProcessValue
+      });
+    } catch (error) {
+      const status = error?.name === 'AbortError' ? 'provider-timeout'
+        : error?.code === ERROR_CODES.INTENT_ANALYSIS_INVALID ? 'validation-failed' : 'failed';
+      // 被替代（新请求抢先提交）时静默吞掉：结果本就不该落盘。
+      await intentStateStore.completeIntentGeneration(projectId, project.screen_id, {
+        requestId: begun.requestId, failure: { status, error_code: error.code || 'PROVIDER_ERROR' }
+      }).catch(() => undefined);
+      throw error;
+    }
+    return intentStateStore.completeIntentGeneration(projectId, project.screen_id, {
+      requestId: begun.requestId,
+      rawAnalysis: envelope.value,
+      provider: envelope.provider || null,
+      warnings: envelope.warnings || []
+    });
+  }
+
   async function draftRequirement(projectId, input = {}) {
     const project = await openScreen(projectId, input.screenId);
     if (!project.wireframe_path) throw new Error('请先导入 UE Wireframe。');
@@ -493,9 +572,17 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
   // 修订再检查一次：对着旧输入生成的产物不得被批准为新事实。
   function assertSourceRevisionsFresh(kind, current, project) {
     const recorded = current?.source?.input_revisions;
-    if (!recorded) return;
-    if (JSON.stringify(recorded) !== JSON.stringify(project.input_revisions || {})) {
+    if (recorded && JSON.stringify(recorded) !== JSON.stringify(project.input_revisions || {})) {
       throw Object.assign(new Error(`${kind} 的输入修订已变化，必须重新生成后才能批准。`), { code: ERROR_CODES.STALE_REAPPROVAL_BLOCKED });
+    }
+    // Screen Contract 的 Intent 绑定专用分支（§9.2）：生成时记录的 canonical
+    // hash 必须与按当前 Intent 内容纯函数重算的 hash 一致；确认后 Intent 又
+    // 被改动的旧契约不得被批准为新事实。
+    if (kind === 'screen-contract' && current?.source?.intent_context) {
+      const fresh = intent.buildScreenContractIntentContext(project);
+      if (fresh.hash !== current.source.intent_context.intent_context_hash) {
+        throw Object.assign(new Error('Screen Contract 对应的 Intent 内容已变化，必须重新生成后才能批准。'), { code: ERROR_CODES.STALE_REAPPROVAL_BLOCKED });
+      }
     }
   }
 
@@ -1116,7 +1203,7 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig }) {
     return openProject(projectId);
   }
 
-  return { addComponentAsset, addFontAsset, addForgeManifest, approveArtifact, approveUnderlayManualReview, cancelStage, composeVisual, confirmFontUsage, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
+  return { addComponentAsset, addFontAsset, addForgeManifest, approveArtifact, approveUnderlayManualReview, cancelStage, composeVisual, confirmFontUsage, createLayoutGuide, createUnderlayContract, critiqueUnderlay, draftRequirement, invalidateArtifacts, invalidateFromInputChange, prefillIntent, repairUnderlay, runFidelity, runStage, updateArtifact, waiveUnderlayIssue };
 }
 
 module.exports = { createDesignPipeline };

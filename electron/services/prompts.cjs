@@ -1,3 +1,5 @@
+const intent = require('./intentAnalysis.cjs');
+
 function commonEnvelope(id) {
   return `All output must be one JSON object with these exact common fields:\n` +
     `"schema_version":"1.0", "id":"${id}", "version":1, "status":"generated", "source":{}.\n` +
@@ -16,12 +18,22 @@ function canvasInstruction(project) {
     `This canvas orientation and aspect ratio are hard constraints. Never rotate, crop into another ratio, or replace it with a desktop/landscape layout.`;
 }
 
-function screenContractPrompt(project) {
+function screenContractPrompt(project, context = {}) {
+  // v1.4 §9.3/§9.4：Art Direction 不进入功能识别；设计师已确认的 Intent
+  // Context 是权威输入，stale analysis 由 context builder 机械排除。
+  const intentContext = context.intentContext
+    ? `Designer-confirmed Intent context (authoritative input):\n${JSON.stringify(context.intentContext.context)}\n` +
+      (context.intentContext.meta?.analysis_context_excluded
+        ? `The AI analysis context was excluded from this task (${context.intentContext.meta.reason}); rely only on the reviewed designer content above plus the wireframe's visible facts.\n`
+        : '')
+    : '';
   return `${commonEnvelope(`${project.screen_id}-screen-contract`)}\n\n` +
     `You are a senior game UX designer. Interpret planning requirements and the attached UE wireframe. ` +
     `The wireframe is the functional source of truth, not the visual source of truth. Do not treat its positions, proportions or sizes as final visual constraints.\n\n` +
-    `Project name: ${project.name}\nProject type: ${project.project_type}\nArt direction: ${project.art_direction || 'not decided'}\n` +
+    `Project name: ${project.name}\nProject type: ${project.project_type}\n` +
     `${canvasInstruction(project)}\n` +
+    intentContext +
+    `Input priority: reviewed designer content is authoritative; visible facts from the wireframe may supplement it; unresolved questions remain unresolved; never convert deferred items into facts; do not use art direction or style priors to infer controls or business rules.\n` +
     `Planning requirement:\n${project.requirement}\n\n` +
     `Return exactly these additional fields: ` +
     `"screen_id", "screen_name", "purpose", "primary_action", ` +
@@ -39,12 +51,44 @@ function screenContractPrompt(project) {
 function intentDraftPrompt(project) {
   return `You are a senior game UX designer. Read the attached UE wireframe before the user writes a planning brief.\n` +
     `Infer only what the screen visibly supports. Do not invent numerical rules, economy values or hidden business logic.\n` +
-    `Project name: ${project.name}\nProject type: ${project.project_type}\nArt direction: ${project.art_direction || 'not decided'}\n` +
+    `Project name: ${project.name}\nProject type: ${project.project_type}\n` +
     `${canvasInstruction(project)}\n` +
     `Return one JSON object with exactly these fields: ` +
     `"requirement_draft" string, "inferred_page_type" string, "inferred_rules" string[], "uncertainties" string[]. ` +
     `Write requirement_draft in concise Simplified Chinese as an editable design-intent brief. It should cover the page purpose, player task, core flow, visible controls/information and important visible states. ` +
     `Mark genuinely unknown hidden rules as needing designer confirmation instead of guessing. Do not add markdown or commentary outside JSON.`;
+}
+
+// v1.4 §7：Intent Analysis v2 Prompt。首行 TASK_KIND 供 Fixture/诊断/真实评估路由；
+// 三步分析；保留 canvas 与 project_type（明示非视觉证据）；移除 Art Direction；
+// 只返回一个 JSON 对象，不返回 requirement_draft；人类文本简体中文、key 英文。
+function intentAnalysisV2Prompt(project) {
+  return `TASK_KIND: intent-analysis-v2\n\n` +
+    `You are a senior game UX analyst. Analyze the attached UE wireframe in exactly three passes:\n` +
+    `1. Scan the page hierarchy and surfaces (background frame versus overlays).\n` +
+    `2. Summarize the page purpose, the player tasks and the core flow.\n` +
+    `3. Audit the eight unknown-rule categories and raise uncertainties for real gaps.\n\n` +
+    `Context:\n` +
+    `Project name (logging context only, never visual evidence): ${project.name}\n` +
+    `Project type: ${project.project_type} — a production constraint, NOT visual evidence; never derive visible elements from it.\n` +
+    `${canvasInstruction(project)}\n\n` +
+    `Evidence rules (anti-inference):\n` +
+    `- Exact visible text may be recorded as fact.\n` +
+    `- The business meaning of a visual state (a green check mark, a highlighted reward, a dimmed background) needs evidence on the SAME entity; identical wording elsewhere — e.g. a 领取 button in another area — does NOT support a reward check mark meaning 已领取.\n` +
+    `- Do not invent a button's destination, an entry's unlock precondition, or a highlighted value's rule; raise an uncertainty instead.\n` +
+    `- Confidence labels never bypass these rules; when unsure, the inference and a matching uncertainty must BOTH exist.\n\n` +
+    `Return exactly one JSON object and nothing else. Keep JSON keys in English; write every human-readable value in Simplified Chinese. Do not return requirement_draft or any free-form brief.\n` +
+    `Fields:\n` +
+    `- "page_type": one of ${JSON.stringify(intent.PAGE_TYPES)}\n` +
+    `- "page_purpose": string\n` +
+    `- "player_tasks": array of {"id","text"} (max ${intent.LIMITS.playerTasks})\n` +
+    `- "core_flow": array of {"id","text"} in explicit execution order (max ${intent.LIMITS.coreFlow})\n` +
+    `- "screen_layers": array of {"id","kind","name","parent_id"} where kind is one of ${JSON.stringify(intent.LAYER_KINDS)} (max ${intent.LIMITS.layers}); every overlay kind ${JSON.stringify(intent.OVERLAY_LAYER_KINDS)} needs a same-scene background frame context\n` +
+    `- "visible_controls": array of {"id","layer_id","visible_label","visible_text","observed_states","claimed_states"} (max ${intent.LIMITS.visibleControls}); state claims about business meaning need same-entity evidence\n` +
+    `- "visible_information_and_states": same shape as visible_controls (max ${intent.LIMITS.visibleInformation})\n` +
+    `- "uncertainties": array of {"id","category","question","priority","evidence_ids","created_by":"ai"} where category is one of ${JSON.stringify(intent.UNCERTAINTY_CATEGORIES)} and priority is one of ${JSON.stringify(intent.UNCERTAINTY_PRIORITIES)} (max ${intent.LIMITS.uncertainties})\n` +
+    `- "uncertainty_audit": exactly one row per category: {"category","status" one of ${JSON.stringify(intent.AUDIT_STATUSES)},"uncertainty_ids","rationale"}\n` +
+    `Entity ids are unique lowercase kebab-case. Never provide server-owned fields: ${JSON.stringify(intent.SERVER_OWNED_ANALYSIS_FIELDS)}.`;
 }
 
 function layoutPrompt(project, screenContract, context = {}) {
@@ -180,4 +224,4 @@ function underlayRepairPrompt(task, contract, critique) {
     `Preserve the scene identity, canvas, composition outside target regions, and all explicitly preserved regions. Return only a repaired underlay: no shared buttons, tabs, navigation, icons, panels, formal text, numbers, or labels.`;
 }
 
-module.exports = { attachmentInstructions, continuationMode, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask };
+module.exports = { attachmentInstructions, continuationMode, intentAnalysisV2Prompt, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask };
