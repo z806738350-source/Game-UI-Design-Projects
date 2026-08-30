@@ -160,7 +160,9 @@ function createIntentStateStore(options = {}) {
     const contractPath = path.join(screenDirPath(projectPath, screenId), 'screen-contract.json');
     const artifact = await readJson(contractPath, null);
     if (!artifact || artifact.status === 'stale') return false;
-    const boundHash = artifact.source?.intent_context?.hash ?? null;
+    // §9.2 绑定形状：{ wireframe_revision, intent_context_revision,
+    // intent_context_hash }；.hash 为 PR-I1 早期形状的兼容回退。
+    const boundHash = artifact.source?.intent_context?.intent_context_hash ?? artifact.source?.intent_context?.hash ?? null;
     const currentHash = nextInputs.intent_context?.hash ?? null;
     if (boundHash === currentHash) return false;
     await writeJson(contractPath, { ...artifact, status: 'stale', stale_at: new Date().toISOString(), stale_reason: 'intent_context_changed' });
@@ -757,7 +759,7 @@ function createIntentStateStore(options = {}) {
     const contractPath = path.join(screenDirPath(projectPath, screenId), 'screen-contract.json');
     const contract = await readJson(contractPath, null);
     if (contract && contract.status !== 'stale' && contract.source?.intent_context
-      && contract.source.intent_context.hash !== (healed.intent_context?.hash ?? null)) {
+      && (contract.source.intent_context.intent_context_hash ?? contract.source.intent_context.hash) !== (healed.intent_context?.hash ?? null)) {
       await writeJson(contractPath, { ...contract, status: 'stale', stale_at: new Date().toISOString(), stale_reason: 'intent_context_mismatch' });
     }
     // 1. Projection alignment: requirement.md and the project.json active

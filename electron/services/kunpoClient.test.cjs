@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { generateImage, isTrustedKunpoCdnUrl, repairImage, requestArtifact, taskId } = require('./kunpoClient.cjs');
+const { generateImage, isTrustedKunpoCdnUrl, repairImage, requestArtifact, requestJson, taskId } = require('./kunpoClient.cjs');
 
 function pngHeader(width, height) {
   const bytes = Buffer.alloc(24);
@@ -208,4 +208,162 @@ test('snapshot host allowlist rejects lookalike hosts and non-image content type
     await assert.rejects(run('https://vcg-prod-1258344699.cos.ap-guangzhou.tencentcos.cn.evil.test/x.png', 'image/png'), /untrusted image location/);
     await assert.rejects(run('https://kunpoapiimg.ziy.cc/output/repair.png?token=temporary', 'text/html'), /unexpected content type/);
   } finally { global.fetch = originalFetch; await fs.rm(root, { recursive: true, force: true }); }
+});
+
+// ---------------------------------------------------------------------------
+// v1.4 §7.5 / §13.2：requestJson 的 processValue 纠正环与捕获语义。
+// ---------------------------------------------------------------------------
+
+function jsonResponse(content, extra = {}) {
+  return new Response(JSON.stringify({ id: 'resp-1', model: 'vision-x', ...extra, choices: [{ message: { content } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
+}
+
+const REQUEST_JSON_CONFIG = { configured: true, baseUrl: 'https://example.test', visionModel: 'vision-x', mode: 'gateway' };
+
+test('requestJson retries with bounded validation feedback when processValue reports errors', async () => {
+  const originalFetch = global.fetch;
+  const prompts = [];
+  let calls = 0;
+  global.fetch = async (_url, options) => {
+    calls += 1;
+    prompts.push(JSON.parse(options.body).messages[0].content[0].text);
+    const content = calls === 1 ? JSON.stringify({ page_type: 'bogus' }) : JSON.stringify({ page_type: 'full_screen' });
+    return jsonResponse(content);
+  };
+  const processValue = (value) => value.page_type === 'full_screen'
+    ? { value, errors: [], warnings: [] }
+    : { value: null, errors: ['page_type 不在枚举内'], warnings: [], repairContext: { page_type: 'bogus' } };
+  try {
+    const result = await requestJson(REQUEST_JSON_CONFIG, { prompt: 'BASE_PROMPT', processValue });
+    assert.equal(calls, 2);
+    assert.deepEqual(result.value, { page_type: 'full_screen' });
+    assert.deepEqual(result.warnings, []);
+    assert.match(prompts[1], /Attempt 1 failed validation with 1 error\(s\)/);
+    assert.match(prompts[1], /page_type 不在枚举内/);
+    assert.match(prompts[1], /"page_type":"bogus"/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('requestJson does not retry on warnings and captures provider metadata only', async () => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async () => { calls += 1; return jsonResponse(JSON.stringify({ page_type: 'full_screen' })); };
+  try {
+    const result = await requestJson(REQUEST_JSON_CONFIG, {
+      prompt: 'BASE', captureMeta: true,
+      processValue: (value) => ({ value, errors: [], warnings: ['仅提示：层数量为 1'] })
+    });
+    assert.equal(calls, 1);
+    assert.equal(result.capture_version, '1.0');
+    assert.equal(result.attempt, 1);
+    assert.deepEqual(result.warnings, ['仅提示：层数量为 1']);
+    assert.equal(result.provider.response_id, 'resp-1');
+    assert.equal(result.provider.model, 'vision-x');
+    // meta 载荷绝不含 raw text / Key / data URL。
+    assert.equal(result.raw_text, undefined);
+    assert.doesNotMatch(JSON.stringify(result), /data:image/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('requestJson caps feedback volume, truncates long errors and redacts data URLs', async () => {
+  const originalFetch = global.fetch;
+  const prompts = [];
+  let calls = 0;
+  global.fetch = async (_url, options) => {
+    calls += 1;
+    prompts.push(JSON.parse(options.body).messages[0].content[0].text);
+    return jsonResponse(calls === 1 ? JSON.stringify({ bad: true }) : JSON.stringify({ ok: true }));
+  };
+  const errors = Array.from({ length: 30 }, (_unused, index) => `错误条目-${index}-${'长'.repeat(400)}`);
+  const processValue = (value) => value.ok
+    ? { value, errors: [], warnings: [] }
+    : { value: null, errors, warnings: [], repairContext: { image: 'data:image/png;base64,QUJDREVGRw==' } };
+  try {
+    const base = 'BASE_PROMPT';
+    await requestJson(REQUEST_JSON_CONFIG, { prompt: base, processValue });
+    const feedback = prompts[1].slice(base.length);
+    assert.match(feedback, /错误条目-0-/);
+    assert.match(feedback, /错误条目-19-/);
+    assert.doesNotMatch(feedback, /错误条目-20-/);
+    assert.doesNotMatch(feedback, /错误条目-29-/);
+    assert.match(feedback, /\[redacted-image-data\]/);
+    assert.doesNotMatch(feedback, /QUJDREVGRw/);
+    assert.ok(Buffer.byteLength(feedback, 'utf8') <= 96 * 1024);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('requestJson gives up after three failed corrections and attaches the failureCode', async () => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async () => { calls += 1; return jsonResponse(JSON.stringify({ bad: true })); };
+  try {
+    await assert.rejects(
+      requestJson(REQUEST_JSON_CONFIG, {
+        prompt: 'BASE', failureCode: 'INTENT_ANALYSIS_INVALID',
+        processValue: () => ({ value: null, errors: ['结构性错误'], warnings: [], repairContext: {} })
+      }),
+      (error) => {
+        assert.equal(error.code, 'INTENT_ANALYSIS_INVALID');
+        assert.match(error.message, /连续 3 次未返回有效内容/);
+        return true;
+      }
+    );
+    assert.equal(calls, 3);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('requestJson reads each image once and reuses it across correction attempts', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-provider-reads-'));
+  const originalFetch = global.fetch;
+  const originalReadFile = fs.readFile;
+  const imagePath = path.join(root, 'wireframe.png');
+  try {
+    await fs.writeFile(imagePath, pngHeader(128, 64));
+    let reads = 0;
+    fs.readFile = (...args) => {
+      if (String(args[0]) === imagePath) reads += 1;
+      return originalReadFile.apply(fs, args);
+    };
+    let calls = 0;
+    global.fetch = async () => { calls += 1; return jsonResponse(calls === 1 ? JSON.stringify({ bad: true }) : JSON.stringify({ ok: true })); };
+    const processValue = (value) => value.ok ? { value, errors: [], warnings: [] } : { value: null, errors: ['非法'], warnings: [], repairContext: {} };
+    // 基线：单次成功尝试的图片读取次数。
+    await requestJson(REQUEST_JSON_CONFIG, { prompt: 'BASE', imagePaths: [imagePath], processValue: (value) => ({ value, errors: [], warnings: [] }) });
+    const baselineReads = reads;
+    reads = 0;
+    calls = 0;
+    const result = await requestJson(REQUEST_JSON_CONFIG, { prompt: 'BASE', imagePaths: [imagePath], captureMeta: true, processValue });
+    assert.equal(calls, 2);
+    assert.equal(result.attempt, 2);
+    // 纠正重试不得重读图片：两次尝试的总读取次数与单次尝试相同。
+    assert.equal(reads, baselineReads);
+  } finally {
+    global.fetch = originalFetch;
+    fs.readFile = originalReadFile;
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
+
+test('requestJson keeps legacy captureRaw and plain return behavior without processValue', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => jsonResponse(JSON.stringify({ requirement_draft: '初稿文本' }));
+  try {
+    const captured = await requestJson(REQUEST_JSON_CONFIG, { prompt: 'BASE', requiredStringKeys: ['requirement_draft'], captureRaw: true });
+    assert.equal(captured.capture_version, '1.0');
+    assert.equal(captured.value.requirement_draft, '初稿文本');
+    assert.match(captured.raw_text, /初稿文本/);
+    assert.equal(captured.provider.model, 'vision-x');
+    const plain = await requestJson(REQUEST_JSON_CONFIG, { prompt: 'BASE', requiredStringKeys: ['requirement_draft'] });
+    assert.equal(plain.requirement_draft, '初稿文本');
+  } finally {
+    global.fetch = originalFetch;
+  }
 });

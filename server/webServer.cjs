@@ -254,7 +254,7 @@ function createApplication(environment = process.env) {
     const intentStateStore = createIntentStateStore({ projectStore });
     projectStore.__attachIntentStore(intentStateStore);
     const kunpoConfig = loadKunpoConfig(projectRoot, environment, { modelConfigPath });
-    const designPipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig });
+    const designPipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore });
     const flowStateRepair = createFlowStateRepair({ projectStore });
     const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, intentStateStore, kunpoConfig, designPipeline, flowStateRepair };
     contexts.set(tenantId, context);
