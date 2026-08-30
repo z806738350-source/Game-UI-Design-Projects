@@ -160,6 +160,8 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .button--ghost { color: var(--muted); background: transparent; }
 .button--ghost:hover:not(:disabled) { color: var(--ink); background: var(--panel-2); border-color: var(--line-strong); }
 .button--danger { color: #fff; border-color: transparent; background: var(--danger); }
+.button--small { min-height: 30px; padding-inline: 11px; font-size: 11.5px; gap: 5px; }
+.button--icon { min-height: 30px; width: 30px; padding: 0; }
 .icon-button { width: 34px; height: 34px; display: grid; place-items: center; padding: 0; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel-2); cursor: pointer; transition: .15s ease; }
 .icon-button:hover { color: var(--ink); background: var(--panel-3); }
 .manage-button { color: var(--muted) !important; }
@@ -815,3 +817,96 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .dropdown-option.is-selected .dropdown-check { opacity: 1; }
 .dropdown-option.is-disabled { color: var(--faint); cursor: not-allowed; }
 .dropdown-option.is-disabled:hover, .dropdown-option.is-disabled.is-active:hover { background: transparent; }
+
+/* ---- v1.4 PR-I4：structured-v2 Intent 评审工作区 ---- */
+.intent-workspace-panel { display: grid; gap: 14px; align-content: start; }
+.intent-status-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.intent-status-bar .button { margin-left: auto; }
+.intent-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--muted); font-size: 10.5px; font-style: normal; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+.intent-badge--visible { color: var(--ok); border-color: rgba(92, 171, 130, .4); background: rgba(92, 171, 130, .1); }
+.intent-badge--inferred { color: var(--accent-hi); border-color: rgba(227, 166, 61, .4); background: var(--accent-soft); }
+.intent-badge--designer { color: #8fb3de; border-color: rgba(143, 179, 222, .4); background: rgba(143, 179, 222, .09); }
+.intent-badge--ok { color: var(--ok); border-color: rgba(92, 171, 130, .4); background: rgba(92, 171, 130, .1); }
+.intent-badge--warn { color: var(--warning); border-color: rgba(222, 116, 51, .45); background: rgba(222, 116, 51, .1); }
+.intent-badge--danger { color: var(--danger); border-color: rgba(217, 95, 102, .45); background: rgba(217, 95, 102, .1); }
+.intent-badge--info { color: var(--accent-hi); border-color: rgba(227, 166, 61, .4); background: var(--accent-soft); }
+.intent-badge--muted { color: var(--faint); }
+.intent-badge-row { display: inline-flex; flex-wrap: wrap; gap: 5px; }
+.intent-empty { margin: 6px 0; padding: 10px 12px; color: var(--faint); border: 1px dashed var(--line-strong); border-radius: 8px; font-size: var(--type-small); }
+.intent-editor { display: grid; gap: 12px; }
+.intent-section { padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); display: grid; gap: 9px; }
+.intent-section > header { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.intent-section > header h3 { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ink); font-size: var(--type-small); font-weight: 700; }
+.intent-section > header h3 em { color: var(--faint); font-size: 10.5px; font-style: normal; font-weight: 500; }
+.intent-section > header small { flex: 1; color: var(--faint); font-size: 10.5px; }
+.intent-section > textarea, .intent-item-body textarea { width: 100%; resize: vertical; padding: 8px 10px; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; background: #0b0c10; font: inherit; font-size: var(--type-small); line-height: 1.6; }
+.intent-section > textarea:focus-visible, .intent-item-body textarea:focus-visible, .intent-uncertainty-note textarea:focus-visible, .intent-uncertainty-add input:focus-visible, .intent-uncertainty-add select:focus-visible { border-color: rgba(227, 166, 61, .55); box-shadow: 0 0 0 3px rgba(227, 166, 61, .1); outline: none; }
+.intent-item-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.intent-item { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: start; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(10, 11, 14, .5); }
+.intent-item-index { color: var(--faint); font-family: var(--mono); font-size: 10px; line-height: 2.4; text-align: right; }
+.intent-item-body { display: grid; gap: 5px; min-width: 0; }
+.intent-item-actions { display: flex; gap: 4px; }
+.intent-item-delete { color: var(--danger); }
+.intent-uncertainties { display: grid; gap: 9px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.intent-uncertainties > header { display: flex; align-items: center; gap: 8px; }
+.intent-uncertainties > header h3 { display: flex; align-items: center; gap: 7px; margin: 0; flex: 1; color: var(--ink); font-size: var(--type-small); font-weight: 700; }
+.intent-uncertainties > header h3 em { color: var(--faint); font-size: 10.5px; font-style: normal; font-weight: 500; }
+.intent-uncertainty-add { display: grid; grid-template-columns: 1fr 120px auto; gap: 8px; }
+.intent-uncertainty-add input, .intent-uncertainty-add select { min-height: 32px; padding: 0 10px; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; background: #0b0c10; font: inherit; font-size: var(--type-small); }
+.intent-uncertainty-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.intent-uncertainty { display: grid; gap: 7px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(10, 11, 14, .5); }
+.intent-uncertainty.is-unreviewed { border-color: rgba(222, 116, 51, .45); }
+.intent-uncertainty-head { display: flex; flex-wrap: wrap; gap: 6px; }
+.intent-uncertainty-question { margin: 0; color: var(--ink); font-size: var(--type-small); line-height: 1.6; }
+.intent-uncertainty-note { display: grid; gap: 4px; }
+.intent-uncertainty-note span { color: var(--faint); font-size: 10.5px; }
+.intent-uncertainty-note textarea { width: 100%; resize: vertical; padding: 7px 9px; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; background: #0b0c10; font: inherit; font-size: var(--type-small); line-height: 1.55; }
+.intent-uncertainty-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.intent-candidate-diff { display: grid; gap: 10px; padding: 13px 14px; border: 1px solid rgba(227, 166, 61, .4); border-radius: 10px; background: var(--accent-soft); }
+.intent-candidate-diff > header { display: grid; gap: 5px; }
+.intent-candidate-diff > header h3 { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--ink); font-size: var(--type-small); font-weight: 700; }
+.intent-candidate-diff > header h3 em { color: var(--warning); font-size: 10.5px; font-style: normal; }
+.intent-candidate-diff > header p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.intent-diff-warning { margin: 0; padding: 8px 10px; color: var(--danger); border: 1px solid rgba(217, 95, 102, .45); border-radius: 8px; background: rgba(217, 95, 102, .08); font-size: 11.5px; }
+.intent-diff-section { border: 1px solid var(--line); border-radius: 8px; background: rgba(10, 11, 14, .5); }
+.intent-diff-section summary { padding: 8px 10px; color: var(--ink); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.intent-diff-rows { margin: 0; padding: 8px; list-style: none; display: grid; gap: 6px; }
+.intent-diff-row { display: grid; grid-template-columns: 130px 1fr; gap: 8px; align-items: start; padding: 6px; border-radius: 6px; }
+.intent-diff-row--added { background: rgba(92, 171, 130, .07); }
+.intent-diff-row--removed { background: rgba(217, 95, 102, .07); }
+.intent-diff-row--changed { background: rgba(222, 116, 51, .07); }
+.intent-diff-texts { display: grid; gap: 3px; min-width: 0; }
+.intent-diff-texts p { margin: 0; color: var(--ink); font-size: 11.5px; line-height: 1.55; overflow-wrap: anywhere; }
+.intent-diff-texts p.is-strike { color: var(--faint); text-decoration: line-through; }
+.intent-diff-texts p.is-candidate { color: var(--accent-hi); }
+.intent-diff-keep-hint { margin: 0; color: var(--muted); font-size: 11px; }
+.intent-candidate-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.intent-evidence { border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.intent-evidence summary { display: flex; align-items: center; gap: 6px; padding: 9px 12px; color: var(--muted); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.intent-evidence ul { margin: 0; padding: 0 12px 10px 28px; color: var(--muted); font-size: 11.5px; line-height: 1.8; }
+.intent-history-wrap { border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.intent-history-wrap > summary { padding: 9px 12px; color: var(--muted); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.intent-history { display: grid; gap: 8px; padding: 2px 12px 12px; }
+.intent-history > header { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.intent-history > header h3 { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--ink); font-size: var(--type-small); font-weight: 700; }
+.intent-history > header h3 em { color: var(--faint); font-size: 10.5px; font-style: normal; }
+.intent-history > header small { color: var(--faint); font-size: 10.5px; }
+.intent-history-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.intent-history-entry { display: grid; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(10, 11, 14, .5); }
+.intent-history-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--faint); font-size: 10.5px; }
+.intent-history-warn { margin: 0; color: var(--warning); font-size: 11px; }
+.intent-history-actions { display: flex; gap: 6px; }
+.design-brief-card.is-readonly textarea { color: var(--muted); cursor: default; }
+.intent-footer { flex-wrap: wrap; }
+.intent-footer-actions { display: flex; align-items: center; gap: 10px; }
+.intent-blockers { flex-basis: 100%; margin: 0; padding: 8px 12px; list-style: disc inside; color: var(--warning); border: 1px solid rgba(222, 116, 51, .4); border-radius: 8px; background: rgba(222, 116, 51, .07); font-size: 11.5px; }
+.intent-blockers li { line-height: 1.7; }
+/* §10.8：窄屏时评审工作区强制单列，条目操作换行不遮挡文本 */
+@media (max-width: 960px) {
+  .intent-workspace-panel { grid-template-columns: 1fr; }
+  .intent-item { grid-template-columns: 1fr; }
+  .intent-item-index { display: none; }
+  .intent-item-actions { justify-content: flex-end; }
+  .intent-uncertainty-add { grid-template-columns: 1fr; }
+  .intent-diff-row { grid-template-columns: 1fr; }
+}
