@@ -8,7 +8,7 @@
 
 | Workbench | 负责阶段 | 主要操作 |
 | --- | --- | --- |
-| InputWorkspace | 需求输入 | 录入/草拟需求（`input:draft-requirement`） |
+| InputWorkspace | 需求输入 | AI 预填意图、逐段评审、确认（`input:prefill-intent` / `input:confirm-intent-review`） |
 | ReferenceWorkbench | 参考分析 | 导入参考图、批准/拒绝参考 |
 | StyleWorkspace | 风格解析 | 生成/批准 Style Contract |
 | TypographyWorkbench | 字体 | 导入字体、license/exact 确认、批准 Font Manifest |
@@ -32,6 +32,26 @@
 
 每个 Workbench 内部的操作按钮只在满足前置条件时可用；置灰或报错时
 先回到上游 Workbench 完成对应批准。
+
+## 输入阶段：AI 预填、Candidate 与确认（structured-v2）
+
+导入线框稿（UE）后，输入阶段提供两种工作方式：
+
+- **新项目 / 空白输入**：点「AI 预填」，AI 看图生成固定六段草稿（页面目的、
+  玩家任务、核心流程、可见控件、可见信息与状态）。首稿直接采用，逐段评审后确认。
+- **已有内容（旧版文本或已确认评审）**：重新预填不会覆盖当前输入，而是生成一个
+  **candidate（候选）**，界面上以差异对比呈现：
+  - **采用**：整版替换当前评审，旧版本自动留档到历史；确认被取消，需重新确认；
+  - **丢弃**：当前输入原封不动。
+  candidate 待处理时不能再次预填；若预填后其它输入已变化，candidate 会显示过期，
+  只能丢弃后重新预填。
+- **历史**：每次采用/保存前的版本都会留档，可在历史面板中查看与恢复；恢复前会二次确认，
+  恢复后确认被取消，需要重新确认才能进入下游。
+
+**确认门禁**：条目上会显示来源标签（图中可见 / AI 推断 / 设计师新增 / 设计师已修改）；存在未处理的待确认项（AI 提出的疑问）或六段内容低于空下限时，确认按钮不可用。
+确认后进入功能解读阶段；此后再编辑评审会取消确认，需重新确认。
+更换线框稿或 Project Type 后，旧分析会标记为「基于旧 UE」，请核对或重新预填。
+状态机细节见 `docs/dev/PIPELINE-STATE-MACHINE.md`。
 
 ## 工作台边界（重要）
 
@@ -79,4 +99,5 @@ A：ComponentKitWorkbench 支持 `components:forge-import`，从 Forge 拉取
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 1.1 | 2026-08-30 | PR-I5：InputWorkspace 升级为 structured-v2 意图预填（六段评审、candidate/历史、确认门禁） |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |

@@ -86,7 +86,7 @@ export function InputWorkspace({ project, busy, run }: WorkspaceProps) {
           <div className="intent-status-bar">
             <i className={`intent-badge intent-badge--${status.tone}`} role="status">{status.label}</i>
             {dirtyReview && <i className="intent-badge intent-badge--warn">有未保存修改</i>}
-            <button type="button" className="button button--secondary button--small" disabled={busy || !ready || Boolean(candidateReady)} title={candidateReady ? '存在待处理的 candidate：请先采用或丢弃' : undefined} onClick={generateCandidate}><Sparkles size={14} />{serverReview || candidate ? '重新 AI 预填' : 'AI 解读并预填写'}</button>
+            <button type="button" className="button button--secondary button--small" data-testid="intent-regenerate" disabled={busy || !ready || Boolean(candidateReady)} title={candidateReady ? '存在待处理的 candidate：请先采用或丢弃' : undefined} onClick={generateCandidate}><Sparkles size={14} />{serverReview || candidate ? '重新 AI 预填' : 'AI 解读并预填写'}</button>
           </div>
           {candidate && <IntentCandidateDiff project={project} candidate={candidate} currentReview={draft} busy={busy}
             onAdopt={() => run(async () => {

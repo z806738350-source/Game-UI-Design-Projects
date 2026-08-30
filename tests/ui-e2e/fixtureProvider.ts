@@ -86,6 +86,52 @@ function semanticResponse(value: unknown) {
   };
 }
 
+// v1.4 §7/§12.2：Intent Analysis v2 合法 fixture。形状与八类 audit 必须通过
+// 服务端 intentAnalysis.cjs 的权威校验；spec 可用 overrides 派生变体。
+const UNCERTAINTY_AUDIT_CATEGORIES = [
+  'state_semantics', 'reward_rules', 'entry_navigation', 'unlock_preconditions',
+  'resource_economy', 'interaction_limits', 'background_behavior', 'data_source_refresh'
+];
+
+export function intentAnalysisV2Fixture(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    page_type: 'modal_overlay',
+    page_purpose: '展示 BOSS 伤害进度与奖励节点，并提供挑战入口',
+    player_tasks: [{ id: 'task-check-damage', text: '查看个人与全派伤害信息' }],
+    core_flow: [
+      { id: 'flow-open', text: '打开 BOSS 挑战弹窗' },
+      { id: 'flow-challenge', text: '点击挑战进入战斗' }
+    ],
+    screen_layers: [
+      { id: 'background', kind: 'background_frame', name: '压暗的主界面', parent_id: null },
+      { id: 'modal', kind: 'modal', name: 'BOSS 挑战弹窗', parent_id: null }
+    ],
+    visible_controls: [
+      { id: 'control-challenge', layer_id: 'modal', visible_label: '挑战', visible_text: '', observed_states: [], claimed_states: [] }
+    ],
+    visible_information_and_states: [
+      { id: 'info-rewards', layer_id: 'modal', visible_label: '奖励进度', visible_text: '99万/999万', observed_states: [], claimed_states: [] }
+    ],
+    uncertainties: [],
+    uncertainty_audit: UNCERTAINTY_AUDIT_CATEGORIES.map((category) => ({ category, status: 'no_gap_found', uncertainty_ids: [], rationale: '' })),
+    ...overrides
+  };
+}
+
+// 带一个非阻断级待确认项的变体：确认前必须在 UI 里处理它（§10.5）。
+export function intentAnalysisV2WithUncertainty(): Record<string, unknown> {
+  return intentAnalysisV2Fixture({
+    uncertainties: [
+      { id: 'uncertainty-reward-reset', category: 'reward_rules', question: '奖励进度每日零点重置还是按周重置？', priority: 'important', evidence_ids: ['info-rewards'] }
+    ],
+    uncertainty_audit: UNCERTAINTY_AUDIT_CATEGORIES.map((category) => (
+      category === 'reward_rules'
+        ? { category, status: 'questions_present', uncertainty_ids: ['uncertainty-reward-reset'], rationale: '图中看不出重置周期' }
+        : { category, status: 'no_gap_found', uncertainty_ids: [], rationale: '' }
+    ))
+  });
+}
+
 function dataUrl(filePath: string): string {
   const extension = path.extname(filePath).slice(1).toLowerCase();
   const mime = extension === 'jpg' ? 'jpeg' : extension;
@@ -110,6 +156,7 @@ export class FixtureProvider {
   private chatFailures = 0;
   private imageQueue: string[] = [];
   private critiqueQueue: string[] = [];
+  private intentQueue: Array<Record<string, unknown>> = [];
 
   armUnderlayGeneration() {
     this.imageQueue.push(GOLDEN_ASSETS.contaminatedUnderlay, GOLDEN_ASSETS.contaminatedUnderlay, GOLDEN_ASSETS.contaminatedUnderlay);
@@ -125,6 +172,9 @@ export class FixtureProvider {
   }
 
   failNextChatRequests(count: number) { this.chatFailures = count; }
+
+  // v1.4 §12.2：按顺序返回给定的 v2 分析（合法/非法变体），队列耗尽后回落默认合法 fixture。
+  armIntentAnalysisSequence(values: Array<Record<string, unknown>>) { this.intentQueue = [...values]; }
 
   async start(): Promise<void> {
     this.server = http.createServer((request, response) => { void this.handle(request, response); });
@@ -167,6 +217,11 @@ export class FixtureProvider {
   }
 
   private routeSemantic(prompt: string): unknown {
+    // v1.4 §7：TASK_KIND 首行路由。v2 Intent Prompt 只允许命中 v2 fixture，
+    // 队列可注入非法分析验证纠正环；无匹配路由硬失败。
+    if (prompt.startsWith('TASK_KIND: intent-analysis-v2')) {
+      return this.intentQueue.shift() ?? intentAnalysisV2Fixture();
+    }
     if (prompt.includes('independent game UI underlay reviewer')) {
       const next = this.critiqueQueue.shift();
       if (!next) throw new Error('fixture provider critique queue exhausted');
@@ -175,9 +230,6 @@ export class FixtureProvider {
     if (prompt.includes('Attempt 1 failed') || prompt.includes('Attempt 2 failed')) {
       // Repair feedback retries must keep routing to the original payload;
       // the original prompt prefix is preserved, so fall through below.
-    }
-    if (prompt.includes('Read the attached UE wireframe')) {
-      return { requirement_draft: String(readJson('project.json').requirement || '') };
     }
     // Most specific envelope id first: layout/style prompts may quote other
     // artifact ids (e.g. the approved screen contract) in their bodies.

@@ -5,6 +5,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { createDesignPipeline } = require('./designPipeline.cjs');
 const { createProjectStore } = require('./projectStore.cjs');
+const { createIntentStateStore } = require('./intentStateStore.cjs');
+const { UNCERTAINTY_CATEGORIES } = require('./intentAnalysis.cjs');
 
 function pngHeader(width, height) {
   const bytes = Buffer.alloc(24);
@@ -14,12 +16,16 @@ function pngHeader(width, height) {
   return bytes;
 }
 
-test('blank input is prefilled from UE and must be confirmed before contract generation', async () => {
+// v1.4 §11.1：draftRequirement 已升级为 structured-v2 预填；空需求首稿直接采用，
+// 未确认的评审不得进入 Screen Contract 生成。
+test('blank input is prefilled as a structured-v2 review and must be confirmed before contract generation', async () => {
   const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-intent-'));
   const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
   process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
   try {
     const projectStore = createProjectStore();
+    const intentStateStore = createIntentStateStore({ projectStore });
+    projectStore.__attachIntentStore(intentStateStore);
     let project = await projectStore.create({ name: 'Intent Project', projectType: 'new', requirement: '' });
     const sourceImage = path.join(temporaryRoot, 'wireframe.png');
     await fs.writeFile(sourceImage, pngHeader(1080, 1920));
@@ -30,8 +36,19 @@ test('blank input is prefilled from UE and must be confirmed before contract gen
       requestJson: async (_config, input) => {
         draftRequest = input;
         return {
-          requirement_draft: '玩家需要在竖屏阵容页选择五名侠客、调整站位并保存阵容。隐藏的数值规则需要设计师确认。',
-          inferred_page_type: '阵容编成', inferred_rules: ['五人阵容'], uncertainties: ['数值规则']
+          value: {
+            page_type: 'full_screen',
+            page_purpose: '在竖屏阵容页选择五名侠客并保存阵容',
+            player_tasks: [{ id: 'task-pick', text: '选择五名侠客并调整站位' }],
+            core_flow: [{ id: 'flow-save', text: '保存阵容' }],
+            screen_layers: [{ id: 'layer-main', kind: 'primary_content', name: '阵容主内容层', parent_id: null }],
+            visible_controls: [{ id: 'control-save', layer_id: 'layer-main', visible_label: '保存', visible_text: '保存阵容', observed_states: [], claimed_states: [] }],
+            visible_information_and_states: [],
+            uncertainties: [],
+            uncertainty_audit: UNCERTAINTY_CATEGORIES.map((category) => ({ category, status: 'no_gap_found', uncertainty_ids: [], rationale: '' }))
+          },
+          provider: null,
+          warnings: []
         };
       },
       requestArtifact: async (_config, input) => {
@@ -44,19 +61,24 @@ test('blank input is prefilled from UE and must be confirmed before contract gen
         };
       }
     };
-    const pipeline = createDesignPipeline({ projectStore, kunpoClient: fakeClient, kunpoConfig: {} });
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: fakeClient, kunpoConfig: {}, intentStateStore });
     project = await pipeline.draftRequirement(project.id, { screenId: 'main' });
-    assert.deepEqual(draftRequest.requiredStringKeys, ['requirement_draft']);
+    assert.ok(draftRequest.prompt.startsWith('TASK_KIND: intent-analysis-v2'));
     assert.equal(draftRequest.imagePaths[0], project.wireframe_path);
-    assert.equal(project.requirement_source, 'ai');
+    // 首稿直接采用：项目进入 structured-v2，需求由服务端渲染生成。
+    assert.equal(project.intent_mode, 'structured-v2');
+    assert.ok(project.intent_review && project.intent_review.page_purpose);
+    assert.ok(project.requirement.trim());
     assert.equal(project.requirement_confirmed, false);
-    assert.equal(project.workflow.current_stage, 'input');
     assert.equal(project.workflow.stages.input.status, 'reviewed');
     await assert.rejects(
       pipeline.runStage(project.id, 'wireframe_interpretation', { screenId: 'main', stayOnInputUntilComplete: true }),
-      /确认 AI 预填的设计意图/
+      (error) => {
+        assert.equal(error.code, 'INTENT_REVIEW_INCOMPLETE');
+        return true;
+      }
     );
-    await projectStore.saveProject(project.id, { requirementConfirmed: true });
+    await intentStateStore.confirmIntentReview(project.id, 'main', { expectedIntentReviewRevision: 1 });
     project = await pipeline.runStage(project.id, 'wireframe_interpretation', { screenId: 'main', stayOnInputUntilComplete: true });
     assert.equal(stageWhileGenerating, 'input');
     assert.equal(project.workflow.current_stage, 'wireframe_interpretation');

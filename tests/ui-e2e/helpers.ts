@@ -126,6 +126,8 @@ type ProjectSnapshot = {
   screen_id: string;
   continuation_mode: string;
   requirement: string;
+  requirement_confirmed?: boolean;
+  intent_mode?: string;
   artifacts: Record<string, { status?: string; version?: number; [key: string]: unknown } | undefined>;
   screens?: Array<{ id: string; name: string; status?: string }>;
   reference_assets?: Array<{ id: string; approved?: boolean }>;
@@ -189,13 +191,41 @@ export async function createStrictProject(page: Page, name: string): Promise<voi
   await expect(page.getByTestId('stage-input')).toBeVisible();
 }
 
+export async function createNewProject(page: Page, name: string): Promise<void> {
+  await page.getByTestId('create-project-dialog').waitFor({ state: 'visible', timeout: 60_000 });
+  await page.locator('.create-dialog input[placeholder*="云境计划"]').fill(name);
+  await page.locator('.project-type-grid button', { hasText: '新项目' }).click();
+  await clickRun(page, 'create-project');
+  await expect(page.getByTestId('stage-input')).toBeVisible();
+}
+
+// v1.4 §10.5：确认前必须逐条处理未审查的待确认项；回答前必须先填结论。
+export async function answerUnreviewedUncertainties(page: Page, note = 'E2E 核对结论：按图中可见行为确认。'): Promise<number> {
+  let handled = 0;
+  const unreviewed = () => page.locator('.intent-uncertainty.is-unreviewed');
+  while (await unreviewed().count()) {
+    const first = unreviewed().first();
+    await first.locator('textarea').fill(note);
+    await first.locator('button', { hasText: '回答' }).click();
+    await page.waitForTimeout(120);
+    handled += 1;
+  }
+  return handled;
+}
+
+// structured-v2 确认入口：处理待确认项 → 确认 → 等待生成完成。
+export async function confirmStructuredIntent(page: Page): Promise<void> {
+  await answerUnreviewedUncertainties(page);
+  await clickRun(page, 'intent-confirm');
+}
+
 export async function importWireframeAndIntent(launched: LaunchedApp): Promise<void> {
   const { app, page } = launched;
   await queueOpenFiles(app, [GOLDEN_ASSETS.wireframe]);
   await clickRun(page, 'wireframe-import');
   await clickRun(page, 'intent-draft');
   await expect(page.locator('.design-brief-card textarea')).not.toHaveValue('');
-  await clickRun(page, 'intent-confirm');
+  await confirmStructuredIntent(page);
 }
 
 export async function approveContract(page: Page): Promise<void> {

@@ -9,7 +9,7 @@ import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { FixtureProvider, GOLDEN_ASSETS } from './fixtureProvider';
 import {
-  approveContract, chooseDropdown, clickRun, createStrictProject, deriveAsset, findProjectDir, getProject,
+  approveContract, chooseDropdown, clickRun, confirmStructuredIntent, createStrictProject, deriveAsset, findProjectDir, getProject,
   importWireframeAndIntent, launchApp, queueOpenFiles, switchScreen
 } from './helpers';
 import type { LaunchedApp } from './helpers';
@@ -83,14 +83,15 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
     await page.getByTestId('stage-input').click();
     await queueOpenFiles(launched.app, [wireframeB]);
     await clickRun(page, 'wireframe-import');
-    // A requirement that differs from Screen A's: typed and confirmed by the
-    // designer, no AI draft involved.
-    await page.locator('.design-brief-card textarea').fill('独立需求：战斗结算页需要展示本局战损、奖励结算与返回主城入口。');
-    await clickRun(page, 'intent-confirm');
+    // v1.4：Screen B 走自己的 structured-v2 预填与确认，不再手输自由文本；
+    // 两屏的评审各自独立，不得互相覆盖（§16 场景 H）。
+    await clickRun(page, 'intent-draft');
+    await confirmStructuredIntent(page);
 
     const project = await getProject(page);
     expect(project.screen_id).toBe('battle');
-    expect(project.requirement).toContain('战斗结算页');
+    expect(project.intent_mode).toBe('structured-v2');
+    expect(project.requirement_confirmed).toBe(true);
     const contract = project.artifacts.screenContract;
     expect(contract).toBeTruthy();
     expect(String(contract?.screen_id)).toBe('battle');
@@ -105,7 +106,12 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
     expect(mainProject.screen_id).toBe('main');
     expect(mainProject.artifacts.screenContract?.status).toBe('approved');
     expect(String(mainProject.artifacts.screenContract?.screen_id)).toBe('main');
-    expect(mainProject.requirement).not.toContain('战斗结算页');
+    // 两屏的权威输入各自留档：B 的评审不写入 A 的 inputs.json。
+    const projectDir = findProjectDir(launched, 'screens/battle/inputs.json');
+    const battleInputs = JSON.parse(fs.readFileSync(path.join(projectDir, 'screens', 'battle', 'inputs.json'), 'utf8'));
+    const mainInputs = JSON.parse(fs.readFileSync(path.join(projectDir, 'screens', 'main', 'inputs.json'), 'utf8'));
+    expect(battleInputs.intent_review).toBeTruthy();
+    expect(battleInputs.intent_review.source_analysis_id).not.toBe(mainInputs.intent_review.source_analysis_id);
   });
 
   test('Screen B is renamed through the UI', async () => {

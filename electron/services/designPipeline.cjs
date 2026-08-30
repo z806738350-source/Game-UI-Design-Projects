@@ -517,25 +517,13 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentSt
     });
   }
 
+  // v1.4 §11.1：draftRequirement 名称为兼容保留，语义升级为 structured-v2
+  // 预填：空需求 → 首稿直接采用；已有输入 → 生成待处理 candidate。
+  // 旧四字段自由文本路径不再由 AI 生成，回滚只影响 UI 展示（§15）。
   async function draftRequirement(projectId, input = {}) {
-    const project = await openScreen(projectId, input.screenId);
-    if (!project.wireframe_path) throw new Error('请先导入 UE Wireframe。');
     await projectStore.updateWorkflow(projectId, 'input', 'in_progress');
     try {
-      const analysis = await kunpoClient.requestJson({ ...kunpoConfig }, {
-        prompt: intentDraftPrompt(project),
-        imagePaths: [project.wireframe_path],
-        requiredStringKeys: ['requirement_draft']
-      });
-      await projectStore.saveProject(projectId, {
-        requirement: analysis.requirement_draft.trim(),
-        requirementSource: 'ai',
-        requirementConfirmed: false,
-        intentAnalysis: { ...analysis, generated_at: new Date().toISOString() }
-      });
-      if (project.requirement !== analysis.requirement_draft.trim()) {
-        await invalidateFromInputChange(projectId, { requirement: true, screenId: project.screen_id });
-      }
+      await prefillIntent(projectId, input);
       await projectStore.updateWorkflow(projectId, 'input', 'reviewed');
       return openProject(projectId);
     } catch (error) {
