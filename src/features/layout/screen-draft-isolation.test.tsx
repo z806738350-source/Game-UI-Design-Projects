@@ -19,7 +19,17 @@ vi.mock('../../api', () => ({
     importFile: vi.fn(),
     generateUnderlayContract: vi.fn(),
     generateLayoutGuide: vi.fn(),
-    repairRouteCycle: vi.fn()
+    repairRouteCycle: vi.fn(),
+    // v1.4 §11.1 structured-v2 同义接口：读接口默认空结果，写接口不被这些用例触发。
+    generateIntentCandidate: vi.fn(),
+    saveIntentReview: vi.fn(),
+    confirmIntentReview: vi.fn(),
+    adoptIntentCandidate: vi.fn(),
+    discardIntentCandidate: vi.fn(),
+    getIntentCandidate: vi.fn().mockResolvedValue(null),
+    listIntentHistory: vi.fn().mockResolvedValue([]),
+    restoreIntentHistory: vi.fn(),
+    deleteIntentHistory: vi.fn()
   }
 }));
 
@@ -84,5 +94,49 @@ describe('AUD-11 输入工作台草稿隔离', () => {
     rerender(<InputWorkspace project={projectB} busy={false} run={run} />);
     expect(textarea.value).toBe('B 屏需求');
     expect(directionInput.value).toBe('B 屏方向');
+  });
+});
+
+// v1.4 §10.4：structured-v2 六段编辑器的本地草稿同样按 Screen 隔离。
+const reviewFixture = (purpose: string) => ({
+  revision: 1,
+  page_purpose: { id: 'pp', text: purpose, origin: 'ai_visible', source_evidence_ids: ['layer-1'] },
+  player_tasks: [{ id: 't1', text: '选择侠客', origin: 'ai_visible', source_evidence_ids: ['layer-1'] }],
+  core_flow: [{ id: 'f1', text: '确认编成', origin: 'ai_visible', source_evidence_ids: ['layer-1'] }],
+  visible_controls: [{ id: 'c1', text: '编成按钮', origin: 'ai_visible', source_evidence_ids: ['layer-1'] }],
+  visible_information_and_states: [],
+  uncertainties: []
+});
+const structuredProject = (screenId: string, purpose: string) => makeProject({
+  id: 'project-1',
+  screen_id: screenId,
+  requirement: purpose,
+  intent_mode: 'structured-v2',
+  intent_review: reviewFixture(purpose) as never,
+  input_revisions: { requirement: 1, intent_review: 1, intent_context: 0, wireframe: 1 },
+  wireframe_path: `/tmp/${screenId}-ue.png`
+} as never);
+
+describe('v1.4 structured-v2 评审草稿隔离', () => {
+  it('切换 Screen 后未保存的六段草稿重置为该屏的服务端评审', () => {
+    const { rerender } = render(<InputWorkspace project={structuredProject('screen-a', 'A 屏页面目的')} busy={false} run={run} />);
+    const purposeTextarea = document.querySelector('textarea[aria-label="页面目的"]') as HTMLTextAreaElement;
+    fireEvent.change(purposeTextarea, { target: { value: 'A 屏未保存的草稿' } });
+    expect(purposeTextarea.value).toBe('A 屏未保存的草稿');
+    // 切到 B 屏：A 屏未保存草稿不得残留，页面目的回到 B 屏服务端值。
+    rerender(<InputWorkspace project={structuredProject('screen-b', 'B 屏页面目的')} busy={false} run={run} />);
+    expect((document.querySelector('textarea[aria-label="页面目的"]') as HTMLTextAreaElement).value).toBe('B 屏页面目的');
+  });
+
+  it('同一 Screen 内服务端评审版本变化后本地草稿同样重建', () => {
+    const project = structuredProject('screen-a', '旧版本目的');
+    const { rerender } = render(<InputWorkspace project={project} busy={false} run={run} />);
+    fireEvent.change(document.querySelector('textarea[aria-label="页面目的"]') as HTMLTextAreaElement, { target: { value: '未保存修改' } });
+    // 保存/采用会 bump intent_review revision，旧草稿必须让位于新版本。
+    const next = structuredProject('screen-a', '新版本目的');
+    (next.intent_review as { revision: number }).revision = 2;
+    next.input_revisions = { ...(next.input_revisions || {}), intent_review: 2 };
+    rerender(<InputWorkspace project={next} busy={false} run={run} />);
+    expect((document.querySelector('textarea[aria-label="页面目的"]') as HTMLTextAreaElement).value).toBe('新版本目的');
   });
 });
