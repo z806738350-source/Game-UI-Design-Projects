@@ -136,6 +136,8 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
   test('Screen B is duplicated through the UI with its data', async () => {
     const dock = page.getByTestId('screen-manager');
     await dock.locator('button[title="复制当前页面及全部产物"]').click();
+    // 复制异步写 project.json；先等落盘完成再读快照，避免与写入竞态。
+    await page.locator('.busy-bar').waitFor({ state: 'detached', timeout: 120_000 });
     const duplicatedDropdown = dock.getByTestId('screen-active-select');
     await duplicatedDropdown.locator('.dropdown-button').click();
     await expect(duplicatedDropdown.locator('.dropdown-option')).toHaveCount(3);
@@ -162,6 +164,8 @@ test.describe.serial('multi-screen isolation and lifecycle (UIE2E-02/02B)', () =
     await switchScreen(page, 'battle');
     await chooseDropdown(page.getByTestId('screen-archive-select'), 'battle-copy');
     await dock.locator('button[title="归档选中的非当前页面"]').click();
+    // 归档同样异步写 project.json；先等落盘完成再读快照。
+    await page.locator('.busy-bar').waitFor({ state: 'detached', timeout: 120_000 });
 
     // Archived screens disappear from the switcher but stay in the registry.
     const activeDropdown = dock.getByTestId('screen-active-select');

@@ -154,7 +154,7 @@ export function InputWorkspace({ project, busy, run }: WorkspaceProps) {
             : '评审完整，可以确认并开始功能解读。'}
         </span>
         <div className="intent-footer-actions">
-          <button className="button button--secondary" disabled={busy || !dirtyReview} onClick={saveReview}><Save size={16} />{dirtyReview ? '保存评审修改' : '评审已保存'}</button>
+          <button className="button button--secondary" data-testid="intent-review-save" disabled={busy || !dirtyReview} onClick={saveReview}><Save size={16} />{dirtyReview ? '保存评审修改' : '评审已保存'}</button>
           <button className="button button--primary" data-testid="intent-confirm" disabled={busy || !ready || !draft || dirtyReview || Boolean(blockers.length)} onClick={confirmReview}><Bot size={17} />{project.requirement_confirmed ? '重新生成功能契约' : '确认意图并开始功能解读'}</button>
         </div>
         {Boolean(blockers.length) && !dirtyReview && draft && <ul className="intent-blockers" aria-label="确认前需要处理的问题">{blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>}

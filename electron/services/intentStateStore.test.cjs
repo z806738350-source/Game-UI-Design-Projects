@@ -167,11 +167,17 @@ test('existing authoritative input sends the result to candidate only', async ()
   const ctx = await setup({ requirement: '手工需求' });
   try {
     const before = await readInputs(ctx.project);
-    const candidateId = await generateCandidate(ctx);
+    const { requestId } = await ctx.intentStore.beginIntentGeneration(ctx.project.id, 'main');
+    const running = await readInputs(ctx.project);
+    assert.notEqual(running.intent_mode, 'structured-v2', 'generation start never flips mode (§16 G)');
+    const completeResult = await ctx.intentStore.completeIntentGeneration(ctx.project.id, 'main', { requestId, rawAnalysis: validRawAnalysis() });
+    assert.equal(completeResult.saved, 'candidate');
+    const candidateId = completeResult.candidateId;
     const after = await readInputs(ctx.project);
     assert.equal(after.requirement, '手工需求', 'current requirement never overwritten');
     assert.equal(after.requirement_source, before.requirement_source);
     assert.equal(after.intent_review ?? null, null, 'current review untouched');
+    assert.notEqual(after.intent_mode, 'structured-v2', 'mode only flips on adopt (§16 G)');
     assert.equal(after.intent_generation.status, 'ready');
     const candidate = await readJson(candidateFile(ctx.project), null);
     assert.equal(candidate.candidate_id, candidateId);

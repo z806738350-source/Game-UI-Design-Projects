@@ -55,7 +55,8 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
       { page_type: 'bogus' }, { page_type: 'bogus' }, { page_type: 'bogus' }
     ]);
     await clickRun(page, 'intent-regenerate', { allowError: true });
-    await expectErrorBanner(page, /INTENT_ANALYSIS_INVALID|纠正后仍非法/);
+    // friendlyError 会把纠正环耗尽的原始错误映射为用户可读文案（ui.tsx）。
+    await expectErrorBanner(page, /INTENT_ANALYSIS_INVALID|纠正后仍非法|自动修复后仍不完整/);
     await closeErrorBanner(page);
     // §16 D/E：失败不改当前评审、不残留 candidate、不取消确认状态以外的任何东西。
     await expect(page.locator('textarea[aria-label="页面目的"]')).toHaveValue(currentPurpose);

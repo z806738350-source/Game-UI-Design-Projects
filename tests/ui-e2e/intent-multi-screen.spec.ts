@@ -79,6 +79,8 @@ test.describe.serial('structured-v2 multi-screen isolation (v1.4 §16 H)', () =>
   test('cloning a confirmed screen cancels confirmation on the copy', async () => {
     const dock = page.getByTestId('screen-manager');
     await dock.locator('button[title="复制当前页面及全部产物"]').click();
+    // Clone 异步复制产物并写 project.json；先等落盘完成再读快照，避免与写入竞态。
+    await page.locator('.busy-bar').waitFor({ state: 'detached', timeout: 120_000 });
     await switchScreen(page, 'main-copy');
     const project = await getProject(page);
     expect(project.screen_id).toBe('main-copy');

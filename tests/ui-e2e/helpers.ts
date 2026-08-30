@@ -216,6 +216,11 @@ export async function answerUnreviewedUncertainties(page: Page, note = 'E2E 核�
 // structured-v2 确认入口：处理待确认项 → 确认 → 等待生成完成。
 export async function confirmStructuredIntent(page: Page): Promise<void> {
   await answerUnreviewedUncertainties(page);
+  // 回答只改本地草稿；存在未保存的评审修改时先保存，再过确认门禁（§10.5）。
+  const saveReviewButton = page.getByTestId('intent-review-save');
+  if (await saveReviewButton.count() && await saveReviewButton.isEnabled()) {
+    await clickRun(page, 'intent-review-save');
+  }
   await clickRun(page, 'intent-confirm');
 }
 

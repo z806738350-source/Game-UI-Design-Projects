@@ -245,7 +245,8 @@ idle ──prefillIntent──> running ──首次且空白（无需求文本�
   intent_context/wireframe），基线漂移后展示与采用均报过期（`INTENT_CANDIDATE_STALE`），
   只能丢弃后重新预填。
 - 历史条目以 `review-save` / `candidate-adopt` / `restore-before` 原因留档；
-  恢复需二次确认，恢复动作取消确认并再留档恢复前版本。
+  恢复需二次确认，恢复动作取消确认并再留档恢复前版本；恢复无评审的历史（采用
+  structured 前的自由文本版本）时回到 legacy 分支，带评审的版本留在 structured-v2。
 
 **stale 判定**：
 - `intent_analysis.source_revision` 绑定生成时的线框修订与 Project Type；

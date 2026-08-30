@@ -31,7 +31,7 @@ test.describe.serial('structured-v2 intent prefill (v1.4 §16 A/B)', () => {
     await clickRun(page, 'intent-draft');
     // 六段固定：页面目的 + 四个列表段，全部来自 UI，不需要看 JSON。
     await expect(page.locator('.intent-section')).toHaveCount(5);
-    await expect(page.getByLabel('玩家任务第 1 条')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: '玩家任务第 1 条' })).toBeVisible();
     // §10.3 来源标签以文字呈现。
     await expect(page.locator('.intent-badge', { hasText: '图中可见' }).first()).toBeVisible();
     // §15：structured-v2 的需求文本只读展示。
@@ -56,6 +56,8 @@ test.describe.serial('structured-v2 intent prefill (v1.4 §16 A/B)', () => {
     await expect(page.locator('.intent-blockers')).toBeVisible();
     const handled = await answerUnreviewedUncertainties(page);
     expect(handled).toBe(1);
+    // 回答只改本地草稿：保存评审后确认门禁才放开（§10.5）。
+    await clickRun(page, 'intent-review-save');
     await expect(page.getByTestId('intent-confirm')).toBeEnabled();
     await clickRun(page, 'intent-confirm');
     await page.getByTestId('stage-wireframe_interpretation').click();
