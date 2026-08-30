@@ -102,10 +102,11 @@ project/
 ├── screens/
 │   ├── index.json
 │   └── main/
-│       ├── inputs.json
+│       ├── inputs.json # 需求/意图权威输入：structured-v2 时含 intent_generation/analysis/review/candidate
 │       ├── inputs/
 │       │   ├── requirement.md
-│       │   └── wireframe.png
+│       │   ├── wireframe.png
+│       │   └── intent-review-history/ # 意图评审版本留档（index.json + 快照）
 │       ├── screen-contract.json
 │       ├── layout-proposals.json
 │       ├── approved-layout.json

@@ -1,5 +1,7 @@
 // UIE2E-07 failure paths: every mutation is performed through the real UI.
-// A provider outage surfaces as an error banner with recovery; a semantic
+// A provider outage surfaces as an error banner with recovery; an invalid
+// correction loop keeps the previous review and leaves no candidate (v1.4
+// §16 D/E); a semantic
 // contract edit marks downstream bindings stale; a missing final PNG blocks
 // export; switching guided↔strict through the input-stage UI invalidates
 // mode-dependent approvals. No renderer API mutation calls remain (F-03).
@@ -43,6 +45,23 @@ test.describe.serial('failure paths (UIE2E-07)', () => {
     await closeErrorBanner(page);
     // Recovery: the same action succeeds once the provider is healthy again.
     await clickRun(page, 'intent-draft');
+  });
+
+  test('invalid correction loop keeps the previous review and leaves no candidate', async () => {
+    // 当前已是 structured-v2 草稿；重新预填连续三次返回非法分析时，
+    // 纠正环耗尽必须以可见错误呈现，且旧评审与确认状态不受影响。
+    const currentPurpose = await page.locator('textarea[aria-label="页面目的"]').inputValue();
+    provider.armIntentAnalysisSequence([
+      { page_type: 'bogus' }, { page_type: 'bogus' }, { page_type: 'bogus' }
+    ]);
+    await clickRun(page, 'intent-regenerate', { allowError: true });
+    // friendlyError 会把纠正环耗尽的原始错误映射为用户可读文案（ui.tsx）。
+    await expectErrorBanner(page, /INTENT_ANALYSIS_INVALID|纠正后仍非法|自动修复后仍不完整/);
+    await closeErrorBanner(page);
+    // §16 D/E：失败不改当前评审、不残留 candidate、不取消确认状态以外的任何东西。
+    await expect(page.locator('textarea[aria-label="页面目的"]')).toHaveValue(currentPurpose);
+    await expect(page.locator('.intent-candidate-diff')).toHaveCount(0);
+    await expect(page.getByTestId('intent-confirm')).toBeEnabled();
   });
 
   test('happy path reaches approved bindings', async () => {

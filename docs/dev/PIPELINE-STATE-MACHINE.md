@@ -202,6 +202,64 @@ composition-manifest、composition-output、fidelity-report 的
   `source.input_revisions` 与当前输入修订，不一致抛
   `STALE_REAPPROVAL_BLOCKED`，对着旧输入生成的契约不得批准为新事实。
 
+### 输入阶段 structured-v2 意图状态机（PR-I0~I5）
+
+输入阶段的意图状态按 Screen 存放于 `screens/<id>/inputs.json`，由
+`intentStateStore.cjs` 独占写入，包含五个字段：`intent_generation`（生成会话）、
+`intent_analysis`（模型分析快照）、`intent_review`（设计师评审，权威输入）、
+`intent_candidate`（待决候选）、`intent_history`（版本留档）。
+`intent_mode === 'structured-v2'` 时需求文本由六段评审派生，只读展示；
+旧版自由文本项目保持原样，不自动转换。
+
+**生成状态机**（`intent_generation.status`）：
+
+```
+idle ──prefillIntent──> running ──首次且空白（无需求文本且无 review）──> 首稿直采（写 intent_review，confirmed=false）
+                          │ ──已有输入──> 写 intent_candidate（status=ready，不动当前评审）
+                          ├──纠正环耗尽/非法──> failed|validation-failed（error_code=INTENT_ANALYSIS_INVALID）
+                          ├──超时/AbortError──> provider-timeout
+                          └──其它异常──> failed；终态失败不改当前评审与 candidate，可重试。
+```
+
+- 每次开始生成记录 `requestId`，完成时 CAS 比对；被新请求抢先后旧结果静默丢弃，
+  不落盘（并发请求只有一个胜出，§16 E）。
+- 纠正环（kunpoClient 草稿修复）连续 3 次未返回有效内容才失败；失败前不失效现有链路。
+- 崩溃自愈：启动读取时发现 `running` 遗留态，读取时自愈为 `interrupted`。
+
+**评审与确认**：
+- `intent_review` 含固定六段（页面目的 + 玩家任务/核心流程/可见控件/可见信息四列表）
+  与 `uncertainties`；条目携带 `origin`（ai_visible/ai_inference/designer）与
+  证据引用，设计师修改打 `designer_modified` 标记。
+- 确认门禁（服务端权威，失败抛 `INTENT_REVIEW_INCOMPLETE`）：六段非空下限、
+  无 `unreviewed` 待确认项、阻断级问题不允许 `deferred`、回答不得为空。
+  确认后 `confirmed_at` 落盘，`requirement_confirmed=true`。
+- 确认后编辑评审、恢复历史、Screen Clone、UE 替换都会取消确认（§16 F/H），
+  必须重新确认才能进入下游。
+
+**candidate 状态机**：
+- 重新预填只在已有输入（需求文本或 review）时产生 candidate；candidate
+  `ready` 时禁止再次生成，必须先采用或丢弃。
+- 采用：整版替换评审（`confirmed=false`），旧版本以 `candidate-adopt` 原因留档历史；
+  丢弃：删除 candidate，当前评审不受影响。
+- candidate 记录 `base_current_revisions` 基线（requirement/intent_review/
+  intent_context/wireframe），基线漂移后展示与采用均报过期（`INTENT_CANDIDATE_STALE`），
+  只能丢弃后重新预填。
+- 历史条目以 `review-save` / `candidate-adopt` / `restore-before` 原因留档；
+  恢复需二次确认，恢复动作取消确认并再留档恢复前版本；恢复无评审的历史（采用
+  structured 前的自由文本版本）时回到 legacy 分支，带评审的版本留在 structured-v2。
+
+**stale 判定**：
+- `intent_analysis.source_revision` 绑定生成时的线框修订与 Project Type；
+  不一致即「基于旧 UE」（`INTENT_ANALYSIS_STALE` 语义），提示核对或重新预填。
+- 下游交接：Screen Contract 生成时绑定当前评审的 `intent_context`
+  revision/hash（`buildScreenContractIntentContext`）；确认后语义编辑使评审升版，
+  旧契约沿既有语义/来源修订重验机制失效。
+- UI 展示状态由 `deriveIntentStatus` 互斥推导（14 态：无 UE、首次生成中、
+  candidate 生成中/待处理/过期、生成中断、生成失败、有 UE 无意图、旧版文本、
+  基于旧 UE、已确认、草稿待审等）。
+- 错误码：`INTENT_ANALYSIS_INVALID` / `INTENT_ANALYSIS_STALE` /
+  `INTENT_REVIEW_INCOMPLETE` / `INTENT_CANDIDATE_STALE`（见 errorCodes.cjs）。
+
 ## 5. Stale 传播机制
 
 `invalidateArtifacts(kind)` 按项目路线 Profile（`profileOf(project)`）
@@ -260,6 +318,7 @@ stale/blocked 时不得继续显示已批准。Screen-scoped 工作台的本地�
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
+| 2.17 | 2026-08-30 | 输入阶段 structured-v2 意图状态机成文（PR-I5，v1.4 §16）：生成/评审确认/candidate/历史/stale 五段状态机与错误码；首稿直采与 candidate 分叉、CAS 并发、读取时自愈、确认后编辑与 Clone 取消确认、下游 intent_context 绑定 |
 | 2.16 | 2026-08-28 | M4 归档收尾（PR-64，M4-L 复审 §8 非阻断项）：源 Screen 有 `in_progress` 阶段时禁止复制（竞态守卫，生成结束后恢复可用，含正/负向测试）；写锁队列尾部清理防无界增长（§8.2）；部署模型边界写入 `RELEASE-CHECKLIST.md`（单进程前提、扩容需跨进程协调、legacy 迁移边界，§8.1/§8.3）；验收文档按审核者 §12 口径归档 |
 | 2.15 | 2026-08-28 | M4-L（PR-63，Clone 并发事务隔离，M4-K 复审 §6/§7/§3.3）：项目级异步写锁（`withProjectWriteLock`，按项目隔离、单进程部署覆盖全部会话）串行化全部 Registry/Workflow 写者，关闭并发 Clone 丢失更新与交叉回滚；并发四必测（不同 ID 全保留/同 ID 一胜/败者不回滚胜者/Create+Duplicate 不丢条目）；`fs.cp` 中途失败即时清理部分目录（存在性清理替代布尔标志）+ 重试成功测试；证据累计字节预算 `stat.size` 预检前置，最坏读取量精确等于预算 |
 | 2.14 | 2026-08-28 | M4-K3（PR-62，验收文档归档与债务台账）：`m4-remediation-acceptance.md` 追加 M4-J/M4-K 整改补录；技术债台账并列披露 Issue #50 与 #57（修正「仅剩 Issue #57」表述）；说明 L3 证据位置（本地审查输出引用在 PR 描述/提交说明，CI 暂无独立 L3 Job）；结论改为按 M4-K 口径的准确归档表述 |

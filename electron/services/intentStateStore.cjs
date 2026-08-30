@@ -235,10 +235,11 @@ function createIntentStateStore(options = {}) {
       const requestId = randomUUID();
       const hadInput = Boolean(String(inputs.requirement || '').trim()) || Boolean(inputs.intent_review);
       const now = new Date().toISOString();
+      // §16 G：intent_mode 只在首稿直采 / 采用 candidate / 恢复结构化历史时切换；
+      // 生成中或失败都不得把既有项目提前翻入 structured 分支。
       const nextInputs = {
         ...inputs,
         screen_id: screenId,
-        intent_mode: 'structured-v2',
         intent_generation: {
           request_id: requestId,
           process_instance_id: processInstanceId,
@@ -635,9 +636,11 @@ function createIntentStateStore(options = {}) {
       // Restoration never revives confirmation (§4.4, GAP-06). A snapshot
       // from an older wireframe revision restores as a stale draft: the
       // analysis source_revision mismatch is derived, not stored.
+      // §16 C：无评审的历史是采用 structured 前的自由文本版本，恢复时回到
+      // legacy 分支；带评审的版本才留在 structured-v2。
       const nextInputs = {
         ...inputs,
-        intent_mode: 'structured-v2',
+        intent_mode: restoredReview ? 'structured-v2' : undefined,
         intent_analysis: snapshot.analysis || null,
         intent_review: restoredReview,
         requirement,
