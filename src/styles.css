@@ -212,6 +212,12 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .input-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
 .input-grid--reworked { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: start; gap: 16px; }
 .input-col { display: grid; align-content: start; gap: 16px; min-width: 0; }
+/* 右栏（UE 图 + 功能基准）随滚动保持视口内相对位置：长列表调整时
+   随时比对 UE，不必回滚页顶（与功能解读页 .contract-reference 同模式）。
+   列高于视口时列内自滚，全图仍可「放大对照」查看。 */
+.input-col--wire { position: sticky; top: 12px; max-height: calc(100vh - 176px); overflow: auto; }
+.input-col--wire .wireframe-canvas-button { min-height: 0; }
+.input-col--wire .wireframe-canvas-button img { max-height: min(56vh, 620px); object-fit: contain; }
 .field-card, .principle-card { display: flex; flex-direction: column; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
 .field-card > span { display: grid; gap: 3px; }
 .field-card > span > div { display: flex; align-items: center; gap: 9px; }
@@ -725,6 +731,7 @@ input[type='checkbox'] { accent-color: var(--accent); }
 }
 @media (max-width: 1120px) {
   .input-grid--reworked { grid-template-columns: 1fr; }
+  .input-col--wire { position: static; max-height: none; overflow: visible; }
   .contract-reference { position: static; grid-template-columns: 220px 1fr; }
   .contract-reference .wireframe-canvas-button { min-height: 280px; }
   .contract-reference .wireframe-canvas-button img { height: 280px; }
