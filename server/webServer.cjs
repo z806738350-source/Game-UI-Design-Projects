@@ -17,6 +17,9 @@ const MAX_JSON_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const STATE_TTL_SECONDS = 10 * 60;
+const DEFAULT_SESSION_COOKIE_NAME = 'design_copilot_session';
+const DEFAULT_OAUTH_COOKIE_NAME = 'design_copilot_oauth';
+const COOKIE_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 
 // v1.4 §11.2：Intent 业务错误码 → HTTP 状态。并发/陈旧/已取代类映射 409，
 // 校验/门禁类映射 422，历史不存在映射 404；请求体超限由 readBody 直接 413。
@@ -235,11 +238,22 @@ function loginPage(configured) {
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#eef4f8;color:#17313b;font:15px/1.7 system-ui}.card{width:min(520px,calc(100vw - 48px));padding:38px;border:1px solid #d9e5ea;border-radius:18px;background:#fff;box-shadow:0 24px 70px #1936421f}.brand{color:#087f76;font-size:13px;font-weight:800;letter-spacing:.12em}h1{margin:10px 0 12px;font-size:28px}p{margin:0 0 26px;color:#5b7079}a,span{display:inline-block;padding:11px 18px;border-radius:9px;background:#0b9b8d;color:#fff;text-decoration:none;font-weight:750}span{background:#7a8d95}</style></head><body><main class="card"><div class="brand">GAME UI DESIGN COPILOT</div><h1>${title}</h1><p>${copy}</p>${action}</main></body></html>`;
 }
 
+function configuredCookieName(environment, key, fallback) {
+  const value = environment[key] === undefined ? fallback : String(environment[key]);
+  if (!COOKIE_NAME_PATTERN.test(value)) {
+    throw new Error(`${key} 必须是非空且不含分隔符或控制字符的 Cookie 名。`);
+  }
+  return value;
+}
+
 function validateConfiguration(environment) {
   const publicUrl = new URL(environment.PUBLIC_URL || `http://${environment.HOST || '127.0.0.1'}:${environment.PORT || '9030'}`);
   const dataRoot = path.resolve(environment.DESIGN_COPILOT_DATA_ROOT || '/var/lib/game-ui-design-copilot-online');
   const sessionSecret = String(environment.SESSION_SECRET || '');
   if (sessionSecret.length < 32) throw new Error('SESSION_SECRET 必须至少为 32 个字符。');
+  const sessionCookieName = configuredCookieName(environment, 'SESSION_COOKIE_NAME', DEFAULT_SESSION_COOKIE_NAME);
+  const oauthCookieName = configuredCookieName(environment, 'OAUTH_COOKIE_NAME', DEFAULT_OAUTH_COOKIE_NAME);
+  if (sessionCookieName === oauthCookieName) throw new Error('SESSION_COOKIE_NAME 与 OAUTH_COOKIE_NAME 必须不同。');
   return {
     host: environment.HOST || '127.0.0.1',
     port: Number(environment.PORT || 9030),
@@ -250,6 +264,10 @@ function validateConfiguration(environment) {
     appSecret: String(environment.FEISHU_APP_SECRET || '').trim(),
     redirectUri: String(environment.FEISHU_REDIRECT_URI || new URL('/auth/feishu/callback', publicUrl).toString()),
     sessionSecret,
+    sessionCookieName,
+    oauthCookieName,
+    releaseId: String(environment.DESIGN_COPILOT_RELEASE_ID || 'development').trim() || 'development',
+    versionLabel: String(environment.DESIGN_COPILOT_VERSION_LABEL || '单版本').trim() || '单版本',
     secureCookie: publicUrl.protocol === 'https:'
   };
 }
@@ -278,7 +296,7 @@ function createApplication(environment = process.env) {
   }
 
   async function sessionFor(request) {
-    const sessionId = parseCookies(request.headers.cookie).design_copilot_session || '';
+    const sessionId = parseCookies(request.headers.cookie)[config.sessionCookieName] || '';
     const session = await identityStore.readSession(sessionId);
     return { sessionId, session };
   }
@@ -308,10 +326,10 @@ function createApplication(environment = process.env) {
       authorize.searchParams.set('response_type', 'code');
       authorize.searchParams.set('redirect_uri', config.redirectUri);
       authorize.searchParams.set('state', state);
-      return redirect(response, authorize.toString(), [cookie('design_copilot_oauth', stateCookie, { maxAge: STATE_TTL_SECONDS, secure: config.secureCookie })]);
+      return redirect(response, authorize.toString(), [cookie(config.oauthCookieName, stateCookie, { maxAge: STATE_TTL_SECONDS, secure: config.secureCookie })]);
     }
     if (url.pathname === '/auth/feishu/callback' && request.method === 'GET') {
-      const stateCookie = verifySignedValue(parseCookies(request.headers.cookie).design_copilot_oauth, config.sessionSecret);
+      const stateCookie = verifySignedValue(parseCookies(request.headers.cookie)[config.oauthCookieName], config.sessionSecret);
       const state = url.searchParams.get('state') || '';
       if (!stateCookie || stateCookie.expiresAt <= Date.now() || stateCookie.state !== state) {
         const error = new Error('飞书登录状态校验失败，请重新登录。');
@@ -344,15 +362,15 @@ function createApplication(environment = process.env) {
       const tenantId = await identityStore.tenantFor(user.data.tenant_key, user.data.open_id);
       const sessionId = await identityStore.createSession(tenantId);
       return redirect(response, '/', [
-        cookie('design_copilot_session', sessionId, { maxAge: SESSION_TTL_SECONDS, secure: config.secureCookie }),
-        cookie('design_copilot_oauth', '', { maxAge: 0, secure: config.secureCookie })
+        cookie(config.sessionCookieName, sessionId, { maxAge: SESSION_TTL_SECONDS, secure: config.secureCookie }),
+        cookie(config.oauthCookieName, '', { maxAge: 0, secure: config.secureCookie })
       ]);
     }
     if (url.pathname === '/auth/logout' && request.method === 'POST') {
       enforceOrigin(request);
       const { sessionId } = await sessionFor(request);
       await identityStore.destroySession(sessionId);
-      response.setHeader('Set-Cookie', cookie('design_copilot_session', '', { maxAge: 0, secure: config.secureCookie }));
+      response.setHeader('Set-Cookie', cookie(config.sessionCookieName, '', { maxAge: 0, secure: config.secureCookie }));
       return sendJson(response, 200, { ok: true });
     }
     return false;
@@ -530,7 +548,14 @@ function createApplication(environment = process.env) {
     securityHeaders(response, config.publicUrl);
     const url = new URL(request.url, config.publicUrl);
     try {
-      if (url.pathname === '/healthz') return sendJson(response, 200, { status: 'ok' });
+      if (url.pathname === '/healthz') {
+        return sendJson(response, 200, {
+          status: 'ok',
+          service: 'game-ui-design-copilot',
+          releaseId: config.releaseId,
+          versionLabel: config.versionLabel
+        });
+      }
       if (url.pathname.startsWith('/auth/')) {
         const handled = await handleAuth(request, response, url);
         if (handled !== false) return;
