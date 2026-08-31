@@ -49,6 +49,9 @@ const SCREEN_CONTRACT_EDITABLE_KEYS = new Set([
 
 function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore = null }) {
   const cancelledVisualJobs = new Set();
+  // 并行生图的运行中任务注册取消通知：cancelStage 触发后生成循环立即
+  // 以已落盘结果结算，不再等剩余方向（停止等待语义）。
+  const cancelWatchers = new Map();
   // AUD-04：取消标记按“项目 + Screen”建键：取消某个 Screen 的生成不得误伤
   // 同项目其他 Screen 的任务（Web 多会话/并行任务下的串线防线）。
   // P1-02：该键仍不能隔离同 Screen 的两个并行任务（Web 多标签页/直接 API）；
@@ -409,7 +412,6 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentSt
       const preserved = resumeInterrupted
         ? previousVariations
         : input.preserveExisting ? previousVariations.filter((variation) => !strategies.includes(variation.strategy)) : [];
-      const variations = [...preserved];
       // P0-05：重新生成即取代旧证据（与合成重试同语义）：即使后续
       // 生图失败，旧的审查/合成/保真链也不得继续被信任。
       await invalidateArtifacts(projectId, 'visual-results', 'visual_results_regenerated', { screenId: project.screen_id });
@@ -417,17 +419,46 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentSt
         screenId: input.screenId,
         progress: { completed: 0, total: tasks.length, message: '正在准备视觉任务' }
       });
-      for (const task of tasks) {
-        if (cancelledVisualJobs.has(visualCancelKey(projectId, project.screen_id))) break;
-        const result = await kunpoClient.generateImage(stageConfig, {
-          prompt: task.prompt, imagePaths: references, size: project.canvas_spec.generation_size, model: input.model,
-          maxReferenceImages: capabilities.max_reference_images,
-          // E2E fixture providers cannot mint trusted permanent CDN assets;
-          // this opt-in flag materializes provider results inline immediately.
-          // Production keeps the default remote-only trusted-CDN behavior.
-          snapshotTransient: process.env.DESIGN_COPILOT_SNAPSHOT_PROVIDER_IMAGES === 'true'
+      // 并行生成：各方向同时提交，总耗时≈最慢单张（串行时逐张累加，
+      // 一张卡住会阻塞后续全部方向）。落盘仍逐张：persist 链串行化并发
+      // 写入，variations 恒按策略顺序排列。停止语义为“停止等待”：已提交
+      // 任务在 provider 侧无法撤回，停止后立即以已完成结果结算进评审，
+      // 迟回结果被 stopping 标记丢弃、不落盘。
+      const cancelKey = visualCancelKey(projectId, project.screen_id);
+      let stopping = false;
+      const slots = new Map();
+      let persistChain = Promise.resolve();
+      const persistProgress = (message) => {
+        persistChain = persistChain.then(async () => {
+          const ordered = tasks.filter((item) => slots.has(item.task_id)).map((item) => slots.get(item.task_id));
+          await projectStore.saveArtifact(projectId, 'visual-results', {
+            schema_version: '1.0', id: `${project.screen_id}-visual-results`, version: 1, status: 'generated',
+            source: { visual_tasks: `${project.screen_id}-visual-tasks`, ...inputSource(project) }, variations: [...preserved, ...ordered]
+          });
+          await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, {
+            screenId: input.screenId,
+            progress: { completed: ordered.length, total: tasks.length, message }
+          });
         });
-        variations.push({
+        return persistChain;
+      };
+      const workers = tasks.map((task) => (async () => {
+        if (stopping || cancelledVisualJobs.has(cancelKey)) return { skipped: true };
+        let result;
+        try {
+          result = await kunpoClient.generateImage(stageConfig, {
+            prompt: task.prompt, imagePaths: references, size: project.canvas_spec.generation_size, model: input.model,
+            maxReferenceImages: capabilities.max_reference_images,
+            // E2E fixture providers cannot mint trusted permanent CDN assets;
+            // this opt-in flag materializes provider results inline immediately.
+            // Production keeps the default remote-only trusted-CDN behavior.
+            snapshotTransient: process.env.DESIGN_COPILOT_SNAPSHOT_PROVIDER_IMAGES === 'true'
+          });
+        } catch (error) {
+          return { error };
+        }
+        if (stopping || cancelledVisualJobs.has(cancelKey)) return { skipped: true };
+        slots.set(task.task_id, {
           id: task.task_id, strategy: task.variation_strategy, image_url: result.url,
           provider_task_id: result.task_id, layout_version: approved.id, style_version: style.id,
           layout_name: approved.label || approved.proposal?.name || approved.id,
@@ -442,19 +473,31 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentSt
           storageDurability: result.storageDurability,
           remoteOnly: result.remoteOnly
         });
-        await projectStore.saveArtifact(projectId, 'visual-results', {
-          schema_version: '1.0', id: `${project.screen_id}-visual-results`, version: 1, status: 'generated',
-          source: { visual_tasks: `${project.screen_id}-visual-tasks`, ...inputSource(project) }, variations
-        });
-        await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, {
+        await persistProgress(`已完成 ${slots.size}/${tasks.length} 个方向`);
+        return {};
+      })());
+      const cancelWatch = new Promise((resolve) => { cancelWatchers.set(cancelKey, resolve); });
+      const allDone = Promise.allSettled(workers).then((settled) => ({ settled: settled.map((item) => item.status === 'rejected' ? { error: item.reason } : item.value) }));
+      const outcome = await Promise.race([allDone, cancelWatch.then(() => ({ cancelled: true }))]);
+      cancelWatchers.delete(cancelKey);
+      if (outcome.cancelled) {
+        // 停止等待：立即以已落盘结果进评审；迟回任务由 stopping 标记丢弃。
+        stopping = true;
+        cancelledVisualJobs.delete(cancelKey);
+        await persistChain.catch(() => undefined);
+        await projectStore.updateWorkflow(projectId, stage, 'reviewed', `screens/${project.screen_id}/explorations/results.json`, {
           screenId: input.screenId,
-          progress: { completed: variations.length - preserved.length, total: tasks.length, message: `已完成 ${variations.length - preserved.length}/${tasks.length} 个方向` }
+          progress: { completed: slots.size, total: tasks.length, message: '已停止等待，已完成结果可以继续评审' }
         });
+        return openProject(projectId, project.screen_id);
       }
-      const wasCancelled = cancelledVisualJobs.delete(visualCancelKey(projectId, project.screen_id));
+      const firstFailure = outcome.settled.find((item) => item && item.error);
+      const wasCancelled = cancelledVisualJobs.delete(cancelKey);
+      if (firstFailure) throw firstFailure.error;
+      await persistChain;
       await projectStore.updateWorkflow(projectId, stage, 'reviewed', `screens/${project.screen_id}/explorations/results.json`, {
         screenId: input.screenId,
-        progress: { completed: variations.length - preserved.length, total: tasks.length, message: wasCancelled ? '已停止剩余任务，已完成结果可以继续评审' : '视觉方向已生成，等待评审' }
+        progress: { completed: slots.size, total: tasks.length, message: wasCancelled ? '已停止剩余任务，已完成结果可以继续评审' : '视觉方向已生成，等待评审' }
       });
       return openProject(projectId, project.screen_id);
     }
@@ -535,11 +578,14 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentSt
   async function cancelStage(projectId, stage, input = {}) {
     if (stage !== 'visual_exploration') throw new Error('当前步骤不支持停止。');
     const project = await openScreen(projectId, input.screenId);
-    cancelledVisualJobs.add(visualCancelKey(projectId, project.screen_id));
+    const cancelKey = visualCancelKey(projectId, project.screen_id);
+    cancelledVisualJobs.add(cancelKey);
+    const notifyStop = cancelWatchers.get(cancelKey);
+    if (notifyStop) notifyStop();
     const progress = project.workflow?.stages?.visual_exploration?.progress || {};
     await projectStore.updateWorkflow(projectId, stage, 'in_progress', undefined, {
       screenId: project.screen_id,
-      progress: { ...progress, message: '正在停止；当前图片完成后不会继续生成' }
+      progress: { ...progress, message: '正在停止；不再等待剩余方向，迟回结果不会写入' }
     });
     return openProject(projectId, project.screen_id);
   }

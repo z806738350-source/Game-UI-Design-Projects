@@ -185,6 +185,96 @@ test('portrait canvas and manual adjustments reach image generation', async () =
   }
 });
 
+test('visual directions generate concurrently and persist in strategy order', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-parallel-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const projectStore = createProjectStore();
+    let project = await projectStore.create({ name: 'Parallel Visual', projectType: 'new', requirement: 'Build a party.' });
+    const sourceImage = path.join(temporaryRoot, 'wireframe.png');
+    await fs.writeFile(sourceImage, pngHeader(1920, 1080));
+    project = await projectStore.importFile(project.id, sourceImage, 'wireframe');
+    await projectStore.saveArtifact(project.id, 'approved-layout', {
+      schema_version: '1.0', id: 'approved-layout', version: 1, status: 'approved', source: {}, label: '横屏布局',
+      manual_adjustments: [], required_controls: ['保存阵容'], proposal: { name: '横屏布局' }
+    });
+    await projectStore.saveArtifact(project.id, 'style-contract', {
+      schema_version: '1.0', id: 'style', style_id: 'wuxia', version: 1, status: 'approved', source: {},
+      visual_identity: { theme: '水墨武侠' }, negative_style_constraints: []
+    });
+    // 完成顺序故意与策略顺序不同：并行落盘后 variations 仍须按策略顺序排列。
+    const delays = [120, 30, 60];
+    let calls = 0;
+    let active = 0;
+    let maxActive = 0;
+    const fakeClient = {
+      requestArtifact: async () => null,
+      generateImage: async () => {
+        const delay = delays[calls] ?? 30;
+        calls += 1;
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        active -= 1;
+        return { url: `https://kunpoapiimg.ziy.cc/v${calls}.png`, task_id: `task-${calls}` };
+      }
+    };
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: fakeClient, kunpoConfig: {} });
+    project = await pipeline.runStage(project.id, 'visual_exploration', { screenId: 'main' });
+    assert.equal(maxActive, 3, 'three directions must overlap in flight (parallel, not serial)');
+    assert.equal(project.workflow.stages.visual_exploration.status, 'reviewed');
+    const strategies = project.artifacts.visualResults.variations.map((variation) => variation.strategy);
+    assert.deepEqual(strategies, ['conservative', 'expressive', 'innovative'], 'variations stay in strategy order despite out-of-order completion');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('cancel settles immediately and discards late image results', async () => {
+  const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-cancel-'));
+  const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;
+  process.env.DESIGN_COPILOT_WORKSPACE = temporaryRoot;
+  try {
+    const projectStore = createProjectStore();
+    let project = await projectStore.create({ name: 'Cancel Visual', projectType: 'new', requirement: 'Build a party.' });
+    const sourceImage = path.join(temporaryRoot, 'wireframe.png');
+    await fs.writeFile(sourceImage, pngHeader(1920, 1080));
+    project = await projectStore.importFile(project.id, sourceImage, 'wireframe');
+    await projectStore.saveArtifact(project.id, 'approved-layout', {
+      schema_version: '1.0', id: 'approved-layout', version: 1, status: 'approved', source: {}, label: '横屏布局',
+      manual_adjustments: [], required_controls: ['保存阵容'], proposal: { name: '横屏布局' }
+    });
+    await projectStore.saveArtifact(project.id, 'style-contract', {
+      schema_version: '1.0', id: 'style', style_id: 'wuxia', version: 1, status: 'approved', source: {},
+      visual_identity: { theme: '水墨武侠' }, negative_style_constraints: []
+    });
+    const gates = [];
+    const fakeClient = {
+      requestArtifact: async () => null,
+      generateImage: async () => new Promise((resolve) => { gates.push(resolve); })
+    };
+    const pipeline = createDesignPipeline({ projectStore, kunpoClient: fakeClient, kunpoConfig: {} });
+    const runPromise = pipeline.runStage(project.id, 'visual_exploration', { screenId: 'main' });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(gates.length, 3, 'all three directions submitted concurrently');
+    project = await pipeline.cancelStage(project.id, 'visual_exploration', { screenId: 'main' });
+    project = await runPromise;
+    assert.equal(project.workflow.stages.visual_exploration.status, 'reviewed', 'stop settles into review without waiting for providers');
+    assert.equal((project.artifacts.visualResults?.variations || []).length, 0);
+    gates.forEach((resolve) => resolve({ url: 'https://kunpoapiimg.ziy.cc/late.png', task_id: 'late-task' }));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const after = await projectStore.open(project.id);
+    assert.equal((after.artifacts.visualResults?.variations || []).length, 0, 'late results after stop must not be persisted');
+  } finally {
+    if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
+    else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
+    await fs.rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
 test('input invalidation marks every dependent artifact stale', async () => {
   const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'design-copilot-invalidation-'));
   const previousWorkspace = process.env.DESIGN_COPILOT_WORKSPACE;

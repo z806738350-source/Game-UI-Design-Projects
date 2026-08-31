@@ -75,14 +75,18 @@ test('AUD-04 缺口 C：取消一个 Screen 的生成不得中断同项目其他
     await pipeline.cancelStage(project.id, 'visual_exploration', { screenId: 'main' });
     mainGate.resolve(undefined);
     const mainResult = await mainRun;
-    assert.equal(mainResult.artifacts.visualResults.variations.length, 1, 'main 被取消后只应保留已完成的 1 个方向');
+    // 并行提交：两个方向在停止前都已提交；停止前已落盘的 expressive 保留，
+    // 挂起的 conservative 迟回被丢弃（停止等待语义）。
+    assert.equal(mainResult.artifacts.visualResults.variations.length, 1, 'main 被停止后只保留停止前已完成的 1 个方向');
+    assert.equal(mainResult.artifacts.visualResults.variations[0].strategy, 'expressive');
 
     // 用户切到 battle 屏继续工作：main 的取消标记绝不能串到这里。
     await projectStore.setActiveScreen(project.id, 'battle');
     const battleResult = await pipeline.runStage(project.id, 'visual_exploration', { screenId: 'battle', strategies: ['conservative', 'expressive'] });
     assert.equal(battleResult.artifacts.visualResults.variations.length, 2, 'battle 不受 main 取消影响，两个方向都要生成');
     assert.equal(battleResult.screen_id, 'battle');
-    assert.equal(generatedPrompts.length, 3);
+    // 并行语义下 main 的两个方向均已提交（provider 侧不可撤回）+ battle 2 个。
+    assert.equal(generatedPrompts.length, 4);
   } finally {
     if (previousWorkspace === undefined) delete process.env.DESIGN_COPILOT_WORKSPACE;
     else process.env.DESIGN_COPILOT_WORKSPACE = previousWorkspace;
