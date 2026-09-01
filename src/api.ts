@@ -1,4 +1,4 @@
-import type { AppConfig, CreateProjectInput, DesignProject, IntentCandidate, IntentReview, ProjectSummary } from './types';
+import type { AppConfig, CreateProjectInput, DesignProject, GalleryAsset, GalleryDownloadResult, GalleryListResult, GalleryQuery, IntentCandidate, IntentReview, ProjectSummary } from './types';
 
 const previewProjects: DesignProject[] = [];
 const previewIntentCandidates = new Map<string, IntentCandidate>();
@@ -18,6 +18,72 @@ function previewIntentDraft(): IntentReview {
 
 function previewRevisionError(): Error {
   return Object.assign(new Error('Intent Review 已被更新，请刷新后基于最新版本重试。'), { code: 'INTENT_REVISION_CONFLICT' });
+}
+
+// 预览模式图库（§7.4）：内存 fixture，但隐藏/恢复/分页/门禁语义与真实实现一致。
+const previewDay = 24 * 60 * 60 * 1000;
+const previewGalleryAssets: GalleryAsset[] = [
+  { id: 'preview-gallery-1', cdn_url: 'https://kunpoapiimg.ziy.cc/preview/gallery-1.png', provider: 'kunpo', provider_task_id: 'task-preview-1', storage_mode: 'provider_cdn', remote_only: true, origin_kind: 'visual_exploration', continuation_mode: 'exploration', project_id: 'preview-cloud', project_name_snapshot: '云境计划', project_status_snapshot: 'draft', screen_id: 'main', screen_name_snapshot: '主页面', variation_id: 'variation-preview-1', strategy: 'conservative', layout_name: '标准栅格', style_name: '明快科幻', width: 1920, height: 1080, target_size: '1920x1080', created_at: new Date(Date.now() - previewDay).toISOString(), indexed_at: new Date(Date.now() - previewDay).toISOString(), last_seen_at: new Date(Date.now() - previewDay).toISOString(), hidden_at: null },
+  { id: 'preview-gallery-2', cdn_url: 'https://kunpoapiimg.ziy.cc/preview/gallery-2.png', provider: 'kunpo', provider_task_id: 'task-preview-2', storage_mode: 'provider_cdn', remote_only: true, origin_kind: 'visual_exploration', continuation_mode: 'exploration', project_id: 'preview-cloud', project_name_snapshot: '云境计划', project_status_snapshot: 'draft', screen_id: 'shop', screen_name_snapshot: '商城', variation_id: 'variation-preview-2', strategy: 'expressive', layout_name: '中心焦点', style_name: '明快科幻', width: 1080, height: 1920, target_size: '1080x1920', created_at: new Date(Date.now() - 3 * previewDay).toISOString(), indexed_at: new Date(Date.now() - 3 * previewDay).toISOString(), last_seen_at: new Date(Date.now() - 3 * previewDay).toISOString(), hidden_at: null },
+  { id: 'preview-gallery-3', cdn_url: 'https://kunpoapiimg.ziy.cc/preview/gallery-3.png', provider: 'kunpo', provider_task_id: 'task-preview-3', storage_mode: 'provider_cdn', remote_only: true, origin_kind: 'visual_exploration', continuation_mode: 'existing-strict', project_id: 'preview-harbor', project_name_snapshot: '星港商城', project_status_snapshot: 'draft', screen_id: 'main', screen_name_snapshot: '主页面', variation_id: 'variation-preview-3', strategy: 'conservative', layout_name: '继承布局', style_name: '既有风格', width: 1920, height: 1080, target_size: '1920x1080', created_at: new Date(Date.now() - 6 * previewDay).toISOString(), indexed_at: new Date(Date.now() - 6 * previewDay).toISOString(), last_seen_at: new Date(Date.now() - 6 * previewDay).toISOString(), hidden_at: null },
+  { id: 'preview-gallery-4', cdn_url: 'https://kunpoapiimg.ziy.cc/preview/gallery-4.png', provider: 'kunpo', provider_task_id: 'task-preview-4', storage_mode: 'provider_cdn', remote_only: true, origin_kind: 'underlay_repair', continuation_mode: 'existing-guided', project_id: 'preview-cloud', project_name_snapshot: '云境计划', project_status_snapshot: 'draft', screen_id: 'main', screen_name_snapshot: '主页面', variation_id: 'underlay-repair-preview', strategy: 'underlay-repair', width: 1920, height: 1080, target_size: '1920x1080', created_at: new Date(Date.now() - 10 * previewDay).toISOString(), indexed_at: new Date(Date.now() - 10 * previewDay).toISOString(), last_seen_at: new Date(Date.now() - 10 * previewDay).toISOString(), hidden_at: null },
+  { id: 'preview-gallery-5', cdn_url: 'https://kunpoapiimg.ziy.cc/preview/gallery-5.png', provider: 'kunpo', provider_task_id: 'task-preview-5', storage_mode: 'provider_cdn', remote_only: true, origin_kind: 'visual_exploration', continuation_mode: 'exploration', project_id: 'preview-harbor', project_name_snapshot: '星港商城', project_status_snapshot: 'draft', screen_id: 'shop', screen_name_snapshot: '商城', variation_id: 'variation-preview-5', strategy: 'innovative', layout_name: '自由拼贴', style_name: '既有风格', width: 1920, height: 1080, target_size: '1920x1080', created_at: new Date(Date.now() - 15 * previewDay).toISOString(), indexed_at: new Date(Date.now() - 15 * previewDay).toISOString(), last_seen_at: new Date(Date.now() - 15 * previewDay).toISOString(), hidden_at: new Date(Date.now() - 2 * previewDay).toISOString() }
+];
+
+function previewGalleryMatches(asset: GalleryAsset, query: GalleryQuery): boolean {
+  const hidden = asset.hidden_at != null;
+  if ((query.scope || 'all') === 'hidden' ? !hidden : hidden) return false;
+  if (query.projectId && asset.project_id !== query.projectId) return false;
+  if (query.screenId && asset.screen_id !== query.screenId) return false;
+  if (query.orientation) {
+    const width = Number(asset.width); const height = Number(asset.height);
+    const orientation = width > height ? 'landscape' : width < height ? 'portrait' : 'square';
+    if (orientation !== query.orientation) return false;
+  }
+  if (query.range && query.range !== 'all') {
+    const created = Date.parse(asset.created_at);
+    const start = new Date();
+    if (query.range === 'today') start.setHours(0, 0, 0, 0);
+    else if (query.range === '7d') start.setDate(start.getDate() - 7);
+    else start.setDate(start.getDate() - 30);
+    if (!Number.isFinite(created) || created < start.getTime()) return false;
+  }
+  if (query.query) {
+    const needle = query.query.trim().toLowerCase();
+    const haystack = [asset.project_name_snapshot, asset.screen_name_snapshot, asset.strategy, asset.layout_name, asset.style_name, asset.cdn_url].filter(Boolean).join(' ').toLowerCase();
+    if (needle && !haystack.includes(needle)) return false;
+  }
+  return true;
+}
+
+async function previewGalleryList(query: GalleryQuery = {}): Promise<GalleryListResult> {
+  const filtered = previewGalleryAssets.filter((asset) => previewGalleryMatches(asset, query));
+  const direction = query.sort === 'oldest' ? 1 : -1;
+  filtered.sort((a, b) => {
+    const delta = a.created_at.localeCompare(b.created_at) * direction;
+    return delta !== 0 ? delta : a.id.localeCompare(b.id);
+  });
+  let start = 0;
+  if (query.cursor) {
+    const index = filtered.findIndex((asset) => asset.id === query.cursor);
+    start = index < 0 ? filtered.length : index + 1;
+  }
+  const limit = Math.max(1, Number(query.limit) || 40);
+  const items = filtered.slice(start, start + limit);
+  const next = filtered[start + limit];
+  const projects = new Map<string, { id: string; name: string; status: 'draft' | 'archived' }>();
+  const screens = new Map<string, { id: string; name: string; projectId?: string }>();
+  for (const asset of previewGalleryAssets.filter((item) => previewGalleryMatches(item, { scope: query.scope }))) {
+    if (asset.project_id) projects.set(asset.project_id, { id: asset.project_id, name: asset.project_name_snapshot || asset.project_id, status: asset.project_status_snapshot || 'draft' });
+    if (asset.screen_id) screens.set(asset.screen_id, { id: asset.screen_id, name: asset.screen_name_snapshot || asset.screen_id, projectId: asset.project_id });
+  }
+  return { items, total: filtered.length, nextCursor: next ? next.id : null, facets: { projects: [...projects.values()], screens: [...screens.values()] } };
+}
+
+function previewGalleryAsset(assetId: string): GalleryAsset {
+  const asset = previewGalleryAssets.find((item) => item.id === assetId);
+  if (!asset) throw new Error(`图库资产不存在：${assetId}`);
+  return asset;
 }
 
 function previewApi(): DesignCopilotApi {
@@ -195,7 +261,18 @@ function previewApi(): DesignCopilotApi {
     approveUnderlayManualReview: async (id) => find(id),
     composeVisual: async (id) => find(id),
     runFidelity: async (id) => find(id),
-    exportVisual: async () => ({ ok: true })
+    exportVisual: async () => ({ ok: true }),
+    listGallery: async (query) => previewGalleryList(query || {}),
+    hideGalleryAsset: async (assetId) => { const asset = previewGalleryAsset(assetId); asset.hidden_at = asset.hidden_at || new Date().toISOString(); return { ...asset }; },
+    restoreGalleryAsset: async (assetId) => { const asset = previewGalleryAsset(assetId); asset.hidden_at = null; return { ...asset }; },
+    downloadGalleryAsset: async (assetId) => {
+      const asset = previewGalleryAsset(assetId);
+      // §7.5：预览同样只认登记时的路线快照，严格/锁定路线一律阻断。
+      if (asset.continuation_mode !== 'exploration' && asset.continuation_mode !== 'existing-guided') {
+        return { status: 'blocked', message: '严格继承项目的图片需回到工作流完成正式交付后导出。' };
+      }
+      return { status: 'failed', message: '预览模式没有真实图片可下载。' };
+    }
   };
 }
 
@@ -345,6 +422,45 @@ function webApi(): DesignCopilotApi {
       URL.revokeObjectURL(objectUrl);
       return { ok: true };
     },
+    // 图库（v1.1 §7.3/§7.4）：租户级 /api/gallery 路由；下载走同源代理，
+    // 409 = 严格路线门禁阻断（§7.5），由 UI 展示指引而非当作未知错误。
+    listGallery: (query) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(query || {})) {
+        if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+      }
+      const suffix = params.toString();
+      return request(`/api/gallery${suffix ? `?${suffix}` : ''}`);
+    },
+    hideGalleryAsset: (assetId) => request(`/api/gallery/${encodeURIComponent(assetId)}/hide`, { method: 'POST', body: '{}' }),
+    restoreGalleryAsset: (assetId) => request(`/api/gallery/${encodeURIComponent(assetId)}/restore`, { method: 'POST', body: '{}' }),
+    downloadGalleryAsset: async (assetId): Promise<GalleryDownloadResult> => {
+      const response = await fetch(`/api/gallery/${encodeURIComponent(assetId)}/download`, { credentials: 'same-origin' });
+      if (response.status === 401) {
+        window.location.assign('/auth/feishu/start');
+        throw new Error('登录状态已失效，正在重新登录。');
+      }
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({})) as { error?: string };
+        if (response.status === 409) return { status: 'blocked', message: payload.error || '严格继承项目的图片需回到工作流完成正式交付后导出。' };
+        return { status: 'failed', message: payload.error || `下载失败（${response.status}）` };
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get('Content-Disposition') || '';
+      const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] || `gallery-${assetId.replace(/[^A-Za-z0-9_-]/g, '')}.png`;
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const anchor = document.createElement('a');
+        anchor.href = objectUrl;
+        anchor.download = fileName;
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+      return { status: 'saved' };
+    },
     logout: async () => {
       await request('/auth/logout', { method: 'POST', body: '{}' });
       window.location.assign('/');
@@ -416,5 +532,9 @@ export const copilotApi = {
   composeVisual: async (id: string, input: { variationId?: string; mode: 'preview' | 'final' }) => rememberScreen(await api().composeVisual(id, withScreen(id, input))),
   runFidelity: async (id: string, screenId?: string) => rememberScreen(await api().runFidelity(id, screenIdFor(id, screenId))),
   exportVisual: (id: string, variationId: string) => api().exportVisual(id, variationId),
+  listGallery: (query: GalleryQuery): Promise<GalleryListResult> => api().listGallery(query),
+  hideGalleryAsset: (assetId: string): Promise<GalleryAsset> => api().hideGalleryAsset(assetId),
+  restoreGalleryAsset: (assetId: string): Promise<GalleryAsset> => api().restoreGalleryAsset(assetId),
+  downloadGalleryAsset: (assetId: string): Promise<GalleryDownloadResult> => api().downloadGalleryAsset(assetId),
   logout: () => api().logout ? api().logout!() : Promise.resolve({ ok: true })
 };

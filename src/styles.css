@@ -71,6 +71,7 @@ input[type='checkbox'] { accent-color: var(--accent); }
 
 /* ---- 应用外壳 ---- */
 .app-shell {
+  position: relative;
   width: 100vw; height: 100vh; display: grid;
   grid-template-columns: 274px minmax(700px, 1fr);
   grid-template-rows: 56px minmax(0, 1fr);
@@ -171,7 +172,8 @@ input[type='checkbox'] { accent-color: var(--accent); }
 /* ---- 忙碌条 / 错误条 ---- */
 /* 顶部通知层：sticky 但零高度，busy-bar / error-banner 出现与消失
    都不占据文档流，避免内容被推挤抖动（人工测试问题 1）。 */
-.overlay-bar { position: sticky; top: 0; z-index: 32; height: 0; display: flow-root; }
+.overlay-bar { position: absolute; top: 56px; left: 0; right: 0; z-index: 90; height: 0; display: flow-root; }
+.app-shell.has-project .overlay-bar { top: 106px; }
 .busy-bar { position: relative; z-index: 30; min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 8px 40px; color: var(--accent-hi); border-bottom: 1px solid rgba(227, 166, 61, .22); background: linear-gradient(90deg, rgba(227, 166, 61, .1), rgba(10, 11, 14, .92) 62%); backdrop-filter: blur(12px); }
 .busy-bar > div { display: grid; gap: 2px; }
 .busy-bar b { font-size: var(--type-small); color: var(--ink); }
@@ -916,4 +918,105 @@ input[type='checkbox'] { accent-color: var(--accent); }
   .intent-item-actions { justify-content: flex-end; }
   .intent-uncertainty-add { grid-template-columns: 1fr; }
   .intent-diff-row { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   图库（Gallery）—— 用户级永久 CDN 资产工作区
+   承载机制：全屏不透明 overlay（顶栏之下），工作流子树保持挂载并置
+   inert；忙碌/错误与撤销提示位于更高层的全局反馈层，覆盖时仍可见。
+   ============================================================ */
+/* 全局反馈层：忙碌条、错误条与图库撤销提示的提升挂载层（App 将
+   .overlay-bar 移出 <main> 后由该规则接管定位），渲染层级高于图库。 */
+.app-shell > .overlay-bar { position: fixed; top: 56px; left: 0; right: 0; z-index: 90; height: 0; display: flow-root; pointer-events: none; }
+.app-shell > .overlay-bar > * { pointer-events: auto; }
+.gallery-undo-toast { position: relative; z-index: 90; display: flex; align-items: center; gap: 12px; margin: 12px 40px 0; padding: 9px 14px; color: var(--ink); border: 1px solid rgba(227, 166, 61, .4); border-radius: 10px; background: rgba(20, 16, 8, .92); backdrop-filter: blur(12px); font-size: var(--type-small); }
+.gallery-undo-toast span { color: var(--muted); }
+.gallery-undo-toast button { border: 0; background: transparent; color: var(--accent-hi); font-weight: 700; font-size: var(--type-small); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.gallery-undo-toast button:hover { background: var(--accent-soft); }
+.gallery-undo-toast button:focus-visible { outline: 2px solid rgba(227, 166, 61, .55); outline-offset: 1px; }
+
+/* 顶栏图库入口：导航项语义，选中态用琥珀金，不用开关样式 */
+.topbar nav button.gallery-entry.is-active { color: var(--accent-hi); border-color: rgba(227, 166, 61, .5); background: var(--accent-soft); }
+
+/* 图库 overlay：顶栏之下满幅不透明层 */
+.gallery-overlay { position: fixed; top: 56px; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; flex-direction: column; background: var(--bg-0); background-image: linear-gradient(rgba(236, 238, 244, .02) 1px, transparent 1px), linear-gradient(90deg, rgba(236, 238, 244, .016) 1px, transparent 1px); background-size: 44px 44px; }
+/* 图库态隐藏工作流专属控件，避免出现两套“当前项目”概念 */
+.app-shell.is-gallery .project-switcher { visibility: hidden; }
+
+.gallery-header { display: flex; align-items: center; gap: 14px; padding: 14px 28px 10px; border-bottom: 1px solid var(--line); }
+.gallery-back { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel-2); color: var(--ink); font-size: var(--type-small); font-weight: 600; cursor: pointer; transition: .15s ease; }
+.gallery-back:hover { border-color: rgba(236, 238, 244, .26); background: var(--panel-3); }
+.gallery-header h1 { margin: 0; font-size: var(--type-subtitle); letter-spacing: .01em; }
+.gallery-header .gallery-count { color: var(--accent-hi); font-family: var(--mono); font-size: 11px; padding: 3px 8px; border: 1px solid rgba(227, 166, 61, .35); border-radius: 999px; background: var(--accent-soft); }
+.gallery-header p { margin: 0; margin-left: auto; color: var(--faint); font-size: var(--type-caption); max-width: 420px; text-align: right; line-height: 1.5; }
+
+.gallery-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 28px; border-bottom: 1px solid var(--line); background: rgba(14, 15, 19, .6); }
+.gallery-scope-tabs { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+.gallery-scope-tabs button { height: 32px; padding: 0 13px; border: 0; background: var(--panel-2); color: var(--muted); font-size: var(--type-small); cursor: pointer; transition: .15s ease; }
+.gallery-scope-tabs button + button { border-left: 1px solid var(--line); }
+.gallery-scope-tabs button:hover { color: var(--ink); background: var(--panel-3); }
+.gallery-scope-tabs button.is-active { color: var(--accent-ink); background: linear-gradient(145deg, var(--accent-hi), var(--accent)); font-weight: 700; }
+.gallery-filters .filter-field { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel-2); color: var(--muted); font-size: var(--type-small); }
+.gallery-filters .filter-field select { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: var(--type-small); cursor: pointer; max-width: 190px; }
+.gallery-filters .filter-field select:focus-visible { outline: 2px solid rgba(227, 166, 61, .55); outline-offset: 1px; border-radius: 4px; }
+.gallery-filters .filter-field input { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: var(--type-small); width: 170px; }
+.gallery-filters .filter-field input::placeholder { color: var(--faint); }
+.gallery-filters .filter-field input:focus-visible, .gallery-filters .filter-field:focus-within { outline: 2px solid rgba(227, 166, 61, .55); outline-offset: 1px; border-radius: 8px; }
+.gallery-filters .filter-clear { height: 32px; padding: 0 12px; border: 1px dashed var(--line-strong); border-radius: 8px; background: transparent; color: var(--muted); font-size: var(--type-small); cursor: pointer; }
+.gallery-filters .filter-clear:hover { color: var(--ink); border-color: rgba(236, 238, 244, .3); }
+
+.gallery-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 28px 36px; }
+.gallery-grid-wrap { max-width: 1420px; margin: 0 auto; }
+.gallery-group-label { margin: 18px 0 10px; color: var(--faint); font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.gallery-group-label:first-child { margin-top: 0; }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+
+.gallery-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; transition: border-color .15s ease, transform .15s ease; }
+.gallery-card:hover { border-color: var(--line-strong); }
+.gallery-card:focus-within { border-color: rgba(227, 166, 61, .45); }
+.gallery-card-preview { border: 0; padding: 0; background: transparent; cursor: zoom-in; display: block; }
+.gallery-card-preview:focus-visible { outline: 2px solid rgba(227, 166, 61, .55); outline-offset: -2px; border-radius: 12px 12px 0 0; }
+.gallery-card-image { position: relative; aspect-ratio: 1 / 1; display: grid; place-items: center; background: var(--bg-1); border-bottom: 1px solid var(--line); }
+.gallery-card-image img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.gallery-card-image .gallery-image-fallback { color: var(--faint); font-size: var(--type-caption); text-align: center; padding: 16px; line-height: 1.6; }
+.gallery-card-meta { display: grid; gap: 4px; padding: 10px 12px 6px; text-align: left; }
+.gallery-card-meta b { color: var(--ink); font-size: var(--type-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gallery-card-meta small { color: var(--muted); font-size: var(--type-caption); }
+.gallery-card-meta code { color: var(--faint); font-family: var(--mono); font-size: 10px; }
+.gallery-card-actions { display: flex; gap: 8px; padding: 6px 12px 12px; margin-top: auto; }
+.gallery-card-actions button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel-2); color: var(--muted); font-size: var(--type-caption); cursor: pointer; transition: .15s ease; }
+.gallery-card-actions button:hover { color: var(--ink); border-color: rgba(236, 238, 244, .26); background: var(--panel-3); }
+.gallery-card-actions button.gallery-remove:hover { color: #f0b6ba; border-color: rgba(217, 95, 102, .45); background: rgba(217, 95, 102, .08); }
+.gallery-card-actions button:disabled { cursor: not-allowed; }
+.gallery-card-actions .gallery-download-blocked { color: var(--warning); border-style: dashed; cursor: help; }
+
+.gallery-state { display: grid; place-items: center; gap: 10px; padding: 72px 24px; text-align: center; }
+.gallery-state b { color: var(--ink); font-size: var(--type-body-strong); }
+.gallery-state p { margin: 0; color: var(--muted); font-size: var(--type-small); line-height: 1.7; max-width: 460px; }
+.gallery-state.is-error b { color: #f0b6ba; }
+.gallery-state.is-error p { color: var(--muted); }
+.gallery-load-more { display: flex; justify-content: center; padding: 22px 0 6px; }
+
+/* 灯箱：覆盖图库层的图片检查层 */
+.gallery-lightbox { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; background: rgba(8, 9, 12, .96); }
+.gallery-lightbox-header { display: flex; align-items: center; gap: 12px; padding: 12px 22px; border-bottom: 1px solid var(--line); }
+.gallery-lightbox-header > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.gallery-lightbox-header b { color: var(--ink); font-size: var(--type-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gallery-lightbox-header small { color: var(--faint); font-family: var(--mono); font-size: 10px; }
+.gallery-lightbox-header .lightbox-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.gallery-lightbox-header .lightbox-actions button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel-2); color: var(--muted); font-size: var(--type-small); cursor: pointer; transition: .15s ease; }
+.gallery-lightbox-header .lightbox-actions button:hover { color: var(--ink); border-color: rgba(236, 238, 244, .26); background: var(--panel-3); }
+.gallery-lightbox-header .lightbox-actions button.is-danger:hover { color: #f0b6ba; border-color: rgba(217, 95, 102, .45); background: rgba(217, 95, 102, .08); }
+.gallery-lightbox-viewport { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; padding: 20px; }
+.gallery-lightbox-viewport img { max-width: 100%; max-height: 100%; object-fit: contain; transition: transform .15s ease; transform-origin: center center; }
+.gallery-lightbox-viewport img.is-zoomed { max-width: none; max-height: none; }
+.gallery-lightbox-footer { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 22px; border-top: 1px solid var(--line); }
+.gallery-lightbox-footer button { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel-2); color: var(--muted); cursor: pointer; transition: .15s ease; }
+.gallery-lightbox-footer button:hover { color: var(--ink); background: var(--panel-3); }
+.gallery-lightbox-footer .zoom-readout { color: var(--muted); font-family: var(--mono); font-size: 10px; min-width: 52px; text-align: center; }
+.gallery-lightbox-footer .lightbox-nav { display: inline-flex; align-items: center; gap: 8px; margin-left: 18px; }
+.gallery-lightbox-footer .lightbox-nav small { color: var(--faint); font-family: var(--mono); font-size: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-overlay, .gallery-card, .gallery-lightbox, .gallery-lightbox-viewport img { transition: none; }
 }

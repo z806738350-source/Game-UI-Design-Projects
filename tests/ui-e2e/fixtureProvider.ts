@@ -213,6 +213,13 @@ export class FixtureProvider {
     if (request.method === 'GET' && request.url?.startsWith('/images/tasks/')) {
       return send(200, { task_id: request.url.split('/').pop(), status: 'succeeded' });
     }
+    // 图库 E2E（§11.5）：受控的可信 CDN 镜像，替代真实生产 COS；
+    // spec 通过替换主进程 fetch 把 kunpo CDN 主机重定向到这里。
+    if (request.method === 'GET' && request.url?.startsWith('/cdn-mirror/')) {
+      this.requests.push({ kind: 'cdn-mirror', head: request.url });
+      response.writeHead(200, { 'content-type': 'image/png' });
+      return response.end(fs.readFileSync(GOLDEN_ASSETS.wireframe));
+    }
     send(404, { error: { message: `fixture provider: unrouted ${request.method} ${request.url}` } });
   }
 

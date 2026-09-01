@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AppConfig } from './types';
+import type { AppConfig, GalleryAsset, GalleryListResult } from './types';
 
 // App 顶栏帮助入口测试：点击打开应用内说明书弹窗（iframe 嵌入 guide HTML）；
 // 弹窗内「在系统浏览器中打开」失败时必须在错误条反馈，不允许静默无反应（PR#25 收口 P1）。
@@ -9,6 +9,10 @@ const openUserGuide = vi.fn();
 const createProject = vi.fn();
 const openProject = vi.fn();
 const listProjects = vi.fn(async (..._args: unknown[]) => [] as unknown[]);
+const listGallery = vi.fn(async (..._args: unknown[]): Promise<GalleryListResult> => ({ items: [], total: 0, nextCursor: null, facets: { projects: [], screens: [] } }));
+const hideGalleryAsset = vi.fn();
+const restoreGalleryAsset = vi.fn();
+const downloadGalleryAsset = vi.fn();
 vi.mock('./api', () => ({
   copilotApi: {
     getConfig: vi.fn(async (): Promise<AppConfig> => ({
@@ -19,7 +23,11 @@ vi.mock('./api', () => ({
     listProjects: (...args: unknown[]) => listProjects(...args),
     createProject: (...args: unknown[]) => createProject(...args),
     openProject: (...args: unknown[]) => openProject(...args),
-    openUserGuide: (...args: unknown[]) => openUserGuide(...args)
+    openUserGuide: (...args: unknown[]) => openUserGuide(...args),
+    listGallery: (...args: unknown[]) => listGallery(...args),
+    hideGalleryAsset: (...args: unknown[]) => hideGalleryAsset(...args),
+    restoreGalleryAsset: (...args: unknown[]) => restoreGalleryAsset(...args),
+    downloadGalleryAsset: (...args: unknown[]) => downloadGalleryAsset(...args)
   }
 }));
 
@@ -36,6 +44,11 @@ afterEach(() => {
   openProject.mockReset();
   listProjects.mockReset();
   listProjects.mockImplementation(async () => []);
+  listGallery.mockReset();
+  listGallery.mockImplementation(async () => ({ items: [], total: 0, nextCursor: null, facets: { projects: [], screens: [] } }));
+  hideGalleryAsset.mockReset();
+  restoreGalleryAsset.mockReset();
+  downloadGalleryAsset.mockReset();
 });
 
 describe('App 顶栏帮助入口', () => {
@@ -155,5 +168,77 @@ describe('App 创建项目身份豁免（AUD-04 newEntity）', () => {
     await waitFor(() => expect(document.querySelector('.error-banner')).toBeNull());
     await screen.findByText('新建测试项目');
     expect(screen.queryByText('旧项目')).toBeNull();
+  });
+});
+
+function makeGalleryAsset(overrides: Partial<GalleryAsset> = {}): GalleryAsset {
+  return {
+    id: 'asset-1', cdn_url: 'https://kunpoapiimg.ziy.cc/gallery-tests/one.png', provider: 'kunpo',
+    storage_mode: 'provider_cdn', remote_only: true, origin_kind: 'visual_exploration',
+    continuation_mode: 'exploration', project_id: 'project-1', project_name_snapshot: '云境计划',
+    screen_id: 'main', screen_name_snapshot: '主页面', strategy: 'conservative', width: 1920, height: 1080,
+    created_at: new Date().toISOString(), indexed_at: new Date().toISOString(), last_seen_at: new Date().toISOString(),
+    hidden_at: null, ...overrides
+  };
+}
+
+// §8.1 / §11.4：图库是无损往返的顶层视图——入口选中态、再次点击 no-op、
+// 返回后焦点恢复、工作流仅被 inert 而从未卸载、移除后的撤销提示。
+describe('App 图库入口与无损往返', () => {
+  it('入口选中态与 aria-current 正确，再次点击不退出，返回按钮恢复工作流与焦点', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const entry = await screen.findByTestId('gallery-entry');
+    expect(entry.className).not.toContain('is-active');
+    await user.click(entry);
+    await screen.findByTestId('gallery-overlay');
+    expect(screen.getByTestId('gallery-entry').className).toContain('is-active');
+    expect(screen.getByTestId('gallery-entry').getAttribute('aria-current')).toBe('page');
+    // 再次点击入口是 no-op：不产生含糊的 toggle。
+    await user.click(screen.getByTestId('gallery-entry'));
+    expect(screen.getByTestId('gallery-overlay')).toBeTruthy();
+    await user.click(screen.getByTestId('gallery-back'));
+    await waitFor(() => expect(screen.queryByTestId('gallery-overlay')).toBeNull());
+    expect(document.activeElement).toBe(screen.getByTestId('gallery-entry'));
+    expect(document.querySelector('main')?.hasAttribute('inert')).toBe(false);
+  });
+
+  it('overlay 打开期间工作流不被卸载，只被 inert 隔离', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByTestId('gallery-entry'));
+    await screen.findByTestId('gallery-overlay');
+    expect(screen.getByText('为游戏 UI 设计师准备的 AI 流水线')).toBeTruthy();
+    expect(document.querySelector('main')?.hasAttribute('inert')).toBe(true);
+  });
+
+  it('Escape 关闭图库并恢复入口焦点', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByTestId('gallery-entry'));
+    await screen.findByTestId('gallery-overlay');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByTestId('gallery-overlay')).toBeNull());
+    expect(document.activeElement).toBe(screen.getByTestId('gallery-entry'));
+  });
+
+  it('移除图片出现撤销提示，撤销调用恢复接口且不提删除云端', async () => {
+    const user = userEvent.setup();
+    const asset = makeGalleryAsset();
+    listGallery.mockImplementation(async () => ({
+      items: [asset], total: 1, nextCursor: null,
+      facets: { projects: [{ id: 'project-1', name: '云境计划', status: 'draft' as const }], screens: [{ id: 'main', name: '主页面', projectId: 'project-1' }] }
+    }));
+    hideGalleryAsset.mockResolvedValue({ ...asset, hidden_at: new Date().toISOString() });
+    restoreGalleryAsset.mockResolvedValue(asset);
+    render(<App />);
+    await user.click(await screen.findByTestId('gallery-entry'));
+    await user.click(await screen.findByRole('button', { name: '移除' }));
+    await waitFor(() => expect(hideGalleryAsset).toHaveBeenCalledWith('asset-1'));
+    const toast = await screen.findByTestId('gallery-undo-toast');
+    expect(toast.textContent).toContain('云端文件不会被删除');
+    await user.click(screen.getByTestId('gallery-undo'));
+    await waitFor(() => expect(restoreGalleryAsset).toHaveBeenCalledWith('asset-1'));
+    await waitFor(() => expect(screen.queryByTestId('gallery-undo-toast')).toBeNull());
   });
 });

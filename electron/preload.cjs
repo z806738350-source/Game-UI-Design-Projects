@@ -46,5 +46,10 @@ contextBridge.exposeInMainWorld('designCopilot', {
   composeVisual: (projectId, input) => ipcRenderer.invoke('copilot:composition:create', projectId, input),
   runFidelity: (projectId, screenId) => ipcRenderer.invoke('copilot:fidelity:run', projectId, { screenId }),
   exportVisual: (projectId, variationId) => ipcRenderer.invoke('copilot:visual:export', projectId, variationId),
-  openUserGuide: () => ipcRenderer.invoke('copilot:guide:open')
+  openUserGuide: () => ipcRenderer.invoke('copilot:guide:open'),
+  // 图库（v1.1 §7.2）：Renderer 只传 assetId，永不传 URL。
+  listGallery: (query) => ipcRenderer.invoke('copilot:gallery:list', query),
+  hideGalleryAsset: (assetId) => ipcRenderer.invoke('copilot:gallery:hide', assetId),
+  restoreGalleryAsset: (assetId) => ipcRenderer.invoke('copilot:gallery:restore', assetId),
+  downloadGalleryAsset: (assetId) => ipcRenderer.invoke('copilot:gallery:download', assetId)
 });

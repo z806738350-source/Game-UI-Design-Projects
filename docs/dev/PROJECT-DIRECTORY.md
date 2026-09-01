@@ -53,7 +53,13 @@
   `saveArtifact` 写当前文件并归档历史快照；
 - 屏幕级 artifact 全部在 `screens/{screen_id}/` 下，复制屏幕 = 复制目录；
 - 物理资产（字体/切图/PNG）与其 manifest 记录以 sha256 哈希绑定，任何
-  校验（import 重哈希、bytes 读取、fidelity inspect）都实时比对。
+  校验（import 重哈希、bytes 读取、fidelity inspect）都实时比对；
+- 图库索引 `<workspaceRoot>/.gallery/index.json` 是 **workspace 用户级
+  文件**：不属于任何项目目录，也不是项目 Artifact（不进
+  `artifactRegistry.cjs`，不受项目 schema 约束）。它是按可信永久 CDN URL
+  去重的可重建查询视图，权威仍在各项目 `screens/{screen_id}/explorations/
+  results.json` 与 `workflow/` 历史快照；丢失后可由打开图库时的回填/对账
+  重建，损坏时报错而不静默清空，回滚代码也不删除该文件。
 
 ## 3. 备份与迁移
 
@@ -67,3 +73,4 @@
 | --- | --- | --- |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
 | 1.1 | 2026-08-19 | PR-22 修正 per-screen inputs 位置；补 reference-pack / underlay-repair-task / visual-task |
+| 1.2 | 2026-09-01 | 图库功能：说明 `.gallery/index.json` 为 workspace 用户级索引，不属项目目录与 Artifact Registry |

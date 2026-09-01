@@ -8,6 +8,7 @@ const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
 const { createFlowStateRepair } = require('./services/flowStateRepair.cjs');
 const { createIntentStateStore } = require('./services/intentStateStore.cjs');
+const { createGalleryStore, isDownloadAllowed } = require('./services/galleryStore.cjs');
 const { exportCompositionOutput, hashBuffer, resolveProjectPath } = require('./services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('./services/finalDeliveryGate.cjs');
 
@@ -70,7 +71,12 @@ function registerIpc() {
   // freshness 与 Clone 运行态检查通过 hooks 生效。专用 IPC 在 PR-I3 接入。
   const intentStateStore = createIntentStateStore({ projectStore });
   projectStore.__attachIntentStore(intentStateStore);
-  const pipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore });
+  const galleryStore = createGalleryStore({
+    workspaceRoot: projectStore.workspaceRoot,
+    projectStore,
+    isTrustedCdnUrl: (url) => kunpoClient.isTrustedKunpoCdnUrl(url)
+  });
+  const pipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore, galleryStore });
   const flowStateRepair = createFlowStateRepair({ projectStore });
 
   ipcMain.handle('copilot:config', async () => ({
@@ -256,6 +262,42 @@ function registerIpc() {
     await fs.writeFile(selection.filePath, Buffer.from(await response.arrayBuffer()));
     shell.showItemInFolder(selection.filePath);
     return { ok: true, filePath: selection.filePath };
+  });
+  // 图库（v1.1 §7.2）：list/hide/restore 直接委托 Store；下载只按已登记
+  // assetId 读取 URL，Renderer 永不传 URL。
+  ipcMain.handle('copilot:gallery:list', (_event, query) => galleryStore.list(query || {}));
+  ipcMain.handle('copilot:gallery:hide', (_event, assetId) => galleryStore.hide(String(assetId || '')));
+  ipcMain.handle('copilot:gallery:restore', (_event, assetId) => galleryStore.restore(String(assetId || '')));
+  ipcMain.handle('copilot:gallery:download', async (_event, assetId) => {
+    const asset = await galleryStore.getDownloadAsset(String(assetId || ''));
+    // §7.5：门禁只认登记时的 continuation_mode 快照（缺失即 fail-closed
+    // 阻断），绝不读取项目当前路线。
+    if (!isDownloadAllowed(asset)) {
+      return { status: 'blocked', message: '严格继承项目的图片需回到工作流完成正式交付后导出。' };
+    }
+    if (!kunpoClient.isTrustedKunpoCdnUrl(asset.cdn_url)) {
+      return { status: 'failed', message: '该图片来源不是可信的永久 CDN 资产，无法下载。' };
+    }
+    const sanitize = (value) => String(value || '').replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'gallery';
+    const extensionMatch = /\.(png|jpe?g|webp)$/i.exec(new URL(asset.cdn_url).pathname);
+    const extension = extensionMatch ? extensionMatch[1].toLowerCase().replace('jpeg', 'jpg') : 'png';
+    const dateStamp = String(asset.created_at || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+    const selection = await dialog.showSaveDialog({
+      title: '下载图库原图',
+      defaultPath: `${sanitize(asset.project_name_snapshot)}-${sanitize(asset.screen_name_snapshot)}-${sanitize(asset.strategy || asset.origin_kind)}-${dateStamp}.${extension}`,
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'webp'] }]
+    });
+    if (selection.canceled || !selection.filePath) return { status: 'cancelled' };
+    const response = await fetch(asset.cdn_url);
+    if (!response.ok) return { status: 'failed', message: `下载失败：上游返回 ${response.status}。` };
+    const contentType = String(response.headers.get('content-type') || '');
+    if (!/^image\/(png|jpe?g|webp)/i.test(contentType)) return { status: 'failed', message: `下载失败：上游内容类型异常（${contentType || '无'}）。` };
+    // 先完整读取并校验，再写文件：失败不留下伪成功的空文件。
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!bytes.length) return { status: 'failed', message: '下载失败：上游返回了空内容。' };
+    await fs.writeFile(selection.filePath, bytes);
+    shell.showItemInFolder(selection.filePath);
+    return { status: 'saved', path: selection.filePath };
   });
 }
 

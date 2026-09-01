@@ -68,6 +68,27 @@
 | `copilot:fidelity:run` | `projectId, input` | 运行 13 项 Fidelity 检查 |
 | `copilot:visual:export` | `projectId, variationId` | 导出：strict → final output 校验后导出（`FINAL_EXPORT_BLOCKED`）；guided → 下载 variation 图 |
 
+## 6b. 图库（gallery）
+
+| 通道 | 参数 | 说明 |
+| --- | --- | --- |
+| `copilot:gallery:list` | `query`（scope/projectId/screenId/orientation/range/sort/query/limit/cursor） | 查询图库；首页查询先回填/对账，翻页（带 cursor）不重复扫描 |
+| `copilot:gallery:hide` | `assetId` | 隐藏资产（仅写 `hidden_at`，绝不删除云端文件） |
+| `copilot:gallery:restore` | `assetId` | 恢复已隐藏资产 |
+| `copilot:gallery:download` | `assetId` | 下载原图：只按已登记 assetId 读取 URL（Renderer 永不传 URL）；门禁只认登记时 `continuation_mode` 快照，缺失按 `existing-strict` fail-closed 阻断；保存前再次校验可信永久 CDN |
+
+Web 端（`server/webServer.cjs`，每租户独立 galleryStore）：
+
+| 路由 | 说明 |
+| --- | --- |
+| `GET /api/gallery` | 租户级图库查询（参数同 IPC `query`） |
+| `POST /api/gallery/:assetId/hide` | 隐藏（无远端删除） |
+| `POST /api/gallery/:assetId/restore` | 恢复 |
+| `GET /api/gallery/:assetId/download` | 同源流式下载代理（不重定向）；门禁失败返回 409；`Content-Disposition` 走 RFC 5987 编码，`Cache-Control: private, no-store` |
+
+约束：无 COS 删除接口；客户端不提供 URL；strict/locked 路线原图下载在
+UI 与服务端双重阻断（见 `docs/dev/ERROR-CATALOG.md` 与 gallery 执行方案 §7.5）。
+
 ## 7. 前端调用层
 
 - `src/api.ts`：每个通道对应一个类型化方法，错误统一转成带
@@ -80,3 +101,4 @@
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
+| 1.2 | 2026-09-01 | 图库功能：新增 §6b 图库 IPC 与 Web 路由（galleryStore、下载门禁） |
