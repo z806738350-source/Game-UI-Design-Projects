@@ -10,6 +10,7 @@ const HEALTH_BODY_LIMIT = 64 * 1024;
 const DEFAULT_HTML_LIMIT = 1024 * 1024;
 const DEFAULT_UPSTREAM_TIMEOUT = 22 * 60 * 1000;
 const DEFAULT_HEALTH_TIMEOUT = 2000;
+const VERSION_CONTROL_CSS = `#design-copilot-version-control{position:fixed;left:14px;bottom:128px;z-index:2147483647;color:#f8fafc;font:13px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#design-copilot-version-control *{box-sizing:border-box}#design-copilot-version-control a{padding:0;border:0;border-radius:0;background:transparent;color:inherit;font-weight:inherit;text-decoration:none}#design-copilot-version-control span{display:block;padding:0;border:0;border-radius:0;background:transparent;color:inherit;font-weight:inherit}#design-copilot-version-control .vc-orb{position:relative;display:grid;place-items:center;width:44px;height:44px;border:1px solid rgba(148,163,184,.32);border-radius:50%;background:rgba(15,23,42,.94);box-shadow:0 10px 30px rgba(15,23,42,.35);color:#e2e8f0;text-decoration:none;backdrop-filter:blur(14px);transition:transform .16s ease,border-color .16s ease}#design-copilot-version-control .vc-orb:hover{transform:scale(1.06);border-color:rgba(148,163,184,.5)}#design-copilot-version-control .vc-dot{position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 2px rgba(15,23,42,.94)}#design-copilot-version-control[data-version="current"] .vc-dot{background:#38bdf8}#design-copilot-version-control[data-version="classic"] .vc-dot{background:#0b9b8d}#design-copilot-version-control .vc-menu{position:absolute;left:0;bottom:calc(100% + 10px);width:206px;padding:8px;border:1px solid rgba(148,163,184,.28);border-radius:12px;background:rgba(15,23,42,.94);box-shadow:0 18px 50px rgba(15,23,42,.34);backdrop-filter:blur(14px);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(6px);transform-origin:left bottom;transition:opacity .16s ease,transform .16s ease,visibility 0s linear .16s}#design-copilot-version-control .vc-menu::after{content:'';position:absolute;top:100%;left:0;width:52px;height:14px}#design-copilot-version-control:hover .vc-menu,#design-copilot-version-control:focus-within .vc-menu{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition:opacity .16s ease,transform .16s ease,visibility 0s}#design-copilot-version-control .vc-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:#e2e8f0;text-decoration:none}#design-copilot-version-control .vc-item:hover{background:rgba(148,163,184,.16);color:#fff}#design-copilot-version-control .vc-item svg{flex:0 0 auto;color:#7dd3fc}#design-copilot-version-control .vc-note{margin:6px 2px 2px;color:#94a3b8;font-size:11px;line-height:1.5}#design-copilot-version-control a:focus-visible{outline:2px solid #38bdf8;outline-offset:2px}@media(max-width:640px),(max-height:600px){#design-copilot-version-control{left:10px;bottom:16px}#design-copilot-version-control .vc-menu{width:186px}}`;
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',
   'keep-alive',
@@ -157,6 +158,17 @@ function sendHtml(response, status, html, extraHeaders = {}) {
   response.end(body);
 }
 
+function sendCss(request, response, css) {
+  securityHeaders(response);
+  const body = Buffer.from(css);
+  response.writeHead(200, {
+    'Content-Type': 'text/css; charset=utf-8',
+    'Content-Length': body.length,
+    'Cache-Control': 'no-store'
+  });
+  response.end(request.method === 'HEAD' ? undefined : body);
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -219,6 +231,24 @@ function injectHtmlBeforeBody(body, snippet) {
   const index = text.toLowerCase().lastIndexOf('</body>');
   if (index < 0) return null;
   return Buffer.from(`${text.slice(0, index)}${snippet}${text.slice(index)}`);
+}
+
+const VERSION_CONTROL_ICONS = {
+  orb: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>',
+  switch: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>',
+  status: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>'
+};
+
+function versionControlMarkup(version) {
+  const currentLabel = version === 'classic' ? '经典版' : '新版';
+  const targetVersion = version === 'classic' ? 'current' : 'classic';
+  const targetLabel = targetVersion === 'classic' ? '经典版' : '新版';
+  const orbLabel = `版本切换，当前：${escapeHtml(currentLabel)}，点击查看版本状态`;
+  return `<link rel="stylesheet" href="/__versions/control.css"><aside id="design-copilot-version-control" data-version="${escapeHtml(version)}" aria-label="版本切换"><a class="vc-orb" href="/__versions" title="${orbLabel}" aria-label="${orbLabel}"><span class="vc-dot" aria-hidden="true"></span>${VERSION_CONTROL_ICONS.orb}</a><nav class="vc-menu" aria-label="版本操作"><a class="vc-item" href="/__versions/select/${escapeHtml(targetVersion)}">${VERSION_CONTROL_ICONS.switch}<span>切换到${escapeHtml(targetLabel)}</span></a><a class="vc-item" href="/__versions">${VERSION_CONTROL_ICONS.status}<span>查看版本状态</span></a><p class="vc-note">两版账号与项目数据相互独立。</p></nav></aside>`;
+}
+
+function defaultHtmlInjector(body, context) {
+  return injectHtmlBeforeBody(body, versionControlMarkup(context.version));
 }
 
 function shouldBufferHtml(request, upstreamResponse, config, htmlInjector) {
@@ -414,12 +444,22 @@ function healthLabel(value) {
 async function versionsPage(request, response, config) {
   const payload = await statusPayload(request, config);
   const selectedLabel = payload.selected.version === 'classic' ? '经典版' : '新版';
-  return sendHtml(response, 200, `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>版本选择</title><style>body{font:16px/1.6 system-ui;margin:40px;max-width:720px}form{display:inline-block;margin-right:12px}button{padding:9px 14px}</style></head><body><main><h1>版本选择</h1><p>当前：${selectedLabel}</p><p>经典版：${escapeHtml(healthLabel(payload.upstreams.classic))}；新版：${escapeHtml(healthLabel(payload.upstreams.current))}</p><p>两版工作区相互独立，项目不会自动同步。</p><form method="post" action="/__versions/select"><input type="hidden" name="version" value="classic"><button type="submit">进入经典版</button></form><form method="post" action="/__versions/select"><input type="hidden" name="version" value="current"><button type="submit">进入新版</button></form></main></body></html>`);
+  return sendHtml(response, 200, `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>版本选择</title><style>body{font:16px/1.6 system-ui;margin:40px;max-width:720px}.version-link{display:inline-block;margin-right:12px;padding:9px 14px;border-radius:8px;background:#0b9b8d;color:#fff;text-decoration:none}</style></head><body><main><h1>版本选择</h1><p>当前：${selectedLabel}</p><p>经典版：${escapeHtml(healthLabel(payload.upstreams.classic))}；新版：${escapeHtml(healthLabel(payload.upstreams.current))}</p><p>两版工作区相互独立，项目不会自动同步。</p><a class="version-link" href="/__versions/select/classic">进入经典版</a><a class="version-link" href="/__versions/select/current">进入新版</a></main></body></html>`);
+}
+
+function selectVersionResponse(response, config, version) {
+  securityHeaders(response);
+  response.writeHead(303, {
+    Location: '/',
+    'Set-Cookie': versionCookie(config, version),
+    'Cache-Control': 'no-store'
+  });
+  response.end();
 }
 
 function createVersionRouter(environment = process.env, options = {}) {
   const config = validateConfiguration(environment);
-  const htmlInjector = options.htmlInjector;
+  const htmlInjector = options.htmlInjector === undefined ? defaultHtmlInjector : options.htmlInjector;
 
   async function handler(request, response) {
     let url;
@@ -440,18 +480,21 @@ function createVersionRouter(environment = process.env, options = {}) {
         if (request.method !== 'GET') return sendJson(response, 405, { error: 'method_not_allowed' });
         return versionsPage(request, response, config);
       }
+      if (url.pathname === '/__versions/control.css') {
+        if (request.method !== 'GET' && request.method !== 'HEAD') return sendJson(response, 405, { error: 'method_not_allowed' });
+        return sendCss(request, response, VERSION_CONTROL_CSS);
+      }
+      const linkedSelection = url.pathname.match(/^\/__versions\/select\/(classic|current)$/);
+      if (linkedSelection) {
+        if (request.method !== 'GET') return sendJson(response, 405, { error: 'method_not_allowed' });
+        return selectVersionResponse(response, config, linkedSelection[1]);
+      }
       if (url.pathname === '/__versions/select') {
         if (request.method !== 'POST') return sendJson(response, 405, { error: 'method_not_allowed' });
         if (request.headers.origin !== config.publicUrl.origin) return sendJson(response, 403, { error: 'untrusted_origin' });
         const body = parseSelectionBody(request, await readLimitedBody(request, ROUTER_BODY_LIMIT));
         if (!VERSION_VALUES.has(body.version)) return sendJson(response, 400, { error: 'invalid_version' });
-        securityHeaders(response);
-        response.writeHead(303, {
-          Location: '/',
-          'Set-Cookie': versionCookie(config, body.version),
-          'Cache-Control': 'no-store'
-        });
-        return response.end();
+        return selectVersionResponse(response, config, body.version);
       }
       return proxyRequest(request, response, config, selectVersion(request, config), htmlInjector);
     } catch (error) {
@@ -476,8 +519,10 @@ if (require.main === module) {
 
 module.exports = {
   createVersionRouter,
+  defaultHtmlInjector,
   filteredHeaders,
   injectHtmlBeforeBody,
   parseCookies,
+  versionControlMarkup,
   validateConfiguration
 };

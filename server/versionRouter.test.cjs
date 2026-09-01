@@ -4,7 +4,8 @@ const test = require('node:test');
 const {
   createVersionRouter,
   injectHtmlBeforeBody,
-  validateConfiguration
+  validateConfiguration,
+  versionControlMarkup
 } = require('./versionRouter.cjs');
 
 const ROUTER_TEST_BODY_LIMIT = 9 * 1024;
@@ -108,7 +109,11 @@ test('router configuration fixes loopback upstreams and applies the routing prio
 });
 
 test('version management endpoints expose safe health and enforce same-origin bounded selection', async () => {
-  const classic = await startServer(healthHandler('经典版'));
+  const classic = await startServer((incoming, response) => {
+    if (incoming.url === '/healthz') return healthHandler('经典版')(incoming, response);
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    response.end('<!doctype html><html><body><main>classic login</main></body></html>');
+  });
   const current = await startServer(healthHandler('新版', { releaseId: 'release-current' }));
   const router = createVersionRouter(routerEnvironment(classic.port, current.port));
   const publicServer = await startServer(router.handler);
@@ -134,6 +139,40 @@ test('version management endpoints expose safe health and enforce same-origin bo
     assert.equal(page.status, 200);
     assert.match(page.body.toString('utf8'), /当前：新版/);
     assert.match(page.body.toString('utf8'), /两版工作区相互独立，项目不会自动同步/);
+
+    const injected = await request(publicServer.base, '/login');
+    assert.equal(injected.status, 200);
+    assert.match(injected.body.toString('utf8'), /id="design-copilot-version-control"/);
+    assert.match(injected.body.toString('utf8'), /当前：经典版/);
+    assert.match(injected.body.toString('utf8'), /href="\/__versions\/select\/current"/);
+    assert.match(injected.body.toString('utf8'), /\/__versions\/control\.css/);
+    const injectedHtml = injected.body.toString('utf8');
+    assert.match(injectedHtml, /data-version="classic"/);
+    assert.match(injectedHtml, /class="vc-orb" href="\/__versions"/);
+    assert.match(injectedHtml, /两版账号与项目数据相互独立。/);
+    assert.doesNotMatch(injectedHtml, /<script/i);
+
+    const controlCss = await request(publicServer.base, '/__versions/control.css');
+    assert.equal(controlCss.status, 200);
+    assert.match(controlCss.headers['content-type'], /^text\/css/);
+    assert.match(controlCss.body.toString('utf8'), /#design-copilot-version-control/);
+    const controlCssText = controlCss.body.toString('utf8');
+    assert.match(controlCssText, /left:14px/);
+    assert.match(controlCssText, /\.vc-menu/);
+    assert.match(controlCssText, /:focus-within/);
+    assert.match(controlCssText, /2147483647/);
+    assert.match(controlCssText, /#design-copilot-version-control span\{/);
+    assert.doesNotMatch(controlCssText, /right:18px/);
+
+    const linkedSelection = await request(publicServer.base, '/__versions/select/current');
+    assert.equal(linkedSelection.status, 303);
+    assert.equal(linkedSelection.headers.location, '/');
+    assert.match(linkedSelection.headers['set-cookie'][0], /^design_copilot_version=current; Path=\/; HttpOnly; SameSite=Lax$/);
+
+    const linkedSelectionPost = await request(publicServer.base, '/__versions/select/current', {
+      method: 'POST'
+    });
+    assert.equal(linkedSelectionPost.status, 405);
 
     const missingOrigin = await request(publicServer.base, '/__versions/select', {
       method: 'POST',
@@ -328,4 +367,14 @@ test('HTML injection is bounded and fails open for unsupported or incomplete res
     await current.close();
     await classic.close();
   }
+});
+
+test('versionControlMarkup renders orb with current version labels and switch target', () => {
+  const markup = versionControlMarkup('current');
+  assert.match(markup, /data-version="current"/);
+  assert.match(markup, /title="版本切换，当前：新版，点击查看版本状态"/);
+  assert.match(markup, /href="\/__versions\/select\/classic"/);
+  assert.match(markup, /切换到经典版/);
+  assert.match(markup, /查看版本状态/);
+  assert.doesNotMatch(markup, /<script/i);
 });
