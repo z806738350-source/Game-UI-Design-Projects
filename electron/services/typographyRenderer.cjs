@@ -32,6 +32,51 @@ async function coloredMask(mask, color, width, height) {
   return sharp({ create: { width, height, channels: 4, background: color } }).composite([{ input: mask, blend: 'dest-in' }]).png().toBuffer();
 }
 
+function maxFilterLine(read, write, length, radius) {
+  const indexes = new Int32Array(length);
+  let head = 0;
+  let tail = 0;
+  let right = -1;
+  for (let position = 0; position < length; position += 1) {
+    const upper = Math.min(length - 1, position + radius);
+    while (right < upper) {
+      right += 1;
+      const value = read(right);
+      while (tail > head && read(indexes[tail - 1]) <= value) tail -= 1;
+      indexes[tail] = right;
+      tail += 1;
+    }
+    const lower = Math.max(0, position - radius);
+    while (tail > head && indexes[head] < lower) head += 1;
+    write(position, read(indexes[head]));
+  }
+}
+
+async function dilateAlphaMask(mask, radius) {
+  const { data, info } = await sharp(mask).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const horizontal = new Uint8Array(info.width * info.height);
+  const dilated = new Uint8Array(info.width * info.height);
+  for (let y = 0; y < info.height; y += 1) {
+    maxFilterLine(
+      (x) => data[(y * info.width + x) * info.channels + 3],
+      (x, value) => { horizontal[y * info.width + x] = value; },
+      info.width,
+      radius
+    );
+  }
+  for (let x = 0; x < info.width; x += 1) {
+    maxFilterLine(
+      (y) => horizontal[y * info.width + x],
+      (y, value) => { dilated[y * info.width + x] = value; },
+      info.height,
+      radius
+    );
+  }
+  const rgba = Buffer.alloc(info.width * info.height * 4, 255);
+  for (let index = 0; index < dilated.length; index += 1) rgba[index * 4 + 3] = dilated[index];
+  return sharp(rgba, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
+}
+
 async function alphaInkBounds(buffer, width, height) {
   const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   let left = width; let top = height; let right = -1; let bottom = -1;
@@ -74,7 +119,7 @@ async function renderGlyphs(layer, target, fontfile, family) {
   const strokeWidth = Math.round(finite(stroke.width, 0, 0, 64));
   let glyphs = fill;
   if (strokeWidth > 0) {
-    const outlineMask = await sharp(result.data).dilate(strokeWidth).png().toBuffer();
+    const outlineMask = await dilateAlphaMask(result.data, strokeWidth);
     const outline = await coloredMask(outlineMask, stroke.color || '#000000', result.info.width, result.info.height);
     glyphs = await sharp({ create: { width: result.info.width, height: result.info.height, channels: 4, background: '#00000000' } }).composite([{ input: outline }, { input: fill }]).png().toBuffer();
   }
