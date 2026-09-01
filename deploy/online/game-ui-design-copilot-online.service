@@ -1,0 +1,32 @@
+[Unit]
+Description=Game UI Design Copilot Version Router
+After=network-online.target game-ui-design-copilot-classic.service game-ui-design-copilot-current.service
+Wants=network-online.target game-ui-design-copilot-classic.service game-ui-design-copilot-current.service
+
+[Service]
+Type=simple
+User=game-ui-design-copilot
+Group=game-ui-design-copilot
+WorkingDirectory=@@CURRENT_RELEASE_DIR@@
+EnvironmentFile=/etc/game-ui-design-copilot-online/version-router.env
+ExecStart=/opt/game-ui-design-copilot-online/runtime/node/bin/node @@CURRENT_RELEASE_DIR@@/server/versionRouter.cjs
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
