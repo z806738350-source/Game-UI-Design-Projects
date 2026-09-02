@@ -9,7 +9,9 @@ User=game-ui-design-copilot
 Group=game-ui-design-copilot
 WorkingDirectory=@@CLASSIC_RELEASE_DIR@@
 EnvironmentFile=/etc/game-ui-design-copilot-online/game-ui-design-copilot-online.env
-ExecStart=/usr/bin/env HOST=127.0.0.1 PORT=9031 DESIGN_COPILOT_RELEASE_ID=20260812-113232-f9dc444 DESIGN_COPILOT_VERSION_LABEL=经典版 /opt/game-ui-design-copilot-online/runtime/node/bin/node @@CLASSIC_RELEASE_DIR@@/server/webServer.cjs
+# 路径类变量必须在此内联钉住：EnvironmentFile 与单版本回滚 unit 共享，其中
+# DIST_ROOT 指向 current/dist，会随 current 符号链接漂移，使钉住的经典版下发新前端。
+ExecStart=/usr/bin/env HOST=127.0.0.1 PORT=9031 DESIGN_COPILOT_DATA_ROOT=/var/lib/game-ui-design-copilot-online DESIGN_COPILOT_DIST_ROOT=@@CLASSIC_RELEASE_DIR@@/dist DESIGN_COPILOT_RELEASE_ID=20260812-113232-f9dc444 DESIGN_COPILOT_VERSION_LABEL=经典版 /opt/game-ui-design-copilot-online/runtime/node/bin/node @@CLASSIC_RELEASE_DIR@@/server/webServer.cjs
 Restart=on-failure
 RestartSec=3
 TimeoutStartSec=30
