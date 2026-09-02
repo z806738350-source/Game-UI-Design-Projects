@@ -9,13 +9,19 @@ const REPO_ROOT = path.join(__dirname, '..', '..');
 const GIF_1X1_BASE64 = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const GIF_1X1 = Buffer.from(GIF_1X1_BASE64, 'base64');
 
-// 规则一：sharp 说明符出现在 require/import/from 位置，含 tests/ui-e2e/helpers.ts 用的
-// createRequire(...)('sharp') 写法（允许一层嵌套括号）。
+// 规则一：sharp 说明符出现在 require/import/from 位置，含内联链式 createRequire(...)('sharp')
+// （允许一层嵌套括号）。
 const SHARP_SPECIFIER = /(?:\brequire|\bimport|\bfrom)\s*\(?\s*['"]sharp['"]|\bcreateRequire\s*\((?:[^()]|\([^()]*\))*\)\s*\(\s*['"]sharp['"]/;
 // 规则二：用到 sharp 的模块必须经 sharpRuntime 引入。只匹配标识符用法，因此
-// styleContractSchema.cjs 里作为转角语言枚举值的字符串 'sharp' 不会误报。
+// styleContractSchema.cjs 里作为转角语言枚举值的字符串 'sharp' 不会误报；
+// tests/ui-e2e/helpers.ts:15,168 那种两步式别名（nodeRequire = createRequire(...)，
+// 再 const sharp = nodeRequire('sharp')）由本规则按标识符用法拦下。
 const USES_SHARP = /\bsharp\s*\(|\bsharp\./;
 const VIA_SHARP_RUNTIME = /require\(\s*['"]\.\/sharpRuntime\.cjs['"]\s*\)/;
+// 规则三：发布目录里禁止 createRequire。绑定改名后（const img = nodeRequire('sharp') 再用
+// img(...)）前两条规则都不触发——实测漏检；CJS 模块本就有 require，createRequire 只是
+// 绕过手段，禁掉它即可闭合这个缺口。
+const NO_CREATE_REQUIRE = /\bcreateRequire\b/;
 
 function rasterBuffer(format) {
   return sharp({ create: { width: 2, height: 2, channels: 3, background: { r: 9, g: 8, b: 7 } } })[format]().toBuffer();
@@ -66,8 +72,11 @@ test('shipped production modules load sharp only through sharpRuntime', () => {
     for (const entry of fs.readdirSync(path.join(REPO_ROOT, dir))) {
       if (!entry.endsWith('.cjs') || entry.endsWith('.test.cjs') || entry === 'sharpRuntime.cjs') continue;
       const source = fs.readFileSync(path.join(REPO_ROOT, dir, entry), 'utf8');
-      if (SHARP_SPECIFIER.test(source)) offenders.push(`${dir}/${entry}: 直接引入 sharp 说明符`);
-      else if (USES_SHARP.test(source) && !VIA_SHARP_RUNTIME.test(source)) offenders.push(`${dir}/${entry}: 使用 sharp 但未经 ./sharpRuntime.cjs 引入`);
+      const problems = [];
+      if (SHARP_SPECIFIER.test(source)) problems.push('直接引入 sharp 说明符');
+      if (USES_SHARP.test(source) && !VIA_SHARP_RUNTIME.test(source)) problems.push('使用 sharp 但未经 ./sharpRuntime.cjs 引入');
+      if (NO_CREATE_REQUIRE.test(source)) problems.push('使用 createRequire，改名绑定可绕过前两条规则');
+      if (problems.length > 0) offenders.push(`${dir}/${entry}: ${problems.join('；')}`);
     }
   }
   assert.deepEqual(offenders, []);

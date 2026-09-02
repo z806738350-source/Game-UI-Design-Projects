@@ -55,14 +55,14 @@ gh run view <run-id> --log | grep -cE 'MEMORY-ERROR|GSlice'
 1. `package.json` 固定 `sharp: 0.33.5`（x86-64-v1 可运行的最后一个版本线）。
 2. 缓解集中在 `electron/services/sharpRuntime.cjs`：加载时按 advisory 官方 workaround 调用 `sharp.block` 禁用 `VipsForeignLoadNsgif`、`VipsForeignLoadTiff`、`VipsForeignLoadVips` 三个解码器，并导出同一 sharp 实例；6 个生产模块一律经该模块引入 sharp。
 3. 审计豁免写在 `pnpm-workspace.yaml` 的 `auditConfig.ignoreGhsas: [GHSA-f88m-g3jw-g9cj]`（11.x 版本的 pnpm 已不再读取 `package.json` 里的 `pnpm` 字段，写在那里只会得到告警并被忽略），只豁免这一条 GHSA，其余 high 级漏洞继续阻断合并。
-4. `electron/services/sharpRuntime.test.cjs` 四项回归：GIF/TIFF 在缓解前可解码、缓解后被拒（未缓解行为用子进程取证，避免同进程 runner 下断言静默退化为永真）；PNG/JPEG/WebP 缓解后仍正常；SVG 缓解后仍可解码（这是产品真实使用的 librsvg 路径，防止有人把 SVG 一并加进 block）；进入 release 的生产目录（`electron/services`、`server`）中的非测试 `.cjs` 既不得出现 sharp 说明符（含 `createRequire(...)('sharp')` 写法），也不得在使用 `sharp(` / `sharp.` 的同时绕过 `./sharpRuntime.cjs`。扫描范围与 `deploy/online/build-release.sh` 的 release 白名单一致。
+4. `electron/services/sharpRuntime.test.cjs` 四项回归：GIF/TIFF 在缓解前可解码、缓解后被拒（未缓解行为用子进程取证，避免同进程 runner 下断言静默退化为永真）；PNG/JPEG/WebP 缓解后仍正常；SVG 缓解后仍可解码（这是产品真实使用的 librsvg 路径，防止有人把 SVG 一并加进 block）；进入 release 的生产目录（`electron/services`、`server`）中的非测试 `.cjs` 受三条规则约束——不得出现 sharp 说明符（含内联链式 `createRequire(...)('sharp')`），出现 `sharp(` / `sharp.` 时必须经 `./sharpRuntime.cjs` 引入，且不得使用 `createRequire`。第三条是必需的：绑定改名后（`const img = nodeRequire('sharp')` 再用 `img(...)`）前两条实测漏检，而 CJS 模块本就有 `require`，`createRequire` 在发布目录里没有正当用途。扫描范围与 `deploy/online/build-release.sh` 的 release 白名单一致；六项对照实测（基线、直接 require、内联链式 createRequire、两步式别名仍叫 sharp、两步式改名为 img、合规经 sharpRuntime）结果均符合预期。
 5. `.github/workflows/ci.yml` 的 `ui-e2e` 作业由 `ubuntu-22.04` 改为 `ubuntu-24.04`，Electron 系统依赖同步换成 noble 的 t64 包名（`libatk1.0-0t64`、`libatk-bridge2.0-0t64`、`libcups2t64`、`libgtk-3-0t64`、`libasound2t64`；jammy 的旧包名在 noble 上已不存在）。用例集、Electron 版本、`xvfb-run` 启动方式与超时全部不变，只更换承载它的系统 GLib。
 6. `deploy/online/prepare-dual-version.sh` 的候选 release 预检由 `require('sharp')` 改为 require 暂存目录内的 `./electron/services/sharpRuntime.cjs`，并断言 GIF 解码被拒绝、打印解析到的 sharp 与 libvips 版本。理由：`require('sharp')` 只证明原生模块能在这台 v1 CPU 上加载，无法发现候选包缺失 `sharpRuntime.cjs`、或该文件里的 `sharp.block` 调用被移除/变成空操作——而这两种情况下审计豁免所依赖的缓解已经不存在，线上会带着未缓解的 high 级解码器运行。该断言与本例外同生命周期，恢复动作里必须同步放宽。
 
 ## 明确不满足的部分（例外的边界）
 
 - 生产依赖树仍包含一条 high 级 advisory（sharp 0.33.5 / libvips 8.15.3）；`pnpm audit --prod --audit-level high` 现在以“1 high (1 ignored)”通过，而不是以零漏洞通过；
-- 缓解依赖代码级黑名单生效：若未来有模块绕过 `sharpRuntime.cjs` 直接 `require('sharp')`，或在 `sharpRuntime` 加载前解码 GIF/TIFF/VIPS，则该次解码不受保护（第 4 条测试用于阻止前者）；
+- 缓解依赖代码级黑名单生效，两类残余风险不等价：模块绕过 `sharpRuntime.cjs` 引入 sharp 由第 4 条的三条规则静态阻止（含改名绑定）；而在 `sharpRuntime` 加载**之前**解码 GIF/TIFF/VIPS 属于加载顺序问题，静态扫描无法证明，只能靠「6 个生产模块一律经 sharpRuntime 引入」的约定与代码评审维持，该次解码不受保护；
 - 禁用 GIF/TIFF/VIPS 解码是永久性的输入面收窄：日后若产品需要接收这三种格式，必须先解除本例外，不能直接放开 block；
 - 部署门禁与本例外耦合（第 6 条）：候选 release 预检断言 GIF 被拒绝，属于有意的 fail-closed。代价是日后放宽输入面必须同时修订本 ADR 与 `prepare-dual-version.sh`，只改业务代码会在部署阶段被挡下；
 - 桌面端（macOS/Windows）本可使用已修复的 0.35.x，为保持双端与线上运行时一致，一并固定在 0.33.5；
