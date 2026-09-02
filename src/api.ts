@@ -269,7 +269,7 @@ function previewApi(): DesignCopilotApi {
       const asset = previewGalleryAsset(assetId);
       // §7.5：预览同样只认登记时的路线快照，严格/锁定路线一律阻断。
       if (asset.continuation_mode !== 'exploration' && asset.continuation_mode !== 'existing-guided') {
-        return { status: 'blocked', message: '严格继承项目的图片需回到工作流完成正式交付后导出。' };
+        return { status: 'blocked', message: asset.mode_provenance === 'fail-closed' ? '历史快照缺少生成时路线证据，按受控交付处理；如需原图请在对应 Screen 重新生成或走正式交付导出。' : '严格继承项目的图片需回到工作流完成正式交付后导出。' };
       }
       return { status: 'failed', message: '预览模式没有真实图片可下载。' };
     }

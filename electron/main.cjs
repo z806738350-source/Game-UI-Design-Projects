@@ -8,7 +8,7 @@ const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
 const { createFlowStateRepair } = require('./services/flowStateRepair.cjs');
 const { createIntentStateStore } = require('./services/intentStateStore.cjs');
-const { createGalleryStore, isDownloadAllowed } = require('./services/galleryStore.cjs');
+const { createGalleryStore, isDownloadAllowed, blockedDownloadMessage } = require('./services/galleryStore.cjs');
 const { exportCompositionOutput, hashBuffer, resolveProjectPath } = require('./services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('./services/finalDeliveryGate.cjs');
 
@@ -273,7 +273,7 @@ function registerIpc() {
     // §7.5：门禁只认登记时的 continuation_mode 快照（缺失即 fail-closed
     // 阻断），绝不读取项目当前路线。
     if (!isDownloadAllowed(asset)) {
-      return { status: 'blocked', message: '严格继承项目的图片需回到工作流完成正式交付后导出。' };
+      return { status: 'blocked', message: blockedDownloadMessage(asset) };
     }
     if (!kunpoClient.isTrustedKunpoCdnUrl(asset.cdn_url)) {
       return { status: 'failed', message: '该图片来源不是可信的永久 CDN 资产，无法下载。' };

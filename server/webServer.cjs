@@ -7,7 +7,7 @@ const { createProjectStore } = require('../electron/services/projectStore.cjs');
 const { createDesignPipeline } = require('../electron/services/designPipeline.cjs');
 const { createFlowStateRepair } = require('../electron/services/flowStateRepair.cjs');
 const { createIntentStateStore } = require('../electron/services/intentStateStore.cjs');
-const { createGalleryStore, isDownloadAllowed } = require('../electron/services/galleryStore.cjs');
+const { createGalleryStore, isDownloadAllowed, blockedDownloadMessage } = require('../electron/services/galleryStore.cjs');
 const { hashBuffer, resolveProjectPath } = require('../electron/services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('../electron/services/finalDeliveryGate.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
@@ -412,7 +412,7 @@ function createApplication(environment = process.env) {
       const asset = await context.galleryStore.getDownloadAsset(assetId);
       // §7.5：门禁只认登记时的 continuation_mode 快照（缺失即 fail-closed），
       // 不得依赖前端禁用，也不读取项目当前路线。
-      if (!isDownloadAllowed(asset)) throw Object.assign(new Error('严格继承项目的图片需回到工作流完成正式交付后导出。'), { status: 409 });
+      if (!isDownloadAllowed(asset)) throw Object.assign(new Error(blockedDownloadMessage(asset)), { status: 409 });
       if (!kunpoClient.isTrustedKunpoCdnUrl(asset.cdn_url)) throw Object.assign(new Error('该图片来源不是可信的永久 CDN 资产。'), { status: 409 });
       const upstream = await fetch(asset.cdn_url);
       if (!upstream.ok || !upstream.body) throw Object.assign(new Error('下载图库原图失败。'), { status: 502 });

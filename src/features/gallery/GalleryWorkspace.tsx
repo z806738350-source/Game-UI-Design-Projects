@@ -19,7 +19,9 @@ type GalleryFilters = {
 
 const DEFAULT_FILTERS: GalleryFilters = { scope: 'all', projectId: '', screenId: '', orientation: '', range: '', sort: 'newest' };
 const DOWNLOADABLE_MODES = new Set(['exploration', 'existing-guided']);
-const BLOCKED_DOWNLOAD_MESSAGE = '严格继承项目的图片需回到工作流完成正式交付后导出。';
+const STRICT_BLOCKED_MESSAGE = '严格继承项目的图片需回到工作流完成正式交付后导出。';
+const FAIL_CLOSED_BLOCKED_MESSAGE = '历史快照缺少生成时路线证据，按受控交付处理；如需原图请在对应 Screen 重新生成或走正式交付导出。';
+const blockedMessage = (asset: GalleryAsset) => asset.mode_provenance === 'fail-closed' ? FAIL_CLOSED_BLOCKED_MESSAGE : STRICT_BLOCKED_MESSAGE;
 
 export function isGalleryDownloadBlocked(asset: GalleryAsset): boolean {
   return !DOWNLOADABLE_MODES.has(asset.continuation_mode || '');
@@ -215,7 +217,7 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
       const outcome = await copilotApi.downloadGalleryAsset(asset.id);
       if (outcome.status === 'saved') onNotify(`原图已保存${outcome.path ? `：${outcome.path}` : '。'}`);
       else if (outcome.status === 'cancelled') onNotify('已取消保存。');
-      else onError(outcome.message || BLOCKED_DOWNLOAD_MESSAGE);
+      else onError(outcome.message || blockedMessage(asset));
     } catch (cause) { onError(friendlyError(cause)); }
   };
 
@@ -314,7 +316,7 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
                       ? <button type="button" onClick={() => void restoreAsset(asset)}><RotateCcw size={14} />恢复</button>
                       : <>
                         {blocked
-                          ? <button type="button" className="gallery-download-blocked" aria-disabled="true" title={BLOCKED_DOWNLOAD_MESSAGE} onClick={() => onError(BLOCKED_DOWNLOAD_MESSAGE)}><Download size={14} />受控交付</button>
+                          ? <button type="button" className="gallery-download-blocked" aria-disabled="true" title={blockedMessage(asset)} onClick={() => onError(blockedMessage(asset))}><Download size={14} />受控交付</button>
                           : <button type="button" onClick={() => void downloadAsset(asset)}><Download size={14} />下载原图</button>}
                         <button type="button" className="gallery-remove" onClick={() => void hideAsset(asset)}>移除</button>
                       </>}
@@ -334,7 +336,7 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
             ? <button type="button" onClick={() => void restoreAsset(lightbox)}><RotateCcw size={14} />恢复到图库</button>
             : <>
               {lightboxBlocked
-                ? <button type="button" className="gallery-download-blocked" aria-disabled="true" title={BLOCKED_DOWNLOAD_MESSAGE} onClick={() => onError(BLOCKED_DOWNLOAD_MESSAGE)}><Download size={14} />受控交付</button>
+                ? <button type="button" className="gallery-download-blocked" aria-disabled="true" title={blockedMessage(lightbox)} onClick={() => onError(blockedMessage(lightbox))}><Download size={14} />受控交付</button>
                 : <button type="button" onClick={() => void downloadAsset(lightbox)}><Download size={14} />下载原图</button>}
               <button type="button" className="is-danger" onClick={() => void hideAsset(lightbox)}>移除</button>
             </>}

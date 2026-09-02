@@ -6,7 +6,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { createProjectStore } = require('./projectStore.cjs');
-const { createGalleryStore, isDownloadAllowed, FAIL_CLOSED_MODE } = require('./galleryStore.cjs');
+const { createGalleryStore, isDownloadAllowed, blockedDownloadMessage, FAIL_CLOSED_MODE } = require('./galleryStore.cjs');
 
 const TRUSTED = (name) => `https://kunpoapiimg.ziy.cc/gallery-tests/${name}.png`;
 
@@ -114,7 +114,7 @@ test('回填当前结果与历史快照，缺失路线按 fail-closed 登记', (
   // 两轮保存：第二轮把第一轮推入历史快照。
   await projectStore.saveArtifact(project.id, 'visual-results', {
     schema_version: '1.0', id: 'main-visual-results', version: 1, status: 'generated', source: {},
-    variations: [variation('old', TRUSTED('history-old'), { created_at: undefined })]
+    variations: [variation('main-old', TRUSTED('history-old'), { created_at: undefined })]
   }, { screenId: 'main' });
   await projectStore.saveArtifact(project.id, 'visual-results', {
     schema_version: '1.0', id: 'main-visual-results', version: 2, status: 'generated', source: {},
@@ -130,6 +130,12 @@ test('回填当前结果与历史快照，缺失路线按 fail-closed 登记', (
   assert.equal(historical.continuation_mode, FAIL_CLOSED_MODE, '历史快照缺失路线证据时按 fail-closed');
   const current = result.items.find((item) => item.cdn_url === TRUSTED('current'));
   assert.equal(current.continuation_mode, 'exploration');
+  assert.equal(historical.mode_provenance, 'fail-closed');
+  assert.equal(historical.screen_id, 'main', 'variation_id 的 Screen 前缀应恢复历史快照的 Screen 上下文');
+  assert.ok(historical.screen_name_snapshot, '恢复的 Screen 必须带名称快照');
+  assert.equal(current.mode_provenance, 'task-start');
+  assert.ok(/历史快照/.test(blockedDownloadMessage(historical)));
+  assert.ok(/严格继承/.test(blockedDownloadMessage(current)));
 
   const raw = JSON.parse(await fs.readFile(path.join(root, '.gallery', 'index.json'), 'utf8'));
   assert.ok(raw.initial_backfill_completed_at);

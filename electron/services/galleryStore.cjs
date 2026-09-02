@@ -92,7 +92,8 @@ function createGalleryStore({ workspaceRoot, projectStore, isTrustedCdnUrl }) {
       width: Number(variation.output_width || variation.width) || undefined,
       height: Number(variation.output_height || variation.height) || undefined,
       target_size: variation.target_size || undefined,
-      created_at: variation.created_at || fallbackCreatedAt || undefined
+      created_at: variation.created_at || fallbackCreatedAt || undefined,
+      mode_provenance: context.modeProvenance || 'task-start'
     };
     const existing = index.assets.find((asset) => asset.cdn_url === cdnUrl);
     if (existing) {
@@ -113,6 +114,7 @@ function createGalleryStore({ workspaceRoot, projectStore, isTrustedCdnUrl }) {
       remote_only: true,
       origin_kind: context.originKind === 'underlay_repair' ? 'underlay_repair' : 'visual_exploration',
       continuation_mode: normalizeMode(context.continuationMode),
+      mode_provenance: incoming.mode_provenance,
       project_id: incoming.project_id,
       project_name_snapshot: incoming.project_name_snapshot,
       project_status_snapshot: incoming.project_status_snapshot,
@@ -186,9 +188,10 @@ function createGalleryStore({ workspaceRoot, projectStore, isTrustedCdnUrl }) {
         // 的既有快照在 upsert 中被保留。
         const snapshots = await projectHistorySnapshots(project, HISTORY_SNAPSHOTS_PER_SCREEN);
         for (const { screenId, variations, savedAt } of snapshots) {
-          const screenName = screenId ? (registryScreenName(projects, project.id, screenId) ) : undefined;
           for (const variation of variations) {
-            applyRegistration(index, { ...context, continuationMode: FAIL_CLOSED_MODE, screenId, screenName, originKind: variation.strategy === 'underlay-repair' ? 'underlay_repair' : 'visual_exploration' }, variation, savedAt);
+            const resolvedScreenId = screenId || resolveScreenFromVariationId(project.id, variation?.id);
+            const screenName = resolvedScreenId ? registryScreenName(projects, project.id, resolvedScreenId) : undefined;
+            applyRegistration(index, { ...context, continuationMode: FAIL_CLOSED_MODE, modeProvenance: 'fail-closed', screenId: resolvedScreenId, screenName, originKind: variation.strategy === 'underlay-repair' ? 'underlay_repair' : 'visual_exploration' }, variation, savedAt);
           }
         }
       }
@@ -206,6 +209,19 @@ function createGalleryStore({ workspaceRoot, projectStore, isTrustedCdnUrl }) {
       const registry = await projectStore.listScreens(project.id).catch(() => ({ screens: [] }));
       for (const screen of registry.screens || []) registryCache.set(`${project.id}:${screen.id}`, screen.name);
     }
+  }
+
+  // 历史快照不带 screen 字段，但 variation_id 带 Screen id 前缀
+  // （如 main-conservative-…），按注册表反查恢复 Screen 上下文；最长前缀优先。
+  function resolveScreenFromVariationId(projectId, variationId) {
+    if (typeof variationId !== 'string') return undefined;
+    let best;
+    for (const key of registryCache.keys()) {
+      if (!key.startsWith(`${projectId}:`)) continue;
+      const screenId = key.slice(projectId.length + 1);
+      if (variationId.startsWith(`${screenId}-`) && (!best || screenId.length > best.length)) best = screenId;
+    }
+    return best;
   }
 
   // §6.2：首次完整回填（含全部历史快照）。只在
@@ -227,9 +243,10 @@ function createGalleryStore({ workspaceRoot, projectStore, isTrustedCdnUrl }) {
         }
         const snapshots = await projectHistorySnapshots(project, Number.MAX_SAFE_INTEGER);
         for (const { screenId, variations, savedAt } of snapshots) {
-          const screenName = screenId ? registryScreenName(projects, project.id, screenId) : undefined;
           for (const variation of variations) {
-            applyRegistration(index, { ...context, continuationMode: FAIL_CLOSED_MODE, screenId, screenName, originKind: variation.strategy === 'underlay-repair' ? 'underlay_repair' : 'visual_exploration' }, variation, savedAt);
+            const resolvedScreenId = screenId || resolveScreenFromVariationId(project.id, variation?.id);
+            const screenName = resolvedScreenId ? registryScreenName(projects, project.id, resolvedScreenId) : undefined;
+            applyRegistration(index, { ...context, continuationMode: FAIL_CLOSED_MODE, modeProvenance: 'fail-closed', screenId: resolvedScreenId, screenName, originKind: variation.strategy === 'underlay-repair' ? 'underlay_repair' : 'visual_exploration' }, variation, savedAt);
           }
         }
       }
@@ -349,4 +366,11 @@ function createGalleryStore({ workspaceRoot, projectStore, isTrustedCdnUrl }) {
   return { indexPath, list, registerVariation, reconcileCurrent, backfillHistoryIfNeeded, hide, restore, getDownloadAsset };
 }
 
-module.exports = { createGalleryStore, isDownloadAllowed, FAIL_CLOSED_MODE, DOWNLOADABLE_MODES };
+const STRICT_BLOCKED_MESSAGE = '严格继承项目的图片需回到工作流完成正式交付后导出。';
+const FAIL_CLOSED_BLOCKED_MESSAGE = '历史快照缺少生成时路线证据，按受控交付处理；如需原图请在对应 Screen 重新生成或走正式交付导出。';
+
+function blockedDownloadMessage(asset) {
+  return asset?.mode_provenance === 'fail-closed' ? FAIL_CLOSED_BLOCKED_MESSAGE : STRICT_BLOCKED_MESSAGE;
+}
+
+module.exports = { createGalleryStore, isDownloadAllowed, blockedDownloadMessage, FAIL_CLOSED_MODE, DOWNLOADABLE_MODES };

@@ -127,6 +127,16 @@ describe('GalleryWorkspace 下载门禁与隐藏', () => {
     expect(downloadGalleryAsset).not.toHaveBeenCalled();
   });
 
+  it('fail-closed 历史资产说明快照来源而非严格继承', async () => {
+    const user = userEvent.setup();
+    listGallery.mockResolvedValue(makeResult([makeAsset({ continuation_mode: 'existing-strict', mode_provenance: 'fail-closed' })]));
+    const { onError } = renderGallery();
+    const blocked = await screen.findByRole('button', { name: '受控交付' });
+    await user.click(blocked);
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining('历史快照'));
+    expect(downloadGalleryAsset).not.toHaveBeenCalled();
+  });
+
   it('可下载路线点击下载，保存成功后展示通知', async () => {
     const user = userEvent.setup();
     downloadGalleryAsset.mockResolvedValue({ status: 'saved', path: '/tmp/one.png' });

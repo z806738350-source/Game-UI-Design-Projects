@@ -227,6 +227,7 @@ export type GalleryAsset = {
   remote_only: true;
   origin_kind: 'visual_exploration' | 'underlay_repair';
   continuation_mode?: ContinuationMode;
+  mode_provenance?: 'task-start' | 'fail-closed';
   project_id?: string;
   project_name_snapshot?: string;
   project_status_snapshot?: 'draft' | 'archived';
