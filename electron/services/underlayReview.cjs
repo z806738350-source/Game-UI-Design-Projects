@@ -1,7 +1,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const sharp = require('sharp');
+const sharp = require('./sharpRuntime.cjs');
 const { ensureDir } = require('./jsonStore.cjs');
 
 const METRIC_THRESHOLDS = Object.freeze({

@@ -1,7 +1,7 @@
 const crypto = require('node:crypto');
 const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const fs = require('node:fs/promises');
-const sharp = require('sharp');
+const sharp = require('./sharpRuntime.cjs');
 const { hashBuffer, resolveProjectPath, verifyCompositionOutput } = require('./compositionRenderer.cjs');
 const { inspectFont } = require('./typographyAssets.cjs');
 

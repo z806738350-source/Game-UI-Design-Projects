@@ -1,4 +1,4 @@
-const sharp = require('sharp');
+const sharp = require('./sharpRuntime.cjs');
 const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const { inspectFont } = require('./typographyAssets.cjs');
 
