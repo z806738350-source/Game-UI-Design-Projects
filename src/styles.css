@@ -1017,6 +1017,15 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .gallery-lightbox-footer .lightbox-nav { display: inline-flex; align-items: center; gap: 8px; margin-left: 18px; }
 .gallery-lightbox-footer .lightbox-nav small { color: var(--faint); font-family: var(--mono); font-size: 10px; }
 
+/* 下载豁免对话框：fail-closed 历史资产的逐张人工放行 */
+.gallery-waiver-dialog { width: min(520px, calc(100vw - 60px)); display: grid; gap: 14px; }
+.gallery-waiver-note { margin: 0; padding: 10px 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); font-size: var(--type-small); line-height: 1.6; }
+.gallery-waiver-field { display: grid; gap: 6px; }
+.gallery-waiver-field > span { color: var(--faint); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.gallery-waiver-field textarea { min-height: 84px; padding: 11px; resize: vertical; color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; outline: 0; background: #0b0c10; font-size: var(--type-small); line-height: 1.6; }
+.gallery-waiver-field textarea:focus { border-color: rgba(227, 166, 61, .55); box-shadow: 0 0 0 3px rgba(227, 166, 61, .1); }
+.gallery-waiver-field small { color: var(--muted); font-size: 10px; line-height: 1.5; }
+
 @media (prefers-reduced-motion: reduce) {
   .gallery-overlay, .gallery-card, .gallery-lightbox, .gallery-lightbox-viewport img { transition: none; }
 }

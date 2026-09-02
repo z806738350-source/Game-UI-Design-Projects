@@ -56,6 +56,7 @@ interface DesignCopilotApi {
   listGallery(query: GalleryQuery): Promise<GalleryListResult>;
   hideGalleryAsset(assetId: string): Promise<GalleryAsset>;
   restoreGalleryAsset(assetId: string): Promise<GalleryAsset>;
+  waiveGalleryDownload(assetId: string, reason: string): Promise<GalleryAsset>;
   downloadGalleryAsset(assetId: string): Promise<GalleryDownloadResult>;
   logout?(): Promise<{ ok: boolean }>;
 }

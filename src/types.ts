@@ -228,6 +228,7 @@ export type GalleryAsset = {
   origin_kind: 'visual_exploration' | 'underlay_repair';
   continuation_mode?: ContinuationMode;
   mode_provenance?: 'task-start' | 'fail-closed';
+  download_waiver?: { at: string; reason: string };
   project_id?: string;
   project_name_snapshot?: string;
   project_status_snapshot?: 'draft' | 'archived';

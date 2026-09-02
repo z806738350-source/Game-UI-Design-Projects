@@ -20,8 +20,10 @@ type GalleryFilters = {
 const DEFAULT_FILTERS: GalleryFilters = { scope: 'all', projectId: '', screenId: '', orientation: '', range: '', sort: 'newest' };
 const DOWNLOADABLE_MODES = new Set(['exploration', 'existing-guided']);
 const STRICT_BLOCKED_MESSAGE = '严格继承项目的图片需回到工作流完成正式交付后导出。';
-const FAIL_CLOSED_BLOCKED_MESSAGE = '历史快照缺少生成时路线证据，按受控交付处理；如需原图请在对应 Screen 重新生成或走正式交付导出。';
+const FAIL_CLOSED_BLOCKED_MESSAGE = '历史快照缺少生成时路线证据，按受控交付处理；确认理由后可逐张豁免下载。';
+const WAIVER_REASON_MIN_LENGTH = 10;
 const blockedMessage = (asset: GalleryAsset) => asset.mode_provenance === 'fail-closed' ? FAIL_CLOSED_BLOCKED_MESSAGE : STRICT_BLOCKED_MESSAGE;
+const hasWaiver = (asset: GalleryAsset) => Boolean(asset.download_waiver?.at && asset.download_waiver?.reason?.trim());
 
 export function isGalleryDownloadBlocked(asset: GalleryAsset): boolean {
   return !DOWNLOADABLE_MODES.has(asset.continuation_mode || '');
@@ -78,9 +80,13 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
   const [listError, setListError] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [waiverAsset, setWaiverAsset] = useState<GalleryAsset | null>(null);
+  const [waiverReason, setWaiverReason] = useState('');
+  const [waiverBusy, setWaiverBusy] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
   const previewRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const waiverOpenerRef = useRef<HTMLElement | null>(null);
   const openerRef = useRef(0);
   const requestRef = useRef(0);
   const items = result?.items ?? [];
@@ -151,13 +157,15 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        if (lightboxIndex !== null) {
+        if (waiverAsset) {
+          closeWaiver();
+        } else if (lightboxIndex !== null) {
           setLightboxIndex(null);
           previewRefs.current[openerRef.current]?.focus();
         } else {
           onClose();
         }
-      } else if (lightboxIndex !== null && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+      } else if (lightboxIndex !== null && !waiverAsset && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
         const delta = event.key === 'ArrowRight' ? 1 : -1;
         setLightboxIndex((current) => current === null || items.length === 0 ? current : (current + delta + items.length) % items.length);
         setZoom(1);
@@ -165,7 +173,7 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose, lightboxIndex, items.length]);
+  }, [open, onClose, lightboxIndex, items.length, waiverAsset]);
 
   const updateFilter = (patch: Partial<GalleryFilters>) => {
     setFilters((current) => ({ ...current, ...patch, ...(patch.projectId !== undefined ? { screenId: '' } : {}) }));
@@ -221,9 +229,42 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
     } catch (cause) { onError(friendlyError(cause)); }
   };
 
+  // 逐张人工豁免：只有历史快照（fail-closed）资产提供口子；严格/锁定
+  // 路线有明确生成时证据，点击只解释原因，绝不伪装成功。
+  const openWaiver = (asset: GalleryAsset) => {
+    waiverOpenerRef.current = document.activeElement as HTMLElement | null;
+    setWaiverReason('');
+    setWaiverAsset(asset);
+  };
+  const closeWaiver = () => {
+    setWaiverAsset(null);
+    setWaiverReason('');
+    waiverOpenerRef.current?.focus();
+    waiverOpenerRef.current = null;
+  };
+  const confirmWaiver = async () => {
+    if (!waiverAsset) return;
+    setWaiverBusy(true);
+    try {
+      const waived = await copilotApi.waiveGalleryDownload(waiverAsset.id, waiverReason.trim());
+      // 就地写回豁免留痕：卡片立即翻转为可下载，不重置分页与滚动。
+      setResult((current) => current ? { ...current, items: current.items.map((item) => item.id === waived.id ? waived : item) } : current);
+      setWaiverAsset(null);
+      setWaiverReason('');
+      waiverOpenerRef.current?.focus();
+      waiverOpenerRef.current = null;
+      await downloadAsset(waived);
+    } catch (cause) { onError(friendlyError(cause)); }
+    finally { setWaiverBusy(false); }
+  };
+  const onBlockedClick = (asset: GalleryAsset) => {
+    if (asset.mode_provenance === 'fail-closed') openWaiver(asset);
+    else onError(blockedMessage(asset));
+  };
+
   if (!open) return null;
   const lightbox = lightboxIndex === null ? null : items[lightboxIndex] ?? null;
-  const lightboxBlocked = lightbox ? isGalleryDownloadBlocked(lightbox) : false;
+  const lightboxBlocked = lightbox ? isGalleryDownloadBlocked(lightbox) && !hasWaiver(lightbox) : false;
   const changeZoom = (factor: number) => setZoom((current) => Math.min(4, Math.max(1, Number((current * factor).toFixed(2)))));
   const stepLightbox = (delta: number) => {
     if (lightboxIndex === null || items.length === 0) return;
@@ -293,7 +334,7 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
             <div className="gallery-grid">
               {group.assets.map((asset) => {
                 const flatIndex = items.findIndex((item) => item.id === asset.id);
-                const blocked = isGalleryDownloadBlocked(asset);
+                const blocked = isGalleryDownloadBlocked(asset) && !hasWaiver(asset);
                 return <article key={asset.id} className="gallery-card" data-testid="gallery-card">
                   <button
                     type="button"
@@ -316,7 +357,7 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
                       ? <button type="button" onClick={() => void restoreAsset(asset)}><RotateCcw size={14} />恢复</button>
                       : <>
                         {blocked
-                          ? <button type="button" className="gallery-download-blocked" aria-disabled="true" title={blockedMessage(asset)} onClick={() => onError(blockedMessage(asset))}><Download size={14} />受控交付</button>
+                          ? <button type="button" className="gallery-download-blocked" aria-disabled="true" title={blockedMessage(asset)} onClick={() => onBlockedClick(asset)}><Download size={14} />受控交付</button>
                           : <button type="button" onClick={() => void downloadAsset(asset)}><Download size={14} />下载原图</button>}
                         <button type="button" className="gallery-remove" onClick={() => void hideAsset(asset)}>移除</button>
                       </>}
@@ -336,7 +377,7 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
             ? <button type="button" onClick={() => void restoreAsset(lightbox)}><RotateCcw size={14} />恢复到图库</button>
             : <>
               {lightboxBlocked
-                ? <button type="button" className="gallery-download-blocked" aria-disabled="true" title={blockedMessage(lightbox)} onClick={() => onError(blockedMessage(lightbox))}><Download size={14} />受控交付</button>
+                ? <button type="button" className="gallery-download-blocked" aria-disabled="true" title={blockedMessage(lightbox)} onClick={() => onBlockedClick(lightbox)}><Download size={14} />受控交付</button>
                 : <button type="button" onClick={() => void downloadAsset(lightbox)}><Download size={14} />下载原图</button>}
               <button type="button" className="is-danger" onClick={() => void hideAsset(lightbox)}>移除</button>
             </>}
@@ -356,6 +397,25 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
           <button type="button" aria-label="下一张" onClick={() => stepLightbox(1)} disabled={items.length < 2}><ChevronRight size={15} /></button>
         </div>
       </footer>
+    </div>}
+    {waiverAsset && <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !waiverBusy) closeWaiver(); }}>
+      <section className="utility-dialog gallery-waiver-dialog" role="dialog" aria-modal="true" aria-label="下载豁免确认" data-testid="gallery-waiver-dialog">
+        <header>
+          <div><h2>确认按当前项目路线下载</h2><p>{waiverAsset.project_name_snapshot || '未知项目'} · {waiverAsset.screen_name_snapshot || '未知 Screen'} · {formatTime(waiverAsset.created_at)}</p></div>
+          <button type="button" className="icon-button" aria-label="关闭" onClick={closeWaiver} disabled={waiverBusy}><X size={18} /></button>
+        </header>
+        <p className="gallery-waiver-note">{FAIL_CLOSED_BLOCKED_MESSAGE}豁免只放行这一张：豁免时间与理由会记录在图库索引中，云端文件与路线快照都不会被修改。</p>
+        <label className="gallery-waiver-field"><span>豁免理由</span>
+          <textarea autoFocus rows={3} aria-label="豁免理由" value={waiverReason} disabled={waiverBusy} onChange={(event) => setWaiverReason(event.target.value)} placeholder="例如：该历史方案已确认复用，需要导出原图归档。" />
+          <small>至少 {WAIVER_REASON_MIN_LENGTH} 个字符；严格/锁定路线资产不提供豁免，需回工作流正式交付。</small>
+        </label>
+        <div className="dialog-actions">
+          <button type="button" className="button button--ghost" onClick={closeWaiver} disabled={waiverBusy}>取消</button>
+          <button type="button" className="button button--primary" data-testid="gallery-waiver-confirm" disabled={waiverBusy || waiverReason.trim().length < WAIVER_REASON_MIN_LENGTH} onClick={() => void confirmWaiver()}>
+            {waiverBusy ? <LoaderCircle className="spin" size={16} /> : <Download size={16} />}确认按当前项目路线下载
+          </button>
+        </div>
+      </section>
     </div>}
   </section>;
 });

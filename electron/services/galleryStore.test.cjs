@@ -6,7 +6,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { createProjectStore } = require('./projectStore.cjs');
-const { createGalleryStore, isDownloadAllowed, blockedDownloadMessage, FAIL_CLOSED_MODE } = require('./galleryStore.cjs');
+const { createGalleryStore, isDownloadAllowed, hasDownloadWaiver, blockedDownloadMessage, FAIL_CLOSED_MODE } = require('./galleryStore.cjs');
 
 const TRUSTED = (name) => `https://kunpoapiimg.ziy.cc/gallery-tests/${name}.png`;
 
@@ -83,6 +83,42 @@ test('hide/restore 只切换 hidden_at，未知资产报错', () => withStore(as
   assert.equal(restored.hidden_at, null);
   await assert.rejects(() => galleryStore.hide('missing-id'), /不存在/);
   await assert.rejects(() => galleryStore.getDownloadAsset('missing-id'), /不存在/);
+}));
+
+test('历史快照资产可逐张豁免下载，严格路线与短理由被拒', () => withStore(async ({ projectStore, galleryStore }) => {
+  const project = await projectStore.create({ name: '豁免项目', projectType: 'new' });
+  await projectStore.saveArtifact(project.id, 'visual-results', {
+    schema_version: '1.0', id: 'main-visual-results', version: 1, status: 'generated', source: {},
+    variations: [variation('main-old', TRUSTED('waive-history'), { created_at: undefined })]
+  }, { screenId: 'main' });
+  await projectStore.saveArtifact(project.id, 'visual-results', {
+    schema_version: '1.0', id: 'main-visual-results', version: 2, status: 'generated', source: {},
+    variations: [variation('main-current', TRUSTED('waive-current'))]
+  }, { screenId: 'main' });
+  await galleryStore.backfillHistoryIfNeeded();
+  const listed = await galleryStore.list({ limit: 100 });
+  const historical = listed.items.find((item) => item.cdn_url === TRUSTED('waive-history'));
+  const current = listed.items.find((item) => item.cdn_url === TRUSTED('waive-current'));
+  const strict = await galleryStore.registerVariation(explorationContext({ continuationMode: 'existing-strict' }), variation('strict-v', TRUSTED('waive-strict')));
+
+  const shortReason = await galleryStore.waiveDownload(historical.id, '太短').catch((cause) => cause);
+  assert.equal(shortReason.code, 'GALLERY_WAIVER_REASON_TOO_SHORT');
+  assert.equal(shortReason.status, 400);
+  await assert.rejects(() => galleryStore.waiveDownload('missing-id', '理由足够长的豁免说明'), /不存在/);
+  // 有明确生成时路线证据的资产（严格 task-start、当前结果）不提供豁免口子。
+  const notApplicable = await galleryStore.waiveDownload(strict.id, '理由足够长的豁免说明').catch((cause) => cause);
+  assert.equal(notApplicable.code, 'GALLERY_WAIVER_NOT_APPLICABLE');
+  assert.equal(notApplicable.status, 409);
+  await assert.rejects(() => galleryStore.waiveDownload(current.id, '理由足够长的豁免说明'), /只有历史快照资产可申请豁免/);
+
+  const waived = await galleryStore.waiveDownload(historical.id, '  该历史方案已确认复用，需要导出原图归档。  ');
+  assert.ok(waived.download_waiver.at);
+  assert.equal(waived.download_waiver.reason, '该历史方案已确认复用，需要导出原图归档。', '理由必须 trim 后留痕');
+  assert.equal(hasDownloadWaiver(waived), true);
+  assert.equal(isDownloadAllowed(waived), false, '路线快照本身不变，放行只认豁免留痕');
+  const persisted = await galleryStore.getDownloadAsset(historical.id);
+  assert.equal(hasDownloadWaiver(persisted), true, '豁免必须持久化到索引');
+  assert.equal(hasDownloadWaiver({ download_waiver: { at: '2026-09-02T00:00:00.000Z' } }), false, '缺理由的半截留痕不放行');
 }));
 
 test('list 支持 scope、筛选、排序、游标分页与 facets', () => withStore(async ({ galleryStore }) => {

@@ -7,7 +7,7 @@ const { createProjectStore } = require('../electron/services/projectStore.cjs');
 const { createDesignPipeline } = require('../electron/services/designPipeline.cjs');
 const { createFlowStateRepair } = require('../electron/services/flowStateRepair.cjs');
 const { createIntentStateStore } = require('../electron/services/intentStateStore.cjs');
-const { createGalleryStore, isDownloadAllowed, blockedDownloadMessage } = require('../electron/services/galleryStore.cjs');
+const { createGalleryStore, isDownloadAllowed, hasDownloadWaiver, blockedDownloadMessage } = require('../electron/services/galleryStore.cjs');
 const { hashBuffer, resolveProjectPath } = require('../electron/services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('../electron/services/finalDeliveryGate.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
@@ -403,16 +403,17 @@ function createApplication(environment = process.env) {
       const query = {};
       for (const [key, value] of url.searchParams) query[key] = value;
       value = await context.galleryStore.list(query);
-    } else if (request.method === 'POST' && /^\/api\/gallery\/[^/]+\/(hide|restore)$/.test(url.pathname)) {
-      const [, assetId, action] = url.pathname.match(/^\/api\/gallery\/([^/]+)\/(hide|restore)$/);
+    } else if (request.method === 'POST' && /^\/api\/gallery\/[^/]+\/(hide|restore|waive)$/.test(url.pathname)) {
+      const [, assetId, action] = url.pathname.match(/^\/api\/gallery\/([^/]+)\/(hide|restore|waive)$/);
       const decodedId = decodeURIComponent(assetId);
-      value = action === 'hide' ? await context.galleryStore.hide(decodedId) : await context.galleryStore.restore(decodedId);
+      if (action === 'waive') value = await context.galleryStore.waiveDownload(decodedId, body.reason);
+      else value = action === 'hide' ? await context.galleryStore.hide(decodedId) : await context.galleryStore.restore(decodedId);
     } else if (request.method === 'GET' && /^\/api\/gallery\/[^/]+\/download$/.test(url.pathname)) {
       const assetId = decodeURIComponent(url.pathname.slice('/api/gallery/'.length, -'/download'.length));
       const asset = await context.galleryStore.getDownloadAsset(assetId);
       // §7.5：门禁只认登记时的 continuation_mode 快照（缺失即 fail-closed），
-      // 不得依赖前端禁用，也不读取项目当前路线。
-      if (!isDownloadAllowed(asset)) throw Object.assign(new Error(blockedDownloadMessage(asset)), { status: 409 });
+      // 不得依赖前端禁用，也不读取项目当前路线；已留痕豁免的历史快照放行。
+      if (!isDownloadAllowed(asset) && !hasDownloadWaiver(asset)) throw Object.assign(new Error(blockedDownloadMessage(asset)), { status: 409 });
       if (!kunpoClient.isTrustedKunpoCdnUrl(asset.cdn_url)) throw Object.assign(new Error('该图片来源不是可信的永久 CDN 资产。'), { status: 409 });
       const upstream = await fetch(asset.cdn_url);
       if (!upstream.ok || !upstream.body) throw Object.assign(new Error('下载图库原图失败。'), { status: 502 });

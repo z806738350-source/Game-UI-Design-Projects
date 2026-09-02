@@ -8,7 +8,7 @@ const { createProjectStore } = require('./services/projectStore.cjs');
 const { createDesignPipeline } = require('./services/designPipeline.cjs');
 const { createFlowStateRepair } = require('./services/flowStateRepair.cjs');
 const { createIntentStateStore } = require('./services/intentStateStore.cjs');
-const { createGalleryStore, isDownloadAllowed, blockedDownloadMessage } = require('./services/galleryStore.cjs');
+const { createGalleryStore, isDownloadAllowed, hasDownloadWaiver, blockedDownloadMessage } = require('./services/galleryStore.cjs');
 const { exportCompositionOutput, hashBuffer, resolveProjectPath } = require('./services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('./services/finalDeliveryGate.cjs');
 
@@ -268,11 +268,12 @@ function registerIpc() {
   ipcMain.handle('copilot:gallery:list', (_event, query) => galleryStore.list(query || {}));
   ipcMain.handle('copilot:gallery:hide', (_event, assetId) => galleryStore.hide(String(assetId || '')));
   ipcMain.handle('copilot:gallery:restore', (_event, assetId) => galleryStore.restore(String(assetId || '')));
+  ipcMain.handle('copilot:gallery:waive', (_event, assetId, reason) => galleryStore.waiveDownload(String(assetId || ''), String(reason || '')));
   ipcMain.handle('copilot:gallery:download', async (_event, assetId) => {
     const asset = await galleryStore.getDownloadAsset(String(assetId || ''));
     // §7.5：门禁只认登记时的 continuation_mode 快照（缺失即 fail-closed
-    // 阻断），绝不读取项目当前路线。
-    if (!isDownloadAllowed(asset)) {
+    // 阻断），绝不读取项目当前路线；已留痕豁免的历史快照资产放行。
+    if (!isDownloadAllowed(asset) && !hasDownloadWaiver(asset)) {
       return { status: 'blocked', message: blockedDownloadMessage(asset) };
     }
     if (!kunpoClient.isTrustedKunpoCdnUrl(asset.cdn_url)) {

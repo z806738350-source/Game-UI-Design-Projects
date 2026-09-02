@@ -110,6 +110,48 @@ test('缺失路线快照按 fail-closed 阻断下载', async () => {
   } finally { await runtime.close(); }
 });
 
+test('fail-closed 历史资产经豁免后放行下载，短理由与严格路线被拒', async () => {
+  const runtime = await startApplication();
+  const originalFetch = globalThis.fetch;
+  const bytes = Buffer.from('89504e470d0a1a0a', 'hex');
+  globalThis.fetch = async (url, init) => {
+    if (String(url).includes('kunpoapiimg.ziy.cc')) return new Response(bytes, { status: 200, headers: { 'content-type': 'image/png' } });
+    return originalFetch(url, init);
+  };
+  try {
+    const historical = await registerAsset(runtime.context, {
+      url: 'https://kunpoapiimg.ziy.cc/gallery-route-tests/history.png',
+      context: { continuationMode: undefined, modeProvenance: 'fail-closed' }
+    });
+    const blocked = await fetch(`${runtime.base}/api/gallery/${historical.id}/download`, { headers: { cookie: runtime.cookie } });
+    assert.equal(blocked.status, 409);
+
+    const shortReason = await fetch(`${runtime.base}/api/gallery/${historical.id}/waive`, { method: 'POST', headers: { cookie: runtime.cookie }, body: JSON.stringify({ reason: '太短' }) });
+    assert.equal(shortReason.status, 400);
+
+    const waived = await fetch(`${runtime.base}/api/gallery/${historical.id}/waive`, { method: 'POST', headers: { cookie: runtime.cookie }, body: JSON.stringify({ reason: '该历史方案已确认复用，需要导出原图归档。' }) });
+    assert.equal(waived.status, 200);
+    const waivedPayload = await waived.json();
+    assert.ok(waivedPayload.download_waiver.at);
+    assert.equal(waivedPayload.download_waiver.reason, '该历史方案已确认复用，需要导出原图归档。');
+
+    const download = await fetch(`${runtime.base}/api/gallery/${historical.id}/download`, { headers: { cookie: runtime.cookie }, redirect: 'error' });
+    assert.equal(download.status, 200);
+    assert.deepEqual(Buffer.from(await download.arrayBuffer()), bytes);
+
+    // 有明确生成时路线证据的严格资产不提供豁免口子。
+    const strict = await registerAsset(runtime.context, {
+      url: 'https://kunpoapiimg.ziy.cc/gallery-route-tests/strict.png',
+      context: { continuationMode: 'existing-strict' }
+    });
+    const strictWaive = await fetch(`${runtime.base}/api/gallery/${strict.id}/waive`, { method: 'POST', headers: { cookie: runtime.cookie }, body: JSON.stringify({ reason: '理由足够长的豁免说明' }) });
+    assert.equal(strictWaive.status, 409);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await runtime.close();
+  }
+});
+
 test('可下载路线经同源代理流式返回，绝不重定向到远端', async () => {
   const runtime = await startApplication();
   const originalFetch = globalThis.fetch;

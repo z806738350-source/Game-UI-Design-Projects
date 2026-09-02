@@ -13,6 +13,7 @@ import type { LaunchedApp } from './helpers';
 const CDN_ONE = 'https://kunpoapiimg.ziy.cc/ui-e2e/gallery-one.png';
 const CDN_TWO = 'https://kunpoapiimg.ziy.cc/ui-e2e/gallery-two.png';
 const CDN_STRICT = 'https://kunpoapiimg.ziy.cc/ui-e2e/gallery-strict.png';
+const CDN_HISTORY = 'https://kunpoapiimg.ziy.cc/ui-e2e/gallery-history.png';
 
 function seedVisualResults(workspacePath: string, screenId: string, variations: Array<Record<string, unknown>>): void {
   const dir = path.join(workspacePath, 'screens', screenId, 'explorations');
@@ -35,6 +36,7 @@ let launched: LaunchedApp;
 let page: Page;
 let projectDir: string;
 let screenId: string;
+let explorationProjectId: string;
 
 test.describe('gallery workspace (§11.5)', () => {
   test.describe.configure({ mode: 'serial' });
@@ -46,8 +48,9 @@ test.describe('gallery workspace (§11.5)', () => {
     page = launched.page;
     // 新项目路线为 exploration：回填资产允许下载（§7.5 门禁按登记快照判定）。
     await createNewProject(page, 'E2E 图库探索');
-    const snapshot = await getProject(page, 'E2E 图库探索');
+    const snapshot = await getProject(page, 'E2E 图库探索') as { id: string; screen_id: string };
     screenId = snapshot.screen_id;
+    explorationProjectId = snapshot.id;
     projectDir = findProjectDir(launched, 'project.json');
     // 历史可信 CDN 结果：首次打开图库时由回填/对账登记（§6.2/§6.3）。
     seedVisualResults(projectDir, screenId, [
@@ -160,5 +163,46 @@ test.describe('gallery workspace (§11.5)', () => {
     await blockedButton.click({ force: true });
     const banner = page.locator('.error-banner');
     await expect(banner).toContainText('严格继承');
+  });
+
+  test('fail-closed 历史资产经逐张豁免后放行下载', async () => {
+    // 向探索项目写入一条历史快照：无生成时路线证据 → 对账按 fail-closed 登记。
+    const historyDir = path.join(projectDir, 'workflow', 'history');
+    fs.mkdirSync(historyDir, { recursive: true });
+    fs.writeFileSync(path.join(historyDir, 'visual-results-waive.json'), JSON.stringify({
+      schema_version: '1.0', id: `${screenId}-visual-results`, version: 1, status: 'generated', source: {},
+      variations: [{ id: `${screenId}-waive-history`, image_url: CDN_HISTORY, strategy: 'conservative', output_width: 1920, output_height: 1080, created_at: '2026-08-28T10:00:00.000Z' }]
+    }, null, 2), 'utf8');
+    const historyPath = path.join(projectDir, 'workflow', 'artifact-history.json');
+    const history = fs.existsSync(historyPath) ? JSON.parse(fs.readFileSync(historyPath, 'utf8')) as Array<Record<string, unknown>> : [];
+    history.unshift({ kind: 'visual-results', id: `${screenId}-visual-results`, version: 1, status: 'generated', saved_at: '2026-08-28T10:05:00.000Z', snapshot: 'workflow/history/visual-results-waive.json' });
+    fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf8');
+
+    await openGalleryIfClosed(page);
+    await page.getByLabel('按项目筛选').selectOption(explorationProjectId);
+    await expect(page.getByTestId('gallery-card')).toHaveCount(3, { timeout: 30_000 });
+    await expect(page.getByRole('button', { name: '受控交付' })).toHaveCount(1);
+
+    await page.getByRole('button', { name: '受控交付' }).click({ force: true });
+    const dialog = page.getByTestId('gallery-waiver-dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('历史快照');
+    const confirm = dialog.getByRole('button', { name: '确认按当前项目路线下载' });
+    await expect(confirm).toBeDisabled();
+    await dialog.getByLabel('豁免理由').fill('该历史方案已确认复用，需要导出原图归档。');
+    await expect(confirm).toBeEnabled();
+
+    // 豁免确认后立即走下载：沿用受控镜像与排队保存路径（§11.5）。
+    const target = path.join(launched.exportDir, 'gallery-waiver-download.png');
+    await queueSaveFile(launched.app, target);
+    await confirm.click();
+    // 断言本次下载的文件名：通用「原图已保存」提示可能残留自上一个测试。
+    await expect(page.getByTestId('gallery-undo-toast')).toContainText('gallery-waiver-download.png', { timeout: 30_000 });
+    expect(fs.existsSync(target)).toBeTruthy();
+    expect(fs.statSync(target).size).toBeGreaterThan(0);
+    await expect(dialog).toHaveCount(0);
+    // 豁免留痕就地写回：卡片翻转为可下载，视图内不再有受控交付。
+    await expect(page.getByRole('button', { name: '受控交付' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '下载原图' })).toHaveCount(3);
   });
 });

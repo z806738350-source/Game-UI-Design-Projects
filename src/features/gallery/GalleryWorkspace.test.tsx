@@ -8,12 +8,14 @@ import type { GalleryAsset, GalleryListResult } from '../../types';
 const listGallery = vi.fn();
 const hideGalleryAsset = vi.fn();
 const restoreGalleryAsset = vi.fn();
+const waiveGalleryDownload = vi.fn();
 const downloadGalleryAsset = vi.fn();
 vi.mock('../../api', () => ({
   copilotApi: {
     listGallery: (...args: unknown[]) => listGallery(...args),
     hideGalleryAsset: (...args: unknown[]) => hideGalleryAsset(...args),
     restoreGalleryAsset: (...args: unknown[]) => restoreGalleryAsset(...args),
+    waiveGalleryDownload: (...args: unknown[]) => waiveGalleryDownload(...args),
     downloadGalleryAsset: (...args: unknown[]) => downloadGalleryAsset(...args)
   }
 }));
@@ -56,6 +58,7 @@ afterEach(() => {
   listGallery.mockReset();
   hideGalleryAsset.mockReset();
   restoreGalleryAsset.mockReset();
+  waiveGalleryDownload.mockReset();
   downloadGalleryAsset.mockReset();
 });
 
@@ -125,16 +128,39 @@ describe('GalleryWorkspace 下载门禁与隐藏', () => {
     await user.click(blocked);
     expect(onError).toHaveBeenCalledWith(expect.stringContaining('严格继承'));
     expect(downloadGalleryAsset).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('gallery-waiver-dialog')).toBeNull();
   });
 
-  it('fail-closed 历史资产说明快照来源而非严格继承', async () => {
+  it('fail-closed 历史资产点击受控交付打开豁免对话框，确认理由后放行下载', async () => {
     const user = userEvent.setup();
-    listGallery.mockResolvedValue(makeResult([makeAsset({ continuation_mode: 'existing-strict', mode_provenance: 'fail-closed' })]));
-    const { onError } = renderGallery();
-    const blocked = await screen.findByRole('button', { name: '受控交付' });
-    await user.click(blocked);
-    expect(onError).toHaveBeenCalledWith(expect.stringContaining('历史快照'));
-    expect(downloadGalleryAsset).not.toHaveBeenCalled();
+    const historical = makeAsset({ continuation_mode: 'existing-strict', mode_provenance: 'fail-closed' });
+    listGallery.mockResolvedValue(makeResult([historical]));
+    waiveGalleryDownload.mockResolvedValue({ ...historical, download_waiver: { at: new Date().toISOString(), reason: '该历史方案已确认复用，需要导出原图归档。' } });
+    downloadGalleryAsset.mockResolvedValue({ status: 'saved', path: '/tmp/history.png' });
+    const { onError, onNotify } = renderGallery();
+    await user.click(await screen.findByRole('button', { name: '受控交付' }));
+    const dialog = await screen.findByTestId('gallery-waiver-dialog');
+    expect(onError).not.toHaveBeenCalled();
+    const confirm = within(dialog).getByRole('button', { name: '确认按当前项目路线下载' });
+    expect(confirm.hasAttribute('disabled')).toBe(true);
+    await user.type(within(dialog).getByLabelText('豁免理由'), '该历史方案已确认复用，需要导出原图归档。');
+    expect(confirm.hasAttribute('disabled')).toBe(false);
+    await user.click(confirm);
+    await waitFor(() => expect(waiveGalleryDownload).toHaveBeenCalledWith('asset-1', '该历史方案已确认复用，需要导出原图归档。'));
+    await waitFor(() => expect(downloadGalleryAsset).toHaveBeenCalledWith('asset-1'));
+    await waitFor(() => expect(onNotify).toHaveBeenCalledWith(expect.stringContaining('/tmp/history.png')));
+    await waitFor(() => expect(screen.queryByTestId('gallery-waiver-dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: '下载原图' })).toBeTruthy();
+  });
+
+  it('已豁免的历史资产直接显示下载原图', async () => {
+    listGallery.mockResolvedValue(makeResult([makeAsset({
+      continuation_mode: 'existing-strict', mode_provenance: 'fail-closed',
+      download_waiver: { at: new Date().toISOString(), reason: '该历史方案已确认复用。' }
+    })]));
+    renderGallery();
+    expect(await screen.findByRole('button', { name: '下载原图' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '受控交付' })).toBeNull();
   });
 
   it('可下载路线点击下载，保存成功后展示通知', async () => {

@@ -15,6 +15,8 @@ const FAIL_CLOSED_MODE = 'existing-strict';
 const DOWNLOADABLE_MODES = new Set(['exploration', 'existing-guided']);
 const HISTORY_SNAPSHOTS_PER_SCREEN = 20;
 const DEFAULT_LIMIT = 40;
+// 与 underlay 豁免一致的理由下限：防止一键空理由绕过门禁。
+const WAIVER_REASON_MIN_LENGTH = 10;
 
 function normalizeMode(value) {
   return CONTINUATION_MODES.has(value) ? value : FAIL_CLOSED_MODE;
@@ -354,6 +356,25 @@ function createGalleryStore({ workspaceRoot, projectStore, isTrustedCdnUrl }) {
     });
   }
 
+  // 逐张人工豁免：只对历史快照（fail-closed）资产开放，写入豁免时间与
+  // 理由留痕；严格/锁定路线有明确生成时证据，必须回工作流正式交付，
+  // 不提供豁免口子。
+  async function waiveDownload(assetId, reason) {
+    const trimmed = String(reason || '').trim();
+    if (trimmed.length < WAIVER_REASON_MIN_LENGTH) {
+      throw Object.assign(new Error(`豁免理由至少需要 ${WAIVER_REASON_MIN_LENGTH} 个字符。`), { code: 'GALLERY_WAIVER_REASON_TOO_SHORT', status: 400 });
+    }
+    return commit((index) => {
+      const asset = index.assets.find((item) => item.id === assetId);
+      if (!asset) throw Object.assign(new Error(`图库资产不存在：${assetId}`), { code: 'GALLERY_ASSET_NOT_FOUND', status: 404 });
+      if (asset.mode_provenance !== 'fail-closed') {
+        throw Object.assign(new Error('只有历史快照资产可申请豁免；严格/锁定路线资产需回工作流完成正式交付。'), { code: 'GALLERY_WAIVER_NOT_APPLICABLE', status: 409 });
+      }
+      asset.download_waiver = { at: new Date().toISOString(), reason: trimmed };
+      return asset;
+    });
+  }
+
   // 下载边界（§7.2/§7.5）：只按已登记 assetId 读取；调用方拿到资产后
   // 必须再次执行可信 CDN 校验与 continuation_mode 快照门禁。
   async function getDownloadAsset(assetId) {
@@ -363,14 +384,19 @@ function createGalleryStore({ workspaceRoot, projectStore, isTrustedCdnUrl }) {
     return asset;
   }
 
-  return { indexPath, list, registerVariation, reconcileCurrent, backfillHistoryIfNeeded, hide, restore, getDownloadAsset };
+  return { indexPath, list, registerVariation, reconcileCurrent, backfillHistoryIfNeeded, hide, restore, waiveDownload, getDownloadAsset };
 }
 
 const STRICT_BLOCKED_MESSAGE = '严格继承项目的图片需回到工作流完成正式交付后导出。';
-const FAIL_CLOSED_BLOCKED_MESSAGE = '历史快照缺少生成时路线证据，按受控交付处理；如需原图请在对应 Screen 重新生成或走正式交付导出。';
+const FAIL_CLOSED_BLOCKED_MESSAGE = '历史快照缺少生成时路线证据，按受控交付处理；确认理由后可逐张豁免下载。';
 
 function blockedDownloadMessage(asset) {
   return asset?.mode_provenance === 'fail-closed' ? FAIL_CLOSED_BLOCKED_MESSAGE : STRICT_BLOCKED_MESSAGE;
 }
 
-module.exports = { createGalleryStore, isDownloadAllowed, blockedDownloadMessage, FAIL_CLOSED_MODE, DOWNLOADABLE_MODES };
+// 豁免留痕必须完整（时间 + 非空理由）才放行，避免索引手改半截字段绕门禁。
+function hasDownloadWaiver(asset) {
+  return Boolean(asset?.download_waiver?.at && String(asset.download_waiver?.reason || '').trim());
+}
+
+module.exports = { createGalleryStore, isDownloadAllowed, hasDownloadWaiver, blockedDownloadMessage, FAIL_CLOSED_MODE, DOWNLOADABLE_MODES, WAIVER_REASON_MIN_LENGTH };

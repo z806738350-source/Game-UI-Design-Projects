@@ -265,11 +265,21 @@ function previewApi(): DesignCopilotApi {
     listGallery: async (query) => previewGalleryList(query || {}),
     hideGalleryAsset: async (assetId) => { const asset = previewGalleryAsset(assetId); asset.hidden_at = asset.hidden_at || new Date().toISOString(); return { ...asset }; },
     restoreGalleryAsset: async (assetId) => { const asset = previewGalleryAsset(assetId); asset.hidden_at = null; return { ...asset }; },
+    waiveGalleryDownload: async (assetId, reason) => {
+      const asset = previewGalleryAsset(assetId);
+      const trimmed = String(reason || '').trim();
+      if (trimmed.length < 10) throw new Error('豁免理由至少需要 10 个字符。');
+      if (asset.mode_provenance !== 'fail-closed') throw new Error('只有历史快照资产可申请豁免；严格/锁定路线资产需回工作流完成正式交付。');
+      asset.download_waiver = { at: new Date().toISOString(), reason: trimmed };
+      return { ...asset };
+    },
     downloadGalleryAsset: async (assetId) => {
       const asset = previewGalleryAsset(assetId);
-      // §7.5：预览同样只认登记时的路线快照，严格/锁定路线一律阻断。
-      if (asset.continuation_mode !== 'exploration' && asset.continuation_mode !== 'existing-guided') {
-        return { status: 'blocked', message: asset.mode_provenance === 'fail-closed' ? '历史快照缺少生成时路线证据，按受控交付处理；如需原图请在对应 Screen 重新生成或走正式交付导出。' : '严格继承项目的图片需回到工作流完成正式交付后导出。' };
+      // §7.5：预览同样只认登记时的路线快照，严格/锁定路线一律阻断；
+      // 已留痕豁免的历史快照资产放行到预览的"无真实图片"分支。
+      const waived = Boolean(asset.download_waiver?.at && String(asset.download_waiver?.reason || '').trim());
+      if (asset.continuation_mode !== 'exploration' && asset.continuation_mode !== 'existing-guided' && !waived) {
+        return { status: 'blocked', message: asset.mode_provenance === 'fail-closed' ? '历史快照缺少生成时路线证据，按受控交付处理；确认理由后可逐张豁免下载。' : '严格继承项目的图片需回到工作流完成正式交付后导出。' };
       }
       return { status: 'failed', message: '预览模式没有真实图片可下载。' };
     }
@@ -434,6 +444,7 @@ function webApi(): DesignCopilotApi {
     },
     hideGalleryAsset: (assetId) => request(`/api/gallery/${encodeURIComponent(assetId)}/hide`, { method: 'POST', body: '{}' }),
     restoreGalleryAsset: (assetId) => request(`/api/gallery/${encodeURIComponent(assetId)}/restore`, { method: 'POST', body: '{}' }),
+    waiveGalleryDownload: (assetId, reason) => request(`/api/gallery/${encodeURIComponent(assetId)}/waive`, { method: 'POST', body: JSON.stringify({ reason }) }),
     downloadGalleryAsset: async (assetId): Promise<GalleryDownloadResult> => {
       const response = await fetch(`/api/gallery/${encodeURIComponent(assetId)}/download`, { credentials: 'same-origin' });
       if (response.status === 401) {
@@ -535,6 +546,7 @@ export const copilotApi = {
   listGallery: (query: GalleryQuery): Promise<GalleryListResult> => api().listGallery(query),
   hideGalleryAsset: (assetId: string): Promise<GalleryAsset> => api().hideGalleryAsset(assetId),
   restoreGalleryAsset: (assetId: string): Promise<GalleryAsset> => api().restoreGalleryAsset(assetId),
+  waiveGalleryDownload: (assetId: string, reason: string): Promise<GalleryAsset> => api().waiveGalleryDownload(assetId, reason),
   downloadGalleryAsset: (assetId: string): Promise<GalleryDownloadResult> => api().downloadGalleryAsset(assetId),
   logout: () => api().logout ? api().logout!() : Promise.resolve({ ok: true })
 };

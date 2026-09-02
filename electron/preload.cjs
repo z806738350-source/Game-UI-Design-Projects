@@ -51,5 +51,6 @@ contextBridge.exposeInMainWorld('designCopilot', {
   listGallery: (query) => ipcRenderer.invoke('copilot:gallery:list', query),
   hideGalleryAsset: (assetId) => ipcRenderer.invoke('copilot:gallery:hide', assetId),
   restoreGalleryAsset: (assetId) => ipcRenderer.invoke('copilot:gallery:restore', assetId),
+  waiveGalleryDownload: (assetId, reason) => ipcRenderer.invoke('copilot:gallery:waive', assetId, reason),
   downloadGalleryAsset: (assetId) => ipcRenderer.invoke('copilot:gallery:download', assetId)
 });
