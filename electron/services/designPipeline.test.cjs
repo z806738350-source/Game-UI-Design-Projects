@@ -258,14 +258,26 @@ test('cancel settles immediately and discards late image results', async () => {
     };
     const pipeline = createDesignPipeline({ projectStore, kunpoClient: fakeClient, kunpoConfig: {} });
     const runPromise = pipeline.runStage(project.id, 'visual_exploration', { screenId: 'main' });
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // 不能用固定 sleep 等「三条方向已提交」：runner 负载高时 100ms 内流水线还没走到第一次
+    // generateImage（run 33608956324 实测 gates.length === 0）。改为轮询，并在 runStage 提前
+    // 结束时立刻退出——真实错误会在下面的 await runPromise 抛出，而不是退化成看不懂的 0 !== 3。
+    // 并发结论仍然成立：gates 直到本用例末尾才统一 resolve，因此三个同时在飞即为并发提交。
+    const runSettled = runPromise.then(() => true, () => true);
+    const submittedDeadline = Date.now() + 10000;
+    while (gates.length < 3 && Date.now() < submittedDeadline) {
+      const settled = await Promise.race([runSettled, new Promise((resolve) => setTimeout(() => resolve(false), 10))]);
+      if (settled) break;
+    }
     assert.equal(gates.length, 3, 'all three directions submitted concurrently');
     project = await pipeline.cancelStage(project.id, 'visual_exploration', { screenId: 'main' });
     project = await runPromise;
     assert.equal(project.workflow.stages.visual_exploration.status, 'reviewed', 'stop settles into review without waiting for providers');
     assert.equal((project.artifacts.visualResults?.variations || []).length, 0);
     gates.forEach((resolve) => resolve({ url: 'https://kunpoapiimg.ziy.cc/late.png', task_id: 'late-task' }));
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // 负向断言的等待窗口不能太短：负载高时错误的持久化可能落在 100ms 之后，断言会假通过。
+    // 丢弃本身是确定的（designPipeline.cjs 在每次 generateImage 前后各检查一次取消标记），
+    // 因此拉长窗口只会更容易暴露真实泄漏，不会带来假失败。
+    await new Promise((resolve) => setTimeout(resolve, 500));
     const after = await projectStore.open(project.id);
     assert.equal((after.artifacts.visualResults?.variations || []).length, 0, 'late results after stop must not be persisted');
   } finally {
