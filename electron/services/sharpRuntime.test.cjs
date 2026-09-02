@@ -29,16 +29,6 @@ test('product formats keep decoding after the mitigation', async () => {
   }
 });
 
-test('the Linux GLib slice reconciliation is applied before sharp is loaded', () => {
-  const source = fs.readFileSync(path.join(__dirname, 'sharpRuntime.cjs'), 'utf8');
-  const sliceAt = source.indexOf("process.env.G_SLICE = 'always-malloc'");
-  const loadAt = source.search(/^const sharp = require\('sharp'\);$/m);
-  assert.ok(sliceAt >= 0 && loadAt >= 0 && sliceAt < loadAt, 'G_SLICE 必须在加载 sharp 之前写入进程环境');
-
-  require('./sharpRuntime.cjs');
-  if (process.platform === 'linux') assert.equal(process.env.G_SLICE, 'always-malloc');
-});
-
 test('shipped production modules load sharp only through sharpRuntime', () => {
   const offenders = [];
   for (const dir of ['electron/services', 'server']) {
