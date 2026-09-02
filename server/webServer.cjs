@@ -7,6 +7,7 @@ const { createProjectStore } = require('../electron/services/projectStore.cjs');
 const { createDesignPipeline } = require('../electron/services/designPipeline.cjs');
 const { createFlowStateRepair } = require('../electron/services/flowStateRepair.cjs');
 const { createIntentStateStore } = require('../electron/services/intentStateStore.cjs');
+const { createGalleryStore, isDownloadAllowed, hasDownloadWaiver, blockedDownloadMessage } = require('../electron/services/galleryStore.cjs');
 const { hashBuffer, resolveProjectPath } = require('../electron/services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('../electron/services/finalDeliveryGate.cjs');
 const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
@@ -288,9 +289,14 @@ function createApplication(environment = process.env) {
     const intentStateStore = createIntentStateStore({ projectStore });
     projectStore.__attachIntentStore(intentStateStore);
     const kunpoConfig = loadKunpoConfig(projectRoot, environment, { modelConfigPath });
-    const designPipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore });
+    const galleryStore = createGalleryStore({
+      workspaceRoot,
+      projectStore,
+      isTrustedCdnUrl: (url) => kunpoClient.isTrustedKunpoCdnUrl(url)
+    });
+    const designPipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore, galleryStore });
     const flowStateRepair = createFlowStateRepair({ projectStore });
-    const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, intentStateStore, kunpoConfig, designPipeline, flowStateRepair };
+    const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, intentStateStore, kunpoConfig, designPipeline, flowStateRepair, galleryStore };
     contexts.set(tenantId, context);
     return context;
   }
@@ -392,6 +398,40 @@ function createApplication(environment = process.env) {
       kunpoConfig.imageModel = saved.imageModel;
       kunpoConfig.modelSource = path.basename(saved.modelConfigPath);
       value = { kunpo: kunpoClient.safeConfig(kunpoConfig), workspaceRoot: '在线工作区（当前飞书账号）', platform: 'web' };
+    } else if (request.method === 'GET' && url.pathname === '/api/gallery') {
+      // 图库是租户级资源：路由必须先于 /api/projects 解析（§7.3）。
+      const query = {};
+      for (const [key, value] of url.searchParams) query[key] = value;
+      value = await context.galleryStore.list(query);
+    } else if (request.method === 'POST' && /^\/api\/gallery\/[^/]+\/(hide|restore|waive)$/.test(url.pathname)) {
+      const [, assetId, action] = url.pathname.match(/^\/api\/gallery\/([^/]+)\/(hide|restore|waive)$/);
+      const decodedId = decodeURIComponent(assetId);
+      if (action === 'waive') value = await context.galleryStore.waiveDownload(decodedId, body.reason);
+      else value = action === 'hide' ? await context.galleryStore.hide(decodedId) : await context.galleryStore.restore(decodedId);
+    } else if (request.method === 'GET' && /^\/api\/gallery\/[^/]+\/download$/.test(url.pathname)) {
+      const assetId = decodeURIComponent(url.pathname.slice('/api/gallery/'.length, -'/download'.length));
+      const asset = await context.galleryStore.getDownloadAsset(assetId);
+      // §7.5：门禁只认登记时的 continuation_mode 快照（缺失即 fail-closed），
+      // 不得依赖前端禁用，也不读取项目当前路线；已留痕豁免的历史快照放行。
+      if (!isDownloadAllowed(asset) && !hasDownloadWaiver(asset)) throw Object.assign(new Error(blockedDownloadMessage(asset)), { status: 409 });
+      if (!kunpoClient.isTrustedKunpoCdnUrl(asset.cdn_url)) throw Object.assign(new Error('该图片来源不是可信的永久 CDN 资产。'), { status: 409 });
+      const upstream = await fetch(asset.cdn_url);
+      if (!upstream.ok || !upstream.body) throw Object.assign(new Error('下载图库原图失败。'), { status: 502 });
+      const contentType = String(upstream.headers.get('content-type') || '');
+      if (!/^image\/(png|jpe?g|webp)/i.test(contentType)) throw Object.assign(new Error('下载图库原图失败：上游内容类型异常。'), { status: 502 });
+      // 同源代理流式转发，绝不把远端 URL 重定向给浏览器（§7.3）。
+      const sanitize = (part) => String(part || '').replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'gallery';
+      const dateStamp = String(asset.created_at || '').slice(0, 10);
+      const extension = (/\.(png|jpe?g|webp)$/i.exec(new URL(asset.cdn_url).pathname)?.[1] || 'png').toLowerCase().replace('jpeg', 'jpg');
+      const displayName = `${sanitize(asset.project_name_snapshot)}-${sanitize(asset.screen_name_snapshot)}-${sanitize(asset.strategy || asset.origin_kind)}-${dateStamp}.${extension}`;
+      const asciiName = displayName.normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '').trim() || `gallery-${dateStamp}.${extension}`;
+      response.writeHead(200, {
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(displayName)}`,
+        'Cache-Control': 'private, no-store'
+      });
+      await pipeline(upstream.body, response);
+      return true;
     } else if (request.method === 'GET' && url.pathname === '/api/projects') value = await projectStore.list();
     else if (request.method === 'POST' && url.pathname === '/api/projects') value = await projectStore.create(body);
     else {

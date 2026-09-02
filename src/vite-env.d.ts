@@ -51,6 +51,13 @@ interface DesignCopilotApi {
   runFidelity(projectId: string, screenId: string): Promise<DesignProject>;
   exportVisual(projectId: string, variationId: string): Promise<{ ok: boolean; filePath?: string }>;
   openUserGuide(): Promise<{ ok: boolean }>;
+  // 图库（v1.1 §7.2/§7.4）：Renderer 只传 assetId，永不传 URL；
+  // 下载门禁由服务端按登记时 continuation_mode 快照判定。
+  listGallery(query: GalleryQuery): Promise<GalleryListResult>;
+  hideGalleryAsset(assetId: string): Promise<GalleryAsset>;
+  restoreGalleryAsset(assetId: string): Promise<GalleryAsset>;
+  waiveGalleryDownload(assetId: string, reason: string): Promise<GalleryAsset>;
+  downloadGalleryAsset(assetId: string): Promise<GalleryDownloadResult>;
   logout?(): Promise<{ ok: boolean }>;
 }
 

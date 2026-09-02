@@ -47,7 +47,7 @@ const SCREEN_CONTRACT_EDITABLE_KEYS = new Set([
   ...SCREEN_CONTRACT_SEMANTIC_KEYS, ...SCREEN_CONTRACT_REVIEW_ONLY_KEYS, 'required_controls'
 ]);
 
-function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore = null }) {
+function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore = null, galleryStore = null }) {
   const cancelledVisualJobs = new Set();
   // 并行生图的运行中任务注册取消通知：cancelStage 触发后生成循环立即
   // 以已落盘结果结算，不再等剩余方向（停止等待语义）。
@@ -403,6 +403,16 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentSt
       // AUD-10：同一轮生成共用一个稳定 generation 戳，保证同轮 Task/Variation
       // ID 可追溯且与上一轮不撞号。
       const generationStamp = new Date().toISOString().replace(/[:.]/g, '-');
+      // 图库 §6.1：登记上下文在任务发起时冻结——尤其 continuation_mode
+      // 快照，服务端下载门禁（§7.5）只认它，不重新读取用户当前路线。
+      const galleryContext = {
+        projectId, screenId: input.screenId,
+        screenName: (project.screens || []).find((screen) => screen.id === input.screenId)?.name,
+        continuationMode: project.continuation_mode,
+        projectName: project.name, projectStatus: project.status,
+        originKind: 'visual_exploration'
+      };
+      const galleryRegistered = new Set();
       const tasks = strategies.map((strategy) => visualTask(project, approved, style, strategy, input.feedback, { underlayContract: project.artifacts.underlayContract, referencePack, generationStamp }));
       await projectStore.saveArtifact(projectId, 'visual-task', {
         schema_version: '1.0', id: `${project.screen_id}-visual-tasks`, version: 1, status: 'approved',
@@ -439,6 +449,18 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentSt
             screenId: input.screenId,
             progress: { completed: ordered.length, total: tasks.length, message }
           });
+          // 图库 §6.1：先成功写入项目 visual-results，再登记图库；登记
+          // 失败只记日志，绝不把已落盘的成功生成判成失败（§5.4），轻量
+          // 对账（§6.3）负责补齐。
+          if (galleryStore) {
+            for (const variation of ordered) {
+              if (galleryRegistered.has(variation.id)) continue;
+              galleryRegistered.add(variation.id);
+              await galleryStore.registerVariation(galleryContext, variation).catch((cause) => {
+                console.error(`[gallery] register failed (${variation.id}): ${cause?.message || cause}`);
+              });
+            }
+          }
         });
         return persistChain;
       };
@@ -1102,6 +1124,20 @@ function createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentSt
       await invalidateArtifacts(projectId, 'visual-results', 'visual_results_repaired', { screenId: project.screen_id });
       await invalidateArtifacts(projectId, 'underlay-critique', 'underlay_repaired');
       await projectStore.saveArtifact(projectId, 'visual-results', { ...currentResults, version: Number(currentResults.version || 1) + 1, status: 'generated', variations: [...(currentResults.variations || []), variation] });
+      // 图库 §6.1：修复结果先成功写入 visual-results 再登记；无 image_url
+      // 的 inline_snapshot 由 Store 侧自动跳过。
+      if (galleryStore) {
+        await galleryStore.registerVariation(
+          {
+            projectId, screenId: project.screen_id,
+            screenName: (project.screens || []).find((screen) => screen.id === project.screen_id)?.name,
+            continuationMode: project.continuation_mode,
+            projectName: project.name, projectStatus: project.status,
+            originKind: 'underlay_repair'
+          },
+          { ...variation, width: repaired.width, height: repaired.height, target_size: project.canvas_spec?.generation_size }
+        ).catch((cause) => console.error(`[gallery] register failed (${variation.id}): ${cause?.message || cause}`));
+      }
       await projectStore.saveArtifact(projectId, 'underlay-repair-task', { ...task, status: 'completed', completed_at: new Date().toISOString(), output: { underlay_id: repairedId, path: repaired.path, hash: repaired.hash, provider_task_id: result.task_id, parent_underlay_id: critique.source.underlay } });
       await projectStore.updateWorkflow(projectId, 'underlay_generation', 'reviewed', `screens/${project.screen_id}/underlay-repair-task.json`);
       return critiqueUnderlay(projectId, { screenId: project.screen_id, underlayId: repairedId });

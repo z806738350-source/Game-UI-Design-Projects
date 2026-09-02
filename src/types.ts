@@ -216,3 +216,61 @@ export type AppConfig = {
     imageModel: string;
   };
 };
+
+// 图库（v1.1 §5.3 / §7）：用户级索引资产与查询合同。
+export type GalleryAsset = {
+  id: string;
+  cdn_url: string;
+  provider: 'kunpo';
+  provider_task_id?: string;
+  storage_mode: 'provider_cdn';
+  remote_only: true;
+  origin_kind: 'visual_exploration' | 'underlay_repair';
+  continuation_mode?: ContinuationMode;
+  mode_provenance?: 'task-start' | 'fail-closed';
+  download_waiver?: { at: string; reason: string };
+  project_id?: string;
+  project_name_snapshot?: string;
+  project_status_snapshot?: 'draft' | 'archived';
+  screen_id?: string;
+  screen_name_snapshot?: string;
+  variation_id?: string;
+  strategy?: string;
+  layout_name?: string;
+  style_name?: string;
+  width?: number;
+  height?: number;
+  target_size?: string;
+  created_at: string;
+  indexed_at: string;
+  last_seen_at: string;
+  hidden_at?: string | null;
+};
+
+export type GalleryQuery = {
+  scope?: 'all' | 'hidden';
+  projectId?: string;
+  screenId?: string;
+  orientation?: 'landscape' | 'portrait' | 'square';
+  range?: 'today' | '7d' | '30d' | 'all';
+  query?: string;
+  sort?: 'newest' | 'oldest';
+  cursor?: string;
+  limit?: number;
+};
+
+export type GalleryListResult = {
+  items: GalleryAsset[];
+  total: number;
+  nextCursor: string | null;
+  facets: {
+    projects: Array<{ id: string; name: string; status: 'draft' | 'archived' }>;
+    screens: Array<{ id: string; name: string; projectId?: string }>;
+  };
+};
+
+export type GalleryDownloadResult = {
+  status: 'saved' | 'cancelled' | 'blocked' | 'failed';
+  message?: string;
+  path?: string;
+};
