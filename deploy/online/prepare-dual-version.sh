@@ -56,11 +56,17 @@ classic_unit_tmp=$(mktemp "$config_root/.classic-unit.XXXXXX")
 current_unit_tmp=$(mktemp "$config_root/.current-unit.XXXXXX")
 current_env_backup=$(mktemp "$config_root/.current-env-backup.XXXXXX")
 current_unit_backup=$(mktemp "$config_root/.current-unit-backup.XXXXXX")
+classic_unit=/etc/systemd/system/game-ui-design-copilot-classic.service
+classic_unit_backup=$(mktemp "$config_root/.classic-unit-backup.XXXXXX")
 candidate_ready=0
 current_reconfigured=0
+# 必须在这里初始化：cleanup 跑在 EXIT trap 里，而本变量要到安装 unit 前才重新赋值。
+# set -u 下若在此之前的步骤失败（例如 pnpm install），cleanup 引用未绑定变量会中断回滚。
+classic_unit_changed=0
 
 if test -f "$current_env"; then install -o root -g root -m 0600 "$current_env" "$current_env_backup"; else rm -f "$current_env_backup"; fi
 if test -f "$current_unit"; then install -o root -g root -m 0644 "$current_unit" "$current_unit_backup"; else rm -f "$current_unit_backup"; fi
+if test -f "$classic_unit"; then install -o root -g root -m 0644 "$classic_unit" "$classic_unit_backup"; else rm -f "$classic_unit_backup"; fi
 
 cleanup() {
   result=$?
@@ -70,9 +76,24 @@ cleanup() {
     if test -f "$current_unit_backup"; then install -o root -g root -m 0644 "$current_unit_backup" "$current_unit"; else rm -f "$current_unit"; fi
     systemctl daemon-reload
     systemctl restart game-ui-design-copilot-current.service || true
-    echo 'candidate preparation failed; restored previous current service' >&2
+    # 只有真的动过经典版 unit 才回滚它。候选因新版侧原因（9032 healthz、DIST_ROOT 断言）
+    # 被拒时重启经典版，等于让默认落地版本为别人的失败买单。
+    if test "$classic_unit_changed" -eq 1; then
+      if test -f "$classic_unit_backup"; then
+        install -o root -g root -m 0644 "$classic_unit_backup" "$classic_unit"
+        systemctl daemon-reload
+        systemctl restart game-ui-design-copilot-classic.service || true
+        curl --max-time 5 -fsS http://127.0.0.1:9031/healthz >/dev/null || echo 'warning: 9031 unhealthy after cleanup' >&2
+      else
+        # 首次部署时原本没有经典版 unit：先停服再删，避免留下 unit 已删而进程仍在跑的半坏状态。
+        systemctl stop game-ui-design-copilot-classic.service || true
+        rm -f "$classic_unit"
+        systemctl daemon-reload
+      fi
+    fi
+    echo 'candidate preparation failed; restored previous current and classic services' >&2
   fi
-  rm -f "$current_tmp" "$router_tmp" "$classic_unit_tmp" "$current_unit_tmp" "$current_env_backup" "$current_unit_backup"
+  rm -f "$current_tmp" "$router_tmp" "$classic_unit_tmp" "$current_unit_tmp" "$current_env_backup" "$current_unit_backup" "$classic_unit_backup"
   exit "$result"
 }
 trap cleanup EXIT
@@ -116,14 +137,50 @@ install -o root -g root -m 0600 "$router_tmp" "$router_env"
 
 sed "s|@@CLASSIC_RELEASE_DIR@@|$classic_release|g" "$release_dir/deploy/online/game-ui-design-copilot-classic.service" > "$classic_unit_tmp"
 sed "s|@@CURRENT_RELEASE_DIR@@|$release_dir|g" "$release_dir/deploy/online/game-ui-design-copilot-current.service" > "$current_unit_tmp"
-install -o root -g root -m 0644 "$classic_unit_tmp" /etc/systemd/system/game-ui-design-copilot-classic.service
+# systemctl start 对已在运行的经典版是空操作：改过的 unit 不会进入运行中的进程。
+# 只有 unit 内容真的变了才 restart，避免每次预检都无谓打断经典版会话。
+classic_unit_changed=1
+if test -f "$classic_unit" && cmp -s "$classic_unit_tmp" "$classic_unit"; then classic_unit_changed=0; fi
+install -o root -g root -m 0644 "$classic_unit_tmp" "$classic_unit"
 install -o root -g root -m 0644 "$current_unit_tmp" "$current_unit"
 current_reconfigured=1
 
 systemctl daemon-reload
-systemctl start game-ui-design-copilot-classic.service
+if test "$classic_unit_changed" -eq 1; then
+  systemctl restart game-ui-design-copilot-classic.service
+else
+  systemctl start game-ui-design-copilot-classic.service
+fi
 systemctl restart game-ui-design-copilot-current.service
 curl --retry 10 --retry-delay 1 --retry-connrefused --max-time 10 -fsS http://127.0.0.1:9031/healthz >/dev/null
 curl --retry 10 --retry-delay 1 --retry-connrefused --max-time 10 -fsS http://127.0.0.1:9032/healthz >/dev/null
+# 只从进程环境里取这几个路径/标识键，不打印任何机密值。经典版的前端、数据根、版本标识与
+# 工作目录必须全部落在它自己钉住的 release 上，不能随 current 漂移（2026-09-02 线上实际发生
+# 过 DIST_ROOT 漂移，回归见 scripts/deployUnits.test.cjs）。RELEASE_ID 也要查：路由的版本标签
+# 取自上游，标识错了会让经典版顶着「新版」跑旧码。
+classic_pid=$(systemctl show -p MainPID --value game-ui-design-copilot-classic.service)
+if test -z "$classic_pid" || test "$classic_pid" = 0; then
+  echo 'classic service has no main pid' >&2
+  exit 4
+fi
+# dash 下管道内的重定向失败不触发 set -e，只会留下空变量；先分清「读不到」与「值漂移」。
+if test ! -r "/proc/$classic_pid/environ"; then
+  echo "classic environ unreadable: pid=$classic_pid" >&2
+  exit 4
+fi
+classic_env=$(tr '\0' '\n' < "/proc/$classic_pid/environ")
+classic_dist_root=$(printf '%s\n' "$classic_env" | sed -n 's|^DESIGN_COPILOT_DIST_ROOT=||p')
+classic_data_root=$(printf '%s\n' "$classic_env" | sed -n 's|^DESIGN_COPILOT_DATA_ROOT=||p')
+classic_release_id=$(printf '%s\n' "$classic_env" | sed -n 's|^DESIGN_COPILOT_RELEASE_ID=||p')
+classic_cwd=$(readlink -f "/proc/$classic_pid/cwd")
+classic_expected_id=${classic_release##*/}
+if test "$classic_dist_root" != "$classic_release/dist" \
+  || test "$classic_data_root" != "$data_root" \
+  || test "$classic_release_id" != "$classic_expected_id" \
+  || test "$classic_cwd" != "$classic_release"; then
+  echo "classic-not-pinned: dist_root=${classic_dist_root:-<unset>} data_root=${classic_data_root:-<unset>} release_id=${classic_release_id:-<unset>} cwd=${classic_cwd:-<unset>}" >&2
+  echo "expected: dist_root=$classic_release/dist data_root=$data_root release_id=$classic_expected_id cwd=$classic_release" >&2
+  exit 4
+fi
 candidate_ready=1
-printf 'candidate-ready release=%s classic=9031 current=9032\n' "$release_id"
+printf 'candidate-ready release=%s classic=9031 current=9032 classic-pinned=%s classic-dist-root=%s\n' "$release_id" "$classic_release_id" "$classic_dist_root"
