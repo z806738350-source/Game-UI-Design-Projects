@@ -56,11 +56,14 @@ classic_unit_tmp=$(mktemp "$config_root/.classic-unit.XXXXXX")
 current_unit_tmp=$(mktemp "$config_root/.current-unit.XXXXXX")
 current_env_backup=$(mktemp "$config_root/.current-env-backup.XXXXXX")
 current_unit_backup=$(mktemp "$config_root/.current-unit-backup.XXXXXX")
+classic_unit=/etc/systemd/system/game-ui-design-copilot-classic.service
+classic_unit_backup=$(mktemp "$config_root/.classic-unit-backup.XXXXXX")
 candidate_ready=0
 current_reconfigured=0
 
 if test -f "$current_env"; then install -o root -g root -m 0600 "$current_env" "$current_env_backup"; else rm -f "$current_env_backup"; fi
 if test -f "$current_unit"; then install -o root -g root -m 0644 "$current_unit" "$current_unit_backup"; else rm -f "$current_unit_backup"; fi
+if test -f "$classic_unit"; then install -o root -g root -m 0644 "$classic_unit" "$classic_unit_backup"; else rm -f "$classic_unit_backup"; fi
 
 cleanup() {
   result=$?
@@ -68,11 +71,13 @@ cleanup() {
   if test "$candidate_ready" -eq 0 && test "$current_reconfigured" -eq 1; then
     if test -f "$current_env_backup"; then install -o root -g root -m 0600 "$current_env_backup" "$current_env"; else rm -f "$current_env"; fi
     if test -f "$current_unit_backup"; then install -o root -g root -m 0644 "$current_unit_backup" "$current_unit"; else rm -f "$current_unit"; fi
+    if test -f "$classic_unit_backup"; then install -o root -g root -m 0644 "$classic_unit_backup" "$classic_unit"; else rm -f "$classic_unit"; fi
     systemctl daemon-reload
     systemctl restart game-ui-design-copilot-current.service || true
-    echo 'candidate preparation failed; restored previous current service' >&2
+    systemctl restart game-ui-design-copilot-classic.service || true
+    echo 'candidate preparation failed; restored previous current and classic services' >&2
   fi
-  rm -f "$current_tmp" "$router_tmp" "$classic_unit_tmp" "$current_unit_tmp" "$current_env_backup" "$current_unit_backup"
+  rm -f "$current_tmp" "$router_tmp" "$classic_unit_tmp" "$current_unit_tmp" "$current_env_backup" "$current_unit_backup" "$classic_unit_backup"
   exit "$result"
 }
 trap cleanup EXIT
@@ -116,14 +121,34 @@ install -o root -g root -m 0600 "$router_tmp" "$router_env"
 
 sed "s|@@CLASSIC_RELEASE_DIR@@|$classic_release|g" "$release_dir/deploy/online/game-ui-design-copilot-classic.service" > "$classic_unit_tmp"
 sed "s|@@CURRENT_RELEASE_DIR@@|$release_dir|g" "$release_dir/deploy/online/game-ui-design-copilot-current.service" > "$current_unit_tmp"
-install -o root -g root -m 0644 "$classic_unit_tmp" /etc/systemd/system/game-ui-design-copilot-classic.service
+# systemctl start 对已在运行的经典版是空操作：改过的 unit 不会进入运行中的进程。
+# 只有 unit 内容真的变了才 restart，避免每次预检都无谓打断经典版会话。
+classic_unit_changed=1
+if test -f "$classic_unit" && cmp -s "$classic_unit_tmp" "$classic_unit"; then classic_unit_changed=0; fi
+install -o root -g root -m 0644 "$classic_unit_tmp" "$classic_unit"
 install -o root -g root -m 0644 "$current_unit_tmp" "$current_unit"
 current_reconfigured=1
 
 systemctl daemon-reload
-systemctl start game-ui-design-copilot-classic.service
+if test "$classic_unit_changed" -eq 1; then
+  systemctl restart game-ui-design-copilot-classic.service
+else
+  systemctl start game-ui-design-copilot-classic.service
+fi
 systemctl restart game-ui-design-copilot-current.service
 curl --retry 10 --retry-delay 1 --retry-connrefused --max-time 10 -fsS http://127.0.0.1:9031/healthz >/dev/null
 curl --retry 10 --retry-delay 1 --retry-connrefused --max-time 10 -fsS http://127.0.0.1:9032/healthz >/dev/null
+# 只从进程环境里取 DIST_ROOT 这一个键。经典版的前端必须来自它自己钉住的 release，
+# 不能随 current 漂移（2026-09-02 线上实际发生过，回归见 scripts/deployUnits.test.cjs）。
+classic_pid=$(systemctl show -p MainPID --value game-ui-design-copilot-classic.service)
+if test -z "$classic_pid" || test "$classic_pid" = 0; then
+  echo 'classic service has no main pid' >&2
+  exit 4
+fi
+classic_dist_root=$(tr '\0' '\n' < "/proc/$classic_pid/environ" | sed -n 's|^DESIGN_COPILOT_DIST_ROOT=||p')
+if test "$classic_dist_root" != "$classic_release/dist"; then
+  echo "classic-dist-root-drifted: ${classic_dist_root:-<unset>}" >&2
+  exit 4
+fi
 candidate_ready=1
-printf 'candidate-ready release=%s classic=9031 current=9032\n' "$release_id"
+printf 'candidate-ready release=%s classic=9031 current=9032 classic-dist-root=%s\n' "$release_id" "$classic_dist_root"

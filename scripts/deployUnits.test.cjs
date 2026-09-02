@@ -92,5 +92,20 @@ test('新版 unit 模板与 prepare 脚本让每个 release 只跑自己的代�
   assert.match(prepare, /DESIGN_COPILOT_DATA_ROOT=\$data_root\/version-data\/v2/);
   // 经典版 unit 每次都从候选 release 的模板重装，所以仓库模板就是线上的事实来源。
   assert.match(prepare, /sed "s\|@@CLASSIC_RELEASE_DIR@@\|\$classic_release\|g" "\$release_dir\/deploy\/online\/game-ui-design-copilot-classic\.service"/);
-  assert.match(prepare, /install -o root -g root -m 0644 "\$classic_unit_tmp" \/etc\/systemd\/system\/game-ui-design-copilot-classic\.service/);
+  assert.match(prepare, /^classic_unit=\/etc\/systemd\/system\/game-ui-design-copilot-classic\.service$/m);
+  assert.match(prepare, /install -o root -g root -m 0644 "\$classic_unit_tmp" "\$classic_unit"/);
+
+  // systemctl start 对已运行的经典版是空操作，改过的 unit 进不了运行中的进程；
+  // 只有内容变了才 restart。少了这一步，模板修复在线上等于没修。
+  assert.match(prepare, /if test -f "\$classic_unit" && cmp -s "\$classic_unit_tmp" "\$classic_unit"; then classic_unit_changed=0; fi/);
+  assert.match(prepare, /if test "\$classic_unit_changed" -eq 1; then\n\s+systemctl restart game-ui-design-copilot-classic\.service/);
+
+  // 预检必须证明钉住真的生效在运行进程上，而不是只看装好的 unit 文件。
+  assert.match(prepare, /classic_dist_root=\$\(tr '\\0' '\\n' < "\/proc\/\$classic_pid\/environ" \| sed -n 's\|\^DESIGN_COPILOT_DIST_ROOT=\|\|p'\)/);
+  assert.match(prepare, /if test "\$classic_dist_root" != "\$classic_release\/dist"; then/);
+  assert.match(prepare, /classic-dist-root-drifted/);
+
+  // 候选被拒时经典版也要回到原样，否则失败的预检会把改坏的 unit 留在系统里。
+  assert.match(prepare, /if test -f "\$classic_unit_backup"; then install -o root -g root -m 0644 "\$classic_unit_backup" "\$classic_unit"/);
+  assert.match(prepare, /systemctl restart game-ui-design-copilot-classic\.service \|\| true/);
 });
