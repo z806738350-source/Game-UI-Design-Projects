@@ -7,6 +7,8 @@ git_commit=${3:?git commit is required}
 repo_root=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 stage="$output_dir/$release_id"
 archive="$output_dir/$release_id.tar.gz"
+# 只统计已跟踪文件的改动：未跟踪文件不进入 release，不影响可复现性。
+if git -C "$repo_root" status --porcelain --untracked-files=no | grep -q .; then git_dirty=true; else git_dirty=false; fi
 
 case "$release_id" in
   *[!0-9A-Za-z._-]*|'') echo 'invalid release id' >&2; exit 2 ;;
@@ -29,7 +31,7 @@ cat > "$stage/RELEASE.json" <<EOF
   "schema_version": "1.0",
   "release_id": "$release_id",
   "git_commit": "$git_commit",
-  "git_dirty": true,
+  "git_dirty": $git_dirty,
   "built_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "entrypoints": {
     "router": "server/versionRouter.cjs",
