@@ -21,6 +21,7 @@
     "test:ui-e2e": "playwright test",
     "test:docs": "node scripts/check-docs.cjs && node scripts/check-error-docs.cjs && node scripts/check-doc-commands.cjs && node scripts/check-project-tree.cjs",
     "start:web": "node server/webServer.cjs",
+    "start:version-router": "node server/versionRouter.cjs",
     "test:kunpo": "node scripts/smoke-kunpo.cjs",
     "test:kunpo-image": "node scripts/smoke-kunpo-image.cjs",
     "golden:prepare": "node scripts/prepare-real-golden-assets.cjs",

@@ -1,0 +1,34 @@
+[Unit]
+Description=Game UI Design Copilot Current
+After=network-online.target kunpo-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=game-ui-design-copilot
+Group=game-ui-design-copilot
+WorkingDirectory=@@CURRENT_RELEASE_DIR@@
+EnvironmentFile=/etc/game-ui-design-copilot-online/game-ui-design-copilot-current.env
+ExecStart=/opt/game-ui-design-copilot-online/runtime/node/bin/node @@CURRENT_RELEASE_DIR@@/server/webServer.cjs
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/var/lib/game-ui-design-copilot-online/version-data/v2 /var/log/game-ui-design-copilot-online
+InaccessiblePaths=-/var/lib/game-ui-design-copilot-online/identity -/var/lib/game-ui-design-copilot-online/tenants
+
+[Install]
+WantedBy=multi-user.target
