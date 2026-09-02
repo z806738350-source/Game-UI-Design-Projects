@@ -166,7 +166,16 @@ ARIA（WAI-ARIA select-only combobox + listbox 模型）：触发元素是 `role
 - 网格：四列资产卡片（超宽至多五列），图片完整不裁切；按日期分组
   （今天/昨天/日期）；分页首屏 40，「加载更多」追加不重置滚动。
 - 筛选：范围页签（全部图片/已移除）为按钮组 `role="group"`；项目、Screen、
-  方向、时间、排序为带 `aria-label` 的下拉；琥珀金只用于选中态与焦点环，
+  方向、时间、排序一律用 §6.1 的共享自绘 `Dropdown`（`data-testid=
+  "gallery-filter-*"` 挂在组件根元素），**禁止原生 `<select>`**——其展开
+  列表是系统菜单，无法套用设计令牌。药丸容器 `.filter-field`（32px）内的
+  下拉去掉自身边框、内边距与焦点环，聚焦态由 `.filter-field:focus-within`
+  统一给出琥珀金描边（沿用 `.project-switcher` 内嵌下拉的先例）；可见标题
+  用 `<span>`，Accessible Name 由 `ariaLabel` 提供且包含标题文字（满足
+  label-in-name）。空值以「全部项目 / 全部 Screen / 全部方向 / 全部时间」
+  真实选项保留，用户可从下拉直接选回全部；无可选 Screen 时该下拉禁用。
+  Escape 在展开的下拉里只收起列表，不得连带关闭灯箱或整个图库工作区
+  （工作区级监听尊重已被消费的按键）。琥珀金只用于选中态与焦点环，
   不作为成功或警告色。
 - 灯箱：键盘（←/→ 切换、Esc 关闭）在 window 级监听；关闭后焦点回到打开
   它的卡片；缩放 100%–400%，尊重 `prefers-reduced-motion`。

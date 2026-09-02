@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { copilotApi } from '../../api';
 import type { GalleryAsset, GalleryListResult, GalleryQuery } from '../../types';
-import { friendlyError } from '../shared/ui';
+import { Dropdown, friendlyError } from '../shared/ui';
 
 export type GalleryHandle = { reinsert: (asset: GalleryAsset) => void };
 
@@ -156,6 +156,9 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
     // 键盘处理挂在 window 上：打开灯箱后焦点仍在卡片按钮上，事件不会经过灯箱节点。
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        // 筛选栏自绘下拉展开时会消费 Escape（preventDefault）关闭自身列表，
+        // 此时不得连带关掉灯箱或整个图库。
+        if (event.defaultPrevented) return;
         event.stopPropagation();
         if (waiverAsset) {
           closeWaiver();
@@ -284,44 +287,44 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
         <button type="button" className={filters.scope === 'all' ? 'is-active' : ''} aria-pressed={filters.scope === 'all'} onClick={() => updateFilter({ scope: 'all' })}>全部图片</button>
         <button type="button" className={filters.scope === 'hidden' ? 'is-active' : ''} aria-pressed={filters.scope === 'hidden'} onClick={() => updateFilter({ scope: 'hidden' })}>已移除</button>
       </div>
-      <label className="filter-field">项目
-        <select aria-label="按项目筛选" value={filters.projectId} onChange={(event) => updateFilter({ projectId: event.target.value })}>
-          <option value="">全部项目</option>
-          {result?.facets.projects.map((item) => <option key={item.id} value={item.id}>{item.status === 'archived' ? '〔归档〕' : ''}{item.name}</option>)}
-        </select>
-      </label>
-      <label className="filter-field">Screen
-        <select aria-label="按 Screen 筛选" value={filters.screenId} onChange={(event) => updateFilter({ screenId: event.target.value })} disabled={!screenOptions.length}>
-          <option value="">全部 Screen</option>
-          {screenOptions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select>
-      </label>
-      <label className="filter-field">方向
-        <select aria-label="按画布方向筛选" value={filters.orientation} onChange={(event) => updateFilter({ orientation: event.target.value as GalleryFilters['orientation'] })}>
-          <option value="">全部方向</option>
-          <option value="landscape">横版</option>
-          <option value="portrait">竖版</option>
-          <option value="square">方形</option>
-        </select>
-      </label>
-      <label className="filter-field">时间
-        <select aria-label="按生成时间筛选" value={filters.range} onChange={(event) => updateFilter({ range: event.target.value as GalleryFilters['range'] })}>
-          <option value="">全部时间</option>
-          <option value="today">今天</option>
-          <option value="7d">最近 7 天</option>
-          <option value="30d">最近 30 天</option>
-        </select>
-      </label>
+      <div className="filter-field"><span>项目</span>
+        <Dropdown testId="gallery-filter-project" ariaLabel="按项目筛选" value={filters.projectId} onChange={(next) => updateFilter({ projectId: next })} options={[
+          { value: '', label: '全部项目' },
+          ...(result?.facets.projects ?? []).map((item) => ({ value: item.id, label: `${item.status === 'archived' ? '〔归档〕' : ''}${item.name}` }))
+        ]} />
+      </div>
+      <div className="filter-field"><span>Screen</span>
+        <Dropdown testId="gallery-filter-screen" ariaLabel="按 Screen 筛选" disabled={!screenOptions.length} value={filters.screenId} onChange={(next) => updateFilter({ screenId: next })} options={[
+          { value: '', label: '全部 Screen' },
+          ...screenOptions.map((item) => ({ value: item.id, label: item.name }))
+        ]} />
+      </div>
+      <div className="filter-field"><span>方向</span>
+        <Dropdown testId="gallery-filter-orientation" ariaLabel="按画布方向筛选" value={filters.orientation} onChange={(next) => updateFilter({ orientation: next as GalleryFilters['orientation'] })} options={[
+          { value: '', label: '全部方向' },
+          { value: 'landscape', label: '横版' },
+          { value: 'portrait', label: '竖版' },
+          { value: 'square', label: '方形' }
+        ]} />
+      </div>
+      <div className="filter-field"><span>时间</span>
+        <Dropdown testId="gallery-filter-range" ariaLabel="按生成时间筛选" value={filters.range} onChange={(next) => updateFilter({ range: next as GalleryFilters['range'] })} options={[
+          { value: '', label: '全部时间' },
+          { value: 'today', label: '今天' },
+          { value: '7d', label: '最近 7 天' },
+          { value: '30d', label: '最近 30 天' }
+        ]} />
+      </div>
       <label className="filter-field">
         <Search size={14} />
         <input aria-label="搜索图库" value={queryInput} onChange={(event) => setQueryInput(event.target.value)} placeholder="搜索项目 / Screen / 策略" />
       </label>
-      <label className="filter-field">排序
-        <select aria-label="排序方式" value={filters.sort} onChange={(event) => updateFilter({ sort: event.target.value as GalleryFilters['sort'] })}>
-          <option value="newest">最新优先</option>
-          <option value="oldest">最早优先</option>
-        </select>
-      </label>
+      <div className="filter-field"><span>排序</span>
+        <Dropdown testId="gallery-filter-sort" ariaLabel="排序方式" value={filters.sort} onChange={(next) => updateFilter({ sort: next as GalleryFilters['sort'] })} options={[
+          { value: 'newest', label: '最新优先' },
+          { value: 'oldest', label: '最早优先' }
+        ]} />
+      </div>
       {hasActiveFilters && <button type="button" className="filter-clear" onClick={clearFilters}>清除筛选</button>}
     </div>
     <div className="gallery-body" ref={bodyRef}>

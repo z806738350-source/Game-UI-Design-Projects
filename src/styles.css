@@ -957,8 +957,12 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .gallery-scope-tabs button:hover { color: var(--ink); background: var(--panel-3); }
 .gallery-scope-tabs button.is-active { color: var(--accent-ink); background: linear-gradient(145deg, var(--accent-hi), var(--accent)); font-weight: 700; }
 .gallery-filters .filter-field { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel-2); color: var(--muted); font-size: var(--type-small); }
-.gallery-filters .filter-field select { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: var(--type-small); cursor: pointer; max-width: 190px; }
-.gallery-filters .filter-field select:focus-visible { outline: 2px solid rgba(227, 166, 61, .55); outline-offset: 1px; border-radius: 4px; }
+.gallery-filters .filter-field > span { flex: none; }
+/* 药丸容器内嵌自绘下拉：去掉控件自身边框与焦点环，焦点态统一由 .filter-field:focus-within 提供 */
+.gallery-filters .filter-field .dropdown { max-width: 190px; }
+.gallery-filters .filter-field .dropdown-button { gap: 6px; min-height: 0; padding: 0; border: 0; border-radius: 4px; background: transparent; font: inherit; font-size: var(--type-small); }
+.gallery-filters .filter-field .dropdown-button:focus-visible { border-color: transparent; box-shadow: none; outline: none; }
+.gallery-filters .filter-field .dropdown-button[aria-disabled="true"] { opacity: .55; }
 .gallery-filters .filter-field input { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: var(--type-small); width: 170px; }
 .gallery-filters .filter-field input::placeholder { color: var(--faint); }
 .gallery-filters .filter-field input:focus-visible, .gallery-filters .filter-field:focus-within { outline: 2px solid rgba(227, 166, 61, .55); outline-offset: 1px; border-radius: 8px; }

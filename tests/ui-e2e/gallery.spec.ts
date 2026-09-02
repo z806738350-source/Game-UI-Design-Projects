@@ -7,7 +7,7 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { FixtureProvider } from './fixtureProvider';
-import { createNewProject, createStrictProject, findProjectDir, getProject, launchApp, queueSaveFile } from './helpers';
+import { chooseDropdown, createNewProject, createStrictProject, findProjectDir, getProject, launchApp, queueSaveFile } from './helpers';
 import type { LaunchedApp } from './helpers';
 
 const CDN_ONE = 'https://kunpoapiimg.ziy.cc/ui-e2e/gallery-one.png';
@@ -73,6 +73,18 @@ test.describe('gallery workspace (§11.5)', () => {
     // 再次点击图库按钮是 no-op，不得产生含糊的 Toggle 行为。
     await entry.click();
     await expect(page.getByTestId('gallery-overlay')).toHaveCount(1);
+    await expect(page.getByTestId('gallery-card')).toHaveCount(2);
+
+    // §6.7 规范回归：筛选下拉必须是自绘列表框，原生 select 的展开列表是系统菜单。
+    await expect(page.locator('.gallery-filters select')).toHaveCount(0);
+    const orientation = page.getByTestId('gallery-filter-orientation');
+    await orientation.getByRole('combobox').click();
+    await expect(orientation.locator('.dropdown-menu')).toBeVisible();
+    await expect(orientation.locator('.dropdown-option[data-value="portrait"]')).toBeVisible();
+    // Escape 只收起列表，不得连带关闭整个图库工作区。
+    await page.keyboard.press('Escape');
+    await expect(orientation.locator('.dropdown-menu')).toHaveCount(0);
+    await expect(page.getByTestId('gallery-overlay')).toBeVisible();
     await expect(page.getByTestId('gallery-card')).toHaveCount(2);
   });
 
@@ -154,7 +166,7 @@ test.describe('gallery workspace (§11.5)', () => {
     ]);
     await page.getByTestId('gallery-entry').click();
     await expect(page.getByTestId('gallery-overlay')).toBeVisible();
-    await page.getByLabel('按项目筛选').selectOption(strict.id);
+    await chooseDropdown(page.getByTestId('gallery-filter-project'), strict.id);
     await expect(page.getByTestId('gallery-card')).toHaveCount(1, { timeout: 30_000 });
     const blockedButton = page.getByTestId('gallery-card').first().getByRole('button', { name: '受控交付' });
     await expect(blockedButton).toHaveAttribute('aria-disabled', 'true');
@@ -163,6 +175,9 @@ test.describe('gallery workspace (§11.5)', () => {
     await blockedButton.click({ force: true });
     const banner = page.locator('.error-banner');
     await expect(banner).toContainText('严格继承');
+    // 错误横幅在全局反馈层（z-90）会盖住图库筛选栏，关闭它再交给后续测试。
+    await page.getByRole('button', { name: '关闭错误' }).click();
+    await expect(banner).toHaveCount(0);
   });
 
   test('fail-closed 历史资产经逐张豁免后放行下载', async () => {
@@ -179,7 +194,7 @@ test.describe('gallery workspace (§11.5)', () => {
     fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf8');
 
     await openGalleryIfClosed(page);
-    await page.getByLabel('按项目筛选').selectOption(explorationProjectId);
+    await chooseDropdown(page.getByTestId('gallery-filter-project'), explorationProjectId);
     await expect(page.getByTestId('gallery-card')).toHaveCount(3, { timeout: 30_000 });
     await expect(page.getByRole('button', { name: '受控交付' })).toHaveCount(1);
 

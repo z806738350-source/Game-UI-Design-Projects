@@ -96,12 +96,34 @@ describe('GalleryWorkspace 列表与筛选', () => {
     expect(groupLabels).toEqual(['今天']);
   });
 
+  it('筛选栏使用自绘下拉而不是系统原生 select', async () => {
+    listGallery.mockResolvedValue(makeResult([]));
+    renderGallery();
+    await screen.findByText('图库还是空的');
+    expect(screen.getAllByRole('combobox')).toHaveLength(5);
+    expect(document.querySelectorAll('.gallery-filters select')).toHaveLength(0);
+  });
+
+  it('下拉展开时按 Escape 只收起列表，不关闭图库', async () => {
+    const user = userEvent.setup();
+    listGallery.mockResolvedValue(makeResult([]));
+    const { onClose } = renderGallery();
+    await screen.findByText('图库还是空的');
+    await user.click(screen.getByRole('combobox', { name: '按画布方向筛选' }));
+    await screen.findByRole('listbox', { name: '按画布方向筛选' });
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(screen.getByTestId('gallery-overlay')).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('项目筛选变化会携带 projectId 重新查询，且清除筛选可还原', async () => {
     const user = userEvent.setup();
     listGallery.mockResolvedValue(makeResult([]));
     renderGallery();
     await screen.findByText('图库还是空的');
-    await user.selectOptions(screen.getByLabelText('按项目筛选'), 'project-1');
+    await user.click(screen.getByRole('combobox', { name: '按项目筛选' }));
+    await user.click(screen.getByRole('option', { name: '云境计划' }));
     await waitFor(() => expect(listGallery).toHaveBeenCalledWith(expect.objectContaining({ projectId: 'project-1' })));
     await user.click(screen.getByRole('button', { name: '清除筛选' }));
     await waitFor(() => expect(listGallery).toHaveBeenCalledWith(expect.not.objectContaining({ projectId: 'project-1' })));
