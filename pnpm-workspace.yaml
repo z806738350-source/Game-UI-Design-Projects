@@ -1,2 +1,10 @@
 allowBuilds:
   sharp: true
+
+# 线上服务器 CPU 只支持 x86-64 baseline（v1），sharp >= 0.34 的 Linux 预编译包要求
+# x86-64-v2 而无法加载，故固定 sharp 0.33.5，并按该 advisory 的官方缓解在
+# electron/services/sharpRuntime.cjs 中禁用 GIF/TIFF/VIPS 解码器（本产品只处理
+# PNG/JPEG/WebP）。豁免理由与退出条件见 docs/decisions/ADR-010-sharp-pinned-for-x64v1-runtime.md。
+auditConfig:
+  ignoreGhsas:
+    - GHSA-f88m-g3jw-g9cj

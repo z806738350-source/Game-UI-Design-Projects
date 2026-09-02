@@ -20,6 +20,12 @@
       无发现或发现已处置；每个新提交重跑
 - [ ] CodeReview 子代理实质审查通过（发现已修复或说明）；单人维护仓库按 ADR-007 批准的例外，以七项 CI 强制 + 子代理实质审查替代真实技术 Reviewer APPROVE
 - [ ] PR 描述包含变更动机、影响面与验证证据
+- [ ] `pnpm audit --prod --audit-level high` 通过；豁免只允许以 `pnpm-workspace.yaml` 的
+      `auditConfig.ignoreGhsas` 显式登记，且每条豁免必须有对应 ADR。当前唯一豁免为
+      GHSA-f88m-g3jw-g9cj：sharp 固定 0.33.5（线上 CPU 只支持 x86-64-v1，≥ 0.34 的预编译包
+      要求 x86-64-v2），由 `electron/services/sharpRuntime.cjs` 按 advisory 官方缓解禁用
+      GIF/TIFF/VIPS 解码器，理由与退出条件见
+      `docs/decisions/ADR-010-sharp-pinned-for-x64v1-runtime.md`
 
 ## 3. CI Required Checks（Ruleset 强制）
 

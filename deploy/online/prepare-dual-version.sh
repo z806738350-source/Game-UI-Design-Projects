@@ -35,7 +35,16 @@ install -d -o root -g root -m 0755 "$release_dir"
 tar -xzf "$archive" -C "$release_dir"
 (cd "$release_dir" && sha256sum -c MANIFEST.sha256)
 (cd "$release_dir" && env PATH=/opt/game-ui-design-copilot-online/runtime/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /opt/game-ui-design-copilot-online/runtime/node/bin/corepack pnpm install --prod --frozen-lockfile)
-(cd "$release_dir" && /opt/game-ui-design-copilot-online/runtime/node/bin/node -e "require('sharp'); console.log('sharp-runtime-ok')")
+# 候选 release 预检必须证明 ADR-010 的缓解真的随包生效：只 require('sharp') 无法发现
+# sharpRuntime.cjs 缺失或其中 sharp.block 调用被移除的候选。GIF 解码被拒绝即缓解生效。
+(cd "$release_dir" && /opt/game-ui-design-copilot-online/runtime/node/bin/node -e '
+const sharp = require("./electron/services/sharpRuntime.cjs");
+const gif = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+sharp(gif).metadata().then(
+  () => { console.error("sharp-mitigation-ineffective: GIF decoded"); process.exit(1); },
+  () => console.log("sharp-runtime-ok sharp=" + sharp.versions.sharp + " libvips=" + sharp.versions.vips),
+);
+')
 chown -R root:root "$release_dir"
 
 install -d -o "$service_user" -g "$service_group" -m 0700 "$data_root/version-data/v2"

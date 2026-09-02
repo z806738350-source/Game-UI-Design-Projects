@@ -1,7 +1,7 @@
 const fs = require('node:fs/promises');
 const { ERROR_CODES, FIDELITY_ISSUE_CODES } = require('./errorCodes.cjs');
 const path = require('node:path');
-const sharp = require('sharp');
+const sharp = require('./sharpRuntime.cjs');
 const intent = require('./intentAnalysis.cjs');
 const { intentAnalysisV2Prompt, intentDraftPrompt, layoutPrompt, screenContractPrompt, stylePrompt, underlayCritiquePrompt, underlayRepairPrompt, visualTask } = require('./prompts.cjs');
 const { providerCapabilities } = require('./providerCapabilities.cjs');
