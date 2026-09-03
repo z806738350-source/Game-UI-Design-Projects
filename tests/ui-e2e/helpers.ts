@@ -101,6 +101,11 @@ export async function queueSaveFile(app: ElectronApplication, filePath: string):
   await app.evaluate((_electron, file) => { (globalThis as { __saveQueue?: string[] }).__saveQueue?.push(file); }, filePath);
 }
 
+// 前提：`.busy-bar` detached 表示「任务结束」只在工作流视图下成立。反馈按上下文
+// 隔离后，图库打开期间忙碌条根本不渲染（见 FRONTEND-DESIGN-GUIDE §6.4），因此
+// 本文件所有以 busy-bar 收尾的助手（clickRun / importFonts /
+// switchContinuationModeViaUi）都只能在工作流态调用；用它等待图库态发起或观察的
+// 任务会立刻判定为已完成。
 export async function clickRun(page: Page, testId: string, options: { allowError?: boolean; settleMs?: number } = {}): Promise<void> {
   await page.getByTestId(testId).click();
   await page.waitForTimeout(250);

@@ -146,23 +146,53 @@ test.describe('gallery workspace (§11.5)', () => {
       await page.getByTestId('gallery-back').click();
       await expect(page.getByTestId('gallery-overlay')).toHaveCount(0);
     }
-    // 工作流态：提示条只允许覆盖右侧工作区，左边界必须等于轨道右缘。
-    const workflow = await page.evaluate(() => {
+    const measureWorkflow = () => page.evaluate(() => {
       const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
       const bar = rect('.overlay-bar');
-      return { barLeft: bar.left, railRight: rect('.stage-rail').right, mainLeft: rect('.main-workspace').left };
+      const rail = rect('.stage-rail');
+      return { barLeft: bar.left, barTop: bar.top, railRight: rail.right, railWidth: rail.width, mainLeft: rect('.main-workspace').left, mainTop: rect('.main-workspace').top };
     });
+    // 工作流态：提示条只允许覆盖右侧工作区，左边界必须等于轨道右缘，
+    // 垂直起点必须等于工作区顶（不覆盖顶栏与 Screen dock）。
+    const workflow = await measureWorkflow();
     expect(workflow.barLeft).toBeCloseTo(workflow.railRight, 0);
     expect(workflow.barLeft).toBeCloseTo(workflow.mainLeft, 0);
+    expect(workflow.barTop).toBeCloseTo(workflow.mainTop, 0);
 
-    // 图库态：整屏覆盖，撤销提示按裁定保持满幅。
+    // 窄屏断点改的是 --rail-w 本身（244px）：本回归最初就出在该分支的硬编码
+    // 字面量与轨道宽度失同步，提示条必须继续跟随轨道右缘。Electron 页面的
+    // viewportSize 为 null，还原窗口尺寸要走 BrowserWindow。
+    const contentSize = await launched.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getContentSize());
+    await page.setViewportSize({ width: 1200, height: 860 });
+    const narrow = await measureWorkflow();
+    expect(narrow.railWidth).toBeCloseTo(244, 0);
+    expect(narrow.barLeft).toBeCloseTo(narrow.railRight, 0);
+    await launched.app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size[0], size[1]), contentSize);
+
+    // 图库态：整屏覆盖，撤销提示按裁定保持满幅；但垂直起点必须让出图库标题
+    // 行——通知层子元素是 pointer-events:auto，压住标题行会吞掉「返回工作流」
+    // 的点击，用户只剩 Escape 能退出。
     await openGalleryIfClosed(page);
+    await page.getByTestId('gallery-card').first().getByRole('button', { name: '移除' }).click();
+    await expect(page.getByTestId('gallery-undo-toast')).toBeVisible();
     const gallery = await page.evaluate(() => {
-      const bar = document.querySelector('.overlay-bar')!.getBoundingClientRect();
-      return { barLeft: bar.left, barWidth: bar.width, viewportWidth: window.innerWidth };
+      const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+      const bar = rect('.overlay-bar');
+      const back = rect('[data-testid="gallery-back"]');
+      const hit = document.elementFromPoint(back.left + back.width / 2, back.top + back.height / 2);
+      return {
+        barLeft: bar.left, barTop: bar.top, barWidth: bar.width, viewportWidth: window.innerWidth,
+        headerBottom: rect('.gallery-header').bottom,
+        backClickable: Boolean(hit?.closest('[data-testid="gallery-back"]'))
+      };
     });
     expect(gallery.barLeft).toBe(0);
     expect(gallery.barWidth).toBeCloseTo(gallery.viewportWidth, 0);
+    expect(gallery.barTop).toBeCloseTo(gallery.headerBottom, 0);
+    expect(gallery.backClickable).toBe(true);
+    // 撤销恢复现场，不影响后续用例的资产计数。
+    await page.getByTestId('gallery-undo').click();
+    await expect(page.getByTestId('gallery-card')).toHaveCount(2);
   });
 
   test('可下载路线通过受控镜像下载原图', async () => {

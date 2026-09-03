@@ -315,4 +315,51 @@ describe('App 反馈按上下文隔离', () => {
     await user.click(screen.getByTestId('gallery-entry'));
     await screen.findByText(/无法打开使用说明书/);
   });
+
+  // 重试入口属于工作流上下文：图库态忙碌条被抑制、状态片只对视觉探索出现，
+  // 若在图库内点重试会全程零反馈地重跑工作流任务，还会改动 inert 覆盖层后
+  // 面的阶段。入口只跟随 workflow 作用域错误。
+  it('图库态错误条不携带工作流重试入口，回到工作流后重试入口恢复且可重跑', async () => {
+    const user = userEvent.setup();
+    openInputProject();
+    listGallery.mockResolvedValue({ items: [makeGalleryAsset()], total: 1, nextCursor: null, facets: { projects: [], screens: [] } });
+    draftRequirement.mockRejectedValue(new Error('模型不可用'));
+    hideGalleryAsset.mockRejectedValue(new Error('索引写入失败'));
+    render(<App />);
+    await user.click(await screen.findByTestId('intent-draft'));
+    await screen.findByText('当前步骤未完成');
+    expect(screen.getByRole('button', { name: '重试' })).toBeTruthy();
+    // 工作流错误在图库内隐藏；图库操作失败后错误条重新出现，但不得带上
+    // 那个属于工作流的重试入口。
+    await user.click(screen.getByTestId('gallery-entry'));
+    await user.click(await screen.findByRole('button', { name: '移除' }));
+    await screen.findByText('当前步骤未完成');
+    expect(document.querySelector('.error-retry')).toBeNull();
+    // 回到工作流重新触发 workflow 错误：重试入口恢复，且点击真的重跑任务。
+    await user.click(screen.getByTestId('gallery-back'));
+    await user.click(screen.getByTestId('intent-draft'));
+    await user.click(await screen.findByRole('button', { name: '重试' }));
+    await waitFor(() => expect(draftRequirement).toHaveBeenCalledTimes(3));
+  });
+
+  // 图库实例常驻，隐藏/恢复/下载的回调在 await 之后无条件触发：请求在飞时
+  // 返回工作流，回执不得泄漏到工作流视图，重开图库也不得看到残留提示。
+  it('图库请求在飞时返回工作流：撤销提示不泄漏，重开图库不残留', async () => {
+    const user = userEvent.setup();
+    openInputProject();
+    const asset = makeGalleryAsset();
+    listGallery.mockResolvedValue({ items: [asset], total: 1, nextCursor: null, facets: { projects: [], screens: [] } });
+    let resolveHide: (value: GalleryAsset) => void = () => {};
+    hideGalleryAsset.mockImplementation(() => new Promise<GalleryAsset>((resolve) => { resolveHide = resolve; }));
+    render(<App />);
+    await user.click(await screen.findByTestId('gallery-entry'));
+    await user.click(await screen.findByRole('button', { name: '移除' }));
+    await waitFor(() => expect(hideGalleryAsset).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByTestId('gallery-back'));
+    resolveHide({ ...asset, hidden_at: new Date().toISOString() });
+    await waitFor(() => expect(screen.queryByTestId('gallery-undo-toast')).toBeNull());
+    await user.click(screen.getByTestId('gallery-entry'));
+    await screen.findByTestId('gallery-overlay');
+    expect(screen.queryByTestId('gallery-undo-toast')).toBeNull();
+  });
 });

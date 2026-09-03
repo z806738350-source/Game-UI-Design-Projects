@@ -181,7 +181,12 @@ input[type='checkbox'] { accent-color: var(--accent); }
 .overlay-bar { position: fixed; top: 56px; left: var(--rail-w); right: 0; z-index: 90; height: 0; display: flow-root; pointer-events: none; }
 .overlay-bar > * { pointer-events: auto; }
 .app-shell.has-project .overlay-bar { top: 106px; }
-.app-shell.is-gallery .overlay-bar { left: 0; }
+/* 图库态：满幅（撤销提示按裁定保持整屏宽），但垂直起点必须让出图库标题行——
+   否则提示条会压住「返回工作流」按钮，且 .overlay-bar > * 的 pointer-events:auto
+   会吞掉点击，用户只剩 Escape 能退出。115 = .gallery-overlay 顶 56
+   + .gallery-header 的 14 上内边距 + 34 内容高 + 10 下内边距 + 1 底边框。
+   无项目态（.has-project 缺席）同样成立，不随 56/106 漂移。 */
+.app-shell.is-gallery .overlay-bar { left: 0; top: 115px; }
 .busy-bar { position: relative; z-index: 30; min-height: 48px; display: flex; align-items: center; gap: 12px; padding: 8px 40px; color: var(--accent-hi); border-bottom: 1px solid rgba(227, 166, 61, .22); background: linear-gradient(90deg, rgba(227, 166, 61, .1), rgba(10, 11, 14, .92) 62%); backdrop-filter: blur(12px); }
 .busy-bar > div { display: grid; gap: 2px; }
 .busy-bar b { font-size: var(--type-small); color: var(--ink); }
