@@ -87,6 +87,8 @@ function ProjectManager({ project, projects, busy, run, onClose, onSwitch }: { p
 // App shell only: project/screen/stage switching, global busy/error
 // boundaries, inspector, and feature workspace assembly. Domain workspaces
 // live under src/features/* and own their own drafts and local state.
+type FeedbackScope = 'workflow' | 'gallery' | 'global';
+const feedbackVisible = (scope: FeedbackScope, galleryOpen: boolean): boolean => scope === 'global' || (scope === 'gallery') === galleryOpen;
 export function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -95,7 +97,11 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [busyJob, setBusyJob] = useState<(RunOptions & { startedAt: number; projectId?: string; projectName?: string; screenId?: string }) | null>(null);
   const [elapsed, setElapsed] = useState(0);
-  const [error, setError] = useState('');
+  // 反馈按上下文隔离：错误条带来源 scope——workflow 错误只在工作流视图显示，
+  // gallery 错误只在图库视图显示，global（顶栏等两界共用入口）两边都显示；
+  // 避免提示条跨界面遮挡另一上下文的功能按钮。
+  const [error, setErrorState] = useState<{ message: string; scope: FeedbackScope } | null>(null);
+  const setError = (message: string, scope: FeedbackScope = 'global') => setErrorState(message ? { message, scope } : null);
   // AUD-04：重试上下文冻结任务发起时的项目与 Screen，不重新从当前 UI 捕获；
   // 用户已离开原上下文时不执行重试，避免任务串到别的项目或 Screen。
   const [retryTask, setRetryTask] = useState<{ task: () => Promise<DesignProject>; options: RunOptions; projectId?: string; projectName?: string; screenId?: string } | null>(null);
@@ -151,7 +157,7 @@ export function App() {
       return next;
     }
     catch (cause) {
-      setError(friendlyError(cause)); setRetryTask({ task, options, projectId: jobProjectId, projectName: jobProjectName, screenId: jobScreenId });
+      setError(friendlyError(cause), 'workflow'); setRetryTask({ task, options, projectId: jobProjectId, projectName: jobProjectName, screenId: jobScreenId });
       // A failed attempt may still have changed backend state (e.g. a
       // regeneration attempt invalidates stale evidence before it fails).
       // Reload the job's project so gates reflect the current truth; never
@@ -170,13 +176,13 @@ export function App() {
     // 不得影响同项目其他 Screen 的生成任务。
     const jobScreenId = busyJob?.screenId;
     try { const next = await copilotApi.cancelStage(jobId, 'visual_exploration', jobScreenId); setProject((current) => applyJobResult(current, next, jobId, jobScreenId)); }
-    catch (cause) { setError(friendlyError(cause)); }
+    catch (cause) { setError(friendlyError(cause), 'workflow'); }
   };
   const create = async (input: CreateProjectInput) => { const next = await run(() => copilotApi.createProject(input), { label: '创建项目', newEntity: true }); if (next) { setCreateOpen(false); setActiveStage('input'); } };
   // AUD-04：重试校验——仅当用户仍停留在任务发起时的项目与 Screen 才执行重试；
   // 已离开原上下文时明确提示先切回，绝不拿当前 UI 上下文执行旧任务。
   const retryMatchesContext = retryContextMatches(retryTask, project);
-  const retry = () => { if (!retryTask) return; if (!retryMatchesContext) { setError('失败的任务属于另一个项目或 Screen，请先切回原项目与页面再重试。'); return; } void run(retryTask.task, retryTask.options); };
+  const retry = () => { if (!retryTask) return; if (!retryMatchesContext) { setError('失败的任务属于另一个项目或 Screen，请先切回原项目与页面再重试。', 'workflow'); return; } void run(retryTask.task, retryTask.options); };
   const switchProject = (id: string) => { copilotApi.openProject(id).then(setProject).catch((cause) => setError(cause.message)); };
   // 帮助入口：文件缺失或系统打开失败时必须在错误条反馈，不能静默无反应
   const openGuide = async () => {
@@ -190,14 +196,17 @@ export function App() {
     setGalleryToast(toast);
     galleryToastTimer.current = window.setTimeout(() => setGalleryToast(null), ttl);
   };
-  const openGallery = () => { if (galleryOpen) return; setGalleryMounted(true); setGalleryOpen(true); };
-  const closeGallery = () => { setGalleryOpen(false); galleryEntryRef.current?.focus(); };
+  // 图库实例常驻，隐藏/恢复/下载的回调在 await 之后无条件触发：用户可能在
+  // 请求在飞时就返回工作流，提示因此会落在 closeGallery 之后。渲染按
+  // galleryOpen 门控，重开时再清一次，避免 TTL 内看到上一次会话的残留提示。
+  const openGallery = () => { if (galleryOpen) return; window.clearTimeout(galleryToastTimer.current); setGalleryToast(null); setGalleryMounted(true); setGalleryOpen(true); };
+  const closeGallery = () => { setGalleryOpen(false); window.clearTimeout(galleryToastTimer.current); setGalleryToast(null); galleryEntryRef.current?.focus(); };
   const undoGalleryHide = async () => {
     const asset = galleryToast?.asset;
     if (!asset) return;
     window.clearTimeout(galleryToastTimer.current); setGalleryToast(null);
     try { const next = await copilotApi.restoreGalleryAsset(asset.id); galleryRef.current?.reinsert(next); }
-    catch (cause) { setError(friendlyError(cause)); }
+    catch (cause) { setError(friendlyError(cause), 'gallery'); }
   };
   const currentArtifact = useMemo(() => { if (!project) return null; if (activeStage === 'wireframe_interpretation') return project.artifacts.screenContract; if (activeStage === 'layout_design') return project.artifacts.approvedLayout || project.artifacts.layouts; if (activeStage === 'style_resolution') return project.artifacts.styleContract; if (activeStage === 'visual_exploration') return project.artifacts.visualResults?.variations?.length ? project.artifacts.visualResults : project.artifacts.visualTask; return null; }, [project, activeStage]);
   const busyStage = busyJob?.stage ? project?.workflow?.stages?.[busyJob.stage] : undefined;
@@ -207,12 +216,12 @@ export function App() {
 
   return <div className={`app-shell ${project ? 'has-project' : ''} ${inspectorOpen ? 'has-inspector' : ''} ${config?.platform === 'darwin' ? 'is-mac' : ''} ${galleryOpen ? 'is-gallery' : ''}`}>
     <header className="topbar"><div className="brand"><div><Aperture size={19} /></div><span><b>Game UI</b><small>Design Copilot</small></span></div><div className="project-switcher"><button onClick={() => setCreateOpen(true)}><Plus size={15} />新项目</button><Dropdown testId="project-switcher-select" ariaLabel="切换项目" placeholder="选择项目" value={project?.id || ''} onChange={(next) => { if (next) switchProject(next); }} options={projects.map((item) => ({ value: item.id, label: `${item.status === 'archived' ? '〔归档〕' : ''}${item.name}` }))} />{project && <button className="manage-button" onClick={() => setManagerOpen(true)}><MoreHorizontal size={16} />管理</button>}</div><nav><div className={`connection ${config?.kunpo.configured ? 'is-online' : ''}`}><i />{config?.kunpo.configured ? `${config.kunpo.mode === 'gateway' ? 'Gateway' : 'Kunpo API'} 已就绪` : 'Kunpo 未配置'}</div><button ref={galleryEntryRef} type="button" className={`gallery-entry ${galleryOpen ? 'is-active' : ''}`} aria-current={galleryOpen ? 'page' : undefined} title="图库：全部已生成的永久 CDN 图片" aria-label="图库" data-testid="gallery-entry" onClick={openGallery}><Images size={17} /></button>{project && config?.platform !== 'web' && <button title="在系统文件管理器中显示项目（macOS 为 Finder）" onClick={() => copilotApi.revealProject(project.id)}><FolderOpen size={17} /></button>}<button title="查看 AI 输入、产物与历史版本" onClick={() => setInspectorOpen(!inspectorOpen)}><PanelLeftClose size={17} /></button>{config?.platform !== 'web' && <button title="使用说明书" onClick={() => setGuideOpen(true)}><BookOpen size={17} /></button>}<button title="模型与工作区配置" onClick={() => setSettingsOpen(true)}><Settings2 size={17} /></button>{config?.platform === 'web' && <button title="退出当前飞书账号" onClick={() => copilotApi.logout()}><LogOut size={17} /></button>}</nav></header>
-    <div className="overlay-bar">{busyJob && <div className="busy-bar"><LoaderCircle className="spin" size={14} /><div><b>{busyJob.label}</b><span>{progress ? `${progress.completed}/${progress.total} · ${progress.message || ''}` : '正在处理'} · 已用时 {elapsed}s</span></div><small>{busyJob.projectId && project && busyJob.projectId !== project.id ? `任务属于项目「${busyJob.projectName || '其他项目'}」，结果不会覆盖当前页面` : busyJob.stage === 'visual_exploration' ? '结果会逐张保存' : '可继续浏览其他阶段'}</small></div>}{error && <div className="error-banner"><b>当前步骤未完成</b><span>{error}{retryTask?.projectId && project && retryTask.projectId !== project.id ? `（任务属于项目「${retryTask.projectName || '其他项目'}」，请先切回再重试）` : ''}</span>{retryTask && !busy && <button className="error-retry" onClick={retry} disabled={!retryMatchesContext}><RefreshCw size={13} />{retryMatchesContext ? '重试' : '回到原上下文后重试'}</button>}<button aria-label="关闭错误" onClick={() => setError('')}>×</button></div>}{galleryToast && <div className="gallery-undo-toast" role="status" data-testid="gallery-undo-toast"><Undo2 size={15} /><span>{galleryToast.message}</span>{galleryToast.asset && <button type="button" data-testid="gallery-undo" onClick={() => void undoGalleryHide()}>撤销</button>}<button type="button" aria-label="关闭提示" onClick={() => { window.clearTimeout(galleryToastTimer.current); setGalleryToast(null); }}>×</button></div>}</div>
+    <div className="overlay-bar">{busyJob && !galleryOpen && <div className="busy-bar"><LoaderCircle className="spin" size={14} /><div><b>{busyJob.label}</b><span>{progress ? `${progress.completed}/${progress.total} · ${progress.message || ''}` : '正在处理'} · 已用时 {elapsed}s</span></div><small>{busyJob.projectId && project && busyJob.projectId !== project.id ? `任务属于项目「${busyJob.projectName || '其他项目'}」，结果不会覆盖当前页面` : busyJob.stage === 'visual_exploration' ? '结果会逐张保存' : '可继续浏览其他阶段'}</small></div>}{error && feedbackVisible(error.scope, galleryOpen) && <div className="error-banner"><b>当前步骤未完成</b><span>{error.message}{retryTask?.projectId && project && retryTask.projectId !== project.id ? `（任务属于项目「${retryTask.projectName || '其他项目'}」，请先切回再重试）` : ''}</span>{retryTask && !busy && error.scope === 'workflow' && <button className="error-retry" onClick={retry} disabled={!retryMatchesContext}><RefreshCw size={13} />{retryMatchesContext ? '重试' : '回到原上下文后重试'}</button>}<button aria-label="关闭错误" onClick={() => setError('')}>×</button></div>}{galleryOpen && galleryToast && <div className="gallery-undo-toast" role="status" data-testid="gallery-undo-toast"><Undo2 size={15} /><span>{galleryToast.message}</span>{galleryToast.asset && <button type="button" data-testid="gallery-undo" onClick={() => void undoGalleryHide()}>撤销</button>}<button type="button" aria-label="关闭提示" onClick={() => { window.clearTimeout(galleryToastTimer.current); setGalleryToast(null); }}>×</button></div>}</div>
     {project && <div className="screen-manager-dock" inert={galleryOpen}><ScreenManager project={project} busy={busy} onProject={setProject} /></div>}
     <aside className="stage-rail" inert={galleryOpen}><div className="rail-title"><span>DESIGN FLOW</span></div><div className="stage-list">{stages.map((stage, index) => { const status = statusOf(project, stage.id); const Icon = stage.icon; return <button key={stage.id} data-testid={`stage-${stage.id}`} disabled={!project} className={`${activeStage === stage.id ? 'is-active' : ''} is-${status}`} onClick={() => setActiveStage(stage.id)}><div className="stage-node"><Icon size={16} /></div><div><span>{stage.number} · {stage.eyebrow}</span><b>{stage.label}</b><small>{stage.description}</small></div>{index < stages.length - 1 && <i className="stage-line" />}</button>; })}</div><div className="rail-principle"><Bot size={17} /><p><b>状态属于设计流水线</b><br />模型生成、人工修改和批准都保留可追踪版本。</p></div></aside>
     <main ref={mainWorkspaceRef} className="main-workspace" inert={galleryOpen}>{!project ? <div className="welcome"><Aperture size={38} /><h1>为游戏 UI 设计师准备的 AI 流水线</h1><p>从 UE 理解到视觉交付，每个决策都可修改、可追踪、可复现。</p><button className="button button--primary" onClick={() => setCreateOpen(true)}><Plus size={16} />建立第一个项目</button></div> : activeStage === 'input' ? <InputWorkspace key={`${project.id}:${project.screen_id || ''}`} project={project} busy={busy} run={run} /> : activeStage === 'wireframe_interpretation' ? <ContractWorkspace project={project} busy={busy} run={run} onNavigate={setActiveStage} /> : activeStage === 'layout_design' ? <LayoutWorkspace key={`${project.id}:${project.screen_id || ''}`} project={project} busy={busy} run={run} onNavigate={setActiveStage} /> : activeStage === 'style_resolution' ? <StyleWorkspace project={project} busy={busy} run={run} /> : <VisualWorkspace project={project} busy={busy} run={run} canCancel={busyJob?.stage === 'visual_exploration'} onCancel={cancelVisual} />}</main>
     {inspectorOpen && <aside className="artifact-inspector" inert={galleryOpen}><div className="inspector-head"><span>AI 输入、产物与版本</span><FileJson size={17} /></div>{activeStage === 'input' && project ? <InputSourceSummary project={project} /> : currentArtifact ? <JsonSummary artifact={currentArtifact} history={project?.artifactHistory?.filter((item) => item.id === currentArtifact.id || item.kind.includes(activeStage.split('_')[0]))} /> : <EmptyArtifact title="当前阶段尚无 AI 产物" copy="完成当前步骤后，版本、来源、结构化内容和历史快照会显示在这里。" />}<div className="inspector-foot"><b>{config?.platform === 'web' ? '在线项目空间' : '本地项目目录'}</b><code>{config?.workspaceRoot || '加载中…'}</code><small>批准与生成结果均保存在这里，可随时回看历史版本。</small></div></aside>}
-    {galleryMounted && <GalleryWorkspace ref={galleryRef} open={galleryOpen} explorationBusy={busyJob?.stage === 'visual_exploration'} onClose={closeGallery} onHidden={(asset) => showGalleryToast({ asset, message: `已从图库移除「${asset.project_name_snapshot || '未知项目'} · ${asset.screen_name_snapshot || '未知 Screen'}」。云端文件不会被删除。` })} onRestored={() => showGalleryToast({ message: '已恢复到图库。' }, 4000)} onError={setError} onNotify={(message) => showGalleryToast({ message }, 4000)} />}
+    {galleryMounted && <GalleryWorkspace ref={galleryRef} open={galleryOpen} explorationBusy={busyJob?.stage === 'visual_exploration'} onClose={closeGallery} onHidden={(asset) => showGalleryToast({ asset, message: `已从图库移除「${asset.project_name_snapshot || '未知项目'} · ${asset.screen_name_snapshot || '未知 Screen'}」。云端文件不会被删除。` })} onRestored={() => showGalleryToast({ message: '已恢复到图库。' }, 4000)} onError={(message) => setError(message, 'gallery')} onNotify={(message) => showGalleryToast({ message }, 4000)} />}
     {createOpen && <NewProjectDialog onCreate={create} onClose={projects.length ? () => setCreateOpen(false) : undefined} onLogout={config?.platform === 'web' ? () => { void copilotApi.logout(); } : undefined} busy={busy} />}{settingsOpen && config && <SettingsDialog config={config} onSaved={setConfig} onClose={() => setSettingsOpen(false)} />}{managerOpen && project && <ProjectManager project={project} projects={projects} busy={busy} run={run} onClose={() => setManagerOpen(false)} onSwitch={switchProject} />}{guideOpen && <GuideModal onClose={() => setGuideOpen(false)} onOpenExternal={openGuide} />}
   </div>;
 }

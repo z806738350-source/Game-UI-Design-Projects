@@ -13,6 +13,8 @@ const listGallery = vi.fn(async (..._args: unknown[]): Promise<GalleryListResult
 const hideGalleryAsset = vi.fn();
 const restoreGalleryAsset = vi.fn();
 const downloadGalleryAsset = vi.fn();
+const saveProject = vi.fn();
+const draftRequirement = vi.fn();
 vi.mock('./api', () => ({
   copilotApi: {
     getConfig: vi.fn(async (): Promise<AppConfig> => ({
@@ -27,7 +29,9 @@ vi.mock('./api', () => ({
     listGallery: (...args: unknown[]) => listGallery(...args),
     hideGalleryAsset: (...args: unknown[]) => hideGalleryAsset(...args),
     restoreGalleryAsset: (...args: unknown[]) => restoreGalleryAsset(...args),
-    downloadGalleryAsset: (...args: unknown[]) => downloadGalleryAsset(...args)
+    downloadGalleryAsset: (...args: unknown[]) => downloadGalleryAsset(...args),
+    saveProject: (...args: unknown[]) => saveProject(...args),
+    draftRequirement: (...args: unknown[]) => draftRequirement(...args)
   }
 }));
 
@@ -49,6 +53,9 @@ afterEach(() => {
   hideGalleryAsset.mockReset();
   restoreGalleryAsset.mockReset();
   downloadGalleryAsset.mockReset();
+  saveProject.mockReset();
+  saveProject.mockResolvedValue(undefined);
+  draftRequirement.mockReset();
 });
 
 describe('App 顶栏帮助入口', () => {
@@ -240,5 +247,119 @@ describe('App 图库入口与无损往返', () => {
     await user.click(screen.getByTestId('gallery-undo'));
     await waitFor(() => expect(restoreGalleryAsset).toHaveBeenCalledWith('asset-1'));
     await waitFor(() => expect(screen.queryByTestId('gallery-undo-toast')).toBeNull());
+  });
+});
+
+// 反馈按上下文隔离：提示条是遮挡层，工作流的忙碌条/错误条不得跟随进入图库
+// 遮挡图库功能按钮，图库的撤销提示与错误也不得悬浮在工作流上；顶栏等两界
+// 共用入口的错误（global）两边都显示。图库态的后台信号是标题行不遮挡状态片。
+describe('App 反馈按上下文隔离', () => {
+  const openInputProject = () => {
+    const project = makeProject({ id: 'project-iso', name: '隔离项目', wireframe_path: '/tmp/wireframe.png', workflow: { current_stage: 'input', stages: {} } });
+    listProjects.mockResolvedValue([{ id: project.id, name: project.name, project_type: 'existing', status: 'draft', updated_at: project.updated_at, workspacePath: project.workspacePath }]);
+    openProject.mockResolvedValue(project);
+    return project;
+  };
+
+  it('工作流忙碌条不跟随进入图库；非探索任务在图库不显示状态片', async () => {
+    const user = userEvent.setup();
+    openInputProject();
+    draftRequirement.mockImplementation(() => new Promise(() => {}));
+    render(<App />);
+    await user.click(await screen.findByTestId('intent-draft'));
+    await waitFor(() => expect(document.querySelector('.busy-bar')).not.toBeNull());
+    await user.click(screen.getByTestId('gallery-entry'));
+    await waitFor(() => expect(document.querySelector('.busy-bar')).toBeNull());
+    expect(screen.queryByTestId('gallery-busy-chip')).toBeNull();
+    await user.click(screen.getByTestId('gallery-back'));
+    await waitFor(() => expect(document.querySelector('.busy-bar')).not.toBeNull());
+  });
+
+  it('workflow 作用域错误只在工作流显示，切回后状态保留', async () => {
+    const user = userEvent.setup();
+    openInputProject();
+    draftRequirement.mockRejectedValue(new Error('模型不可用'));
+    render(<App />);
+    await user.click(await screen.findByTestId('intent-draft'));
+    await screen.findByText('当前步骤未完成');
+    await user.click(screen.getByTestId('gallery-entry'));
+    await waitFor(() => expect(document.querySelector('.error-banner')).toBeNull());
+    await user.click(screen.getByTestId('gallery-back'));
+    await screen.findByText('当前步骤未完成');
+  });
+
+  it('gallery 作用域错误只在图库显示', async () => {
+    const user = userEvent.setup();
+    openInputProject();
+    const asset = makeGalleryAsset();
+    listGallery.mockResolvedValue({ items: [asset], total: 1, nextCursor: null, facets: { projects: [], screens: [] } });
+    hideGalleryAsset.mockRejectedValue(new Error('索引写入失败'));
+    render(<App />);
+    await user.click(await screen.findByTestId('gallery-entry'));
+    await screen.findByTestId('gallery-card');
+    await user.click(screen.getByRole('button', { name: '移除' }));
+    await screen.findByText('当前步骤未完成');
+    await user.click(screen.getByTestId('gallery-back'));
+    await waitFor(() => expect(document.querySelector('.error-banner')).toBeNull());
+  });
+
+  it('global 作用域错误在图库与工作流都显示', async () => {
+    const user = userEvent.setup();
+    openInputProject();
+    openUserGuide.mockResolvedValue({ ok: false });
+    render(<App />);
+    await user.click(await screen.findByTitle('使用说明书'));
+    await user.click(screen.getByRole('button', { name: '在系统浏览器中打开' }));
+    await screen.findByText(/无法打开使用说明书/);
+    await user.click(screen.getByRole('button', { name: '关闭' }));
+    await user.click(screen.getByTestId('gallery-entry'));
+    await screen.findByText(/无法打开使用说明书/);
+  });
+
+  // 重试入口属于工作流上下文：图库态忙碌条被抑制、状态片只对视觉探索出现，
+  // 若在图库内点重试会全程零反馈地重跑工作流任务，还会改动 inert 覆盖层后
+  // 面的阶段。入口只跟随 workflow 作用域错误。
+  it('图库态错误条不携带工作流重试入口，回到工作流后重试入口恢复且可重跑', async () => {
+    const user = userEvent.setup();
+    openInputProject();
+    listGallery.mockResolvedValue({ items: [makeGalleryAsset()], total: 1, nextCursor: null, facets: { projects: [], screens: [] } });
+    draftRequirement.mockRejectedValue(new Error('模型不可用'));
+    hideGalleryAsset.mockRejectedValue(new Error('索引写入失败'));
+    render(<App />);
+    await user.click(await screen.findByTestId('intent-draft'));
+    await screen.findByText('当前步骤未完成');
+    expect(screen.getByRole('button', { name: '重试' })).toBeTruthy();
+    // 工作流错误在图库内隐藏；图库操作失败后错误条重新出现，但不得带上
+    // 那个属于工作流的重试入口。
+    await user.click(screen.getByTestId('gallery-entry'));
+    await user.click(await screen.findByRole('button', { name: '移除' }));
+    await screen.findByText('当前步骤未完成');
+    expect(document.querySelector('.error-retry')).toBeNull();
+    // 回到工作流重新触发 workflow 错误：重试入口恢复，且点击真的重跑任务。
+    await user.click(screen.getByTestId('gallery-back'));
+    await user.click(screen.getByTestId('intent-draft'));
+    await user.click(await screen.findByRole('button', { name: '重试' }));
+    await waitFor(() => expect(draftRequirement).toHaveBeenCalledTimes(3));
+  });
+
+  // 图库实例常驻，隐藏/恢复/下载的回调在 await 之后无条件触发：请求在飞时
+  // 返回工作流，回执不得泄漏到工作流视图，重开图库也不得看到残留提示。
+  it('图库请求在飞时返回工作流：撤销提示不泄漏，重开图库不残留', async () => {
+    const user = userEvent.setup();
+    openInputProject();
+    const asset = makeGalleryAsset();
+    listGallery.mockResolvedValue({ items: [asset], total: 1, nextCursor: null, facets: { projects: [], screens: [] } });
+    let resolveHide: (value: GalleryAsset) => void = () => {};
+    hideGalleryAsset.mockImplementation(() => new Promise<GalleryAsset>((resolve) => { resolveHide = resolve; }));
+    render(<App />);
+    await user.click(await screen.findByTestId('gallery-entry'));
+    await user.click(await screen.findByRole('button', { name: '移除' }));
+    await waitFor(() => expect(hideGalleryAsset).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByTestId('gallery-back'));
+    resolveHide({ ...asset, hidden_at: new Date().toISOString() });
+    await waitFor(() => expect(screen.queryByTestId('gallery-undo-toast')).toBeNull());
+    await user.click(screen.getByTestId('gallery-entry'));
+    await screen.findByTestId('gallery-overlay');
+    expect(screen.queryByTestId('gallery-undo-toast')).toBeNull();
   });
 });

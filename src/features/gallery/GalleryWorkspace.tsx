@@ -280,6 +280,7 @@ export const GalleryWorkspace = forwardRef<GalleryHandle, {
       <button ref={backRef} className="gallery-back" onClick={onClose} data-testid="gallery-back"><ArrowLeft size={15} />返回工作流</button>
       <h1>图库</h1>
       {result && <span className="gallery-count" data-testid="gallery-count">{result.total}</span>}
+      {explorationBusy && <span className="gallery-busy-chip" role="status" data-testid="gallery-busy-chip"><LoaderCircle className="spin" size={11} />视觉探索进行中 · 新图会逐张出现</span>}
       <p>按项目与 Screen 整理已生成的永久 CDN 图片；移除只是从图库隐藏，绝不删除云端文件。</p>
     </header>
     <div className="gallery-filters">
