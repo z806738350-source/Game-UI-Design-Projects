@@ -123,6 +123,9 @@ test.describe('gallery workspace (§11.5)', () => {
     await expect(toast).toContainText('已恢复');
     await page.getByRole('button', { name: '全部图片' }).click();
     await expect(page.getByTestId('gallery-card')).toHaveCount(2, { timeout: 30_000 });
+    // 反馈按上下文隔离：撤销提示属于图库上下文，返回工作流即清除，不得遮挡工作流按钮。
+    await page.getByTestId('gallery-back').click();
+    await expect(page.getByTestId('gallery-undo-toast')).toHaveCount(0);
   });
 
   test('返回工作流：原项目与阶段保留，焦点回到图库入口', async () => {
@@ -134,6 +137,32 @@ test.describe('gallery workspace (§11.5)', () => {
     expect(snapshot.screen_id).toBe(screenId);
     const focusTestId = await page.evaluate(() => document.activeElement?.getAttribute('data-testid') || '');
     expect(focusTestId).toBe('gallery-entry');
+  });
+
+  test('通知层几何：工作流态让出左侧轨道，图库态满幅覆盖', async () => {
+    // .overlay-bar 高度为 0（不占文档流），Playwright 会判定不可见，
+    // 因此几何一律用 getBoundingClientRect 直接量。
+    if (await page.getByTestId('gallery-overlay').count()) {
+      await page.getByTestId('gallery-back').click();
+      await expect(page.getByTestId('gallery-overlay')).toHaveCount(0);
+    }
+    // 工作流态：提示条只允许覆盖右侧工作区，左边界必须等于轨道右缘。
+    const workflow = await page.evaluate(() => {
+      const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+      const bar = rect('.overlay-bar');
+      return { barLeft: bar.left, railRight: rect('.stage-rail').right, mainLeft: rect('.main-workspace').left };
+    });
+    expect(workflow.barLeft).toBeCloseTo(workflow.railRight, 0);
+    expect(workflow.barLeft).toBeCloseTo(workflow.mainLeft, 0);
+
+    // 图库态：整屏覆盖，撤销提示按裁定保持满幅。
+    await openGalleryIfClosed(page);
+    const gallery = await page.evaluate(() => {
+      const bar = document.querySelector('.overlay-bar')!.getBoundingClientRect();
+      return { barLeft: bar.left, barWidth: bar.width, viewportWidth: window.innerWidth };
+    });
+    expect(gallery.barLeft).toBe(0);
+    expect(gallery.barWidth).toBeCloseTo(gallery.viewportWidth, 0);
   });
 
   test('可下载路线通过受控镜像下载原图', async () => {

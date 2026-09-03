@@ -143,6 +143,8 @@ ARIA（WAI-ARIA select-only combobox + listbox 模型）：触发元素是 `role
 
 - 列表/卡片条目的状态用 2-3px 左边条或描边表达（`is-approved` 绿、`is-failed` 红等），与状态胶囊同源。
 - 提示条语义：AI 相关用紫（`.ai-reading-note`）、容量/待确认用橙（`.capacity-warning`）、错误用红（`.error-banner`）、中性说明用 `--muted` + `--panel-2`（`.settings-note`），不得随意配色。
+- 顶部通知层几何（`.overlay-bar`，承载 `.busy-bar` / `.error-banner` / 图库撤销提示）：工作流态只覆盖右侧工作区，左边界取 `--rail-w`（DESIGN FLOW 轨道宽度的唯一事实来源，定义在 `.app-shell`，1320px 断点改为 244px），禁止满幅遮挡轨道；仅图库态 `.app-shell.is-gallery` 恢复满幅。回归测试：`tests/ui-e2e/gallery.spec.ts`「通知层几何」。
+- 反馈按上下文隔离：提示条是遮挡层，禁止跨上下文显示。工作流 `.busy-bar` 与 workflow 作用域错误不在图库态渲染（图库标题行用不遮挡的 `.gallery-busy-chip` 解释视觉探索逐张落盘）；图库撤销提示与 gallery 作用域错误不在工作流态渲染（离开图库即清除提示）；顶栏等两界共用入口的错误为 global，两界都显示。作用域定义见 `src/App.tsx` 的 `FeedbackScope`。
 
 ### 6.5 弹窗与空态
 

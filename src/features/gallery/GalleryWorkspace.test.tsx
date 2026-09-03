@@ -79,6 +79,15 @@ describe('GalleryWorkspace 状态', () => {
     await screen.findByText('图库还是空的');
   });
 
+  it('视觉探索进行中在标题行显示不遮挡的状态片，任务结束即消失', async () => {
+    listGallery.mockResolvedValue(makeResult([makeAsset()]));
+    const view = renderGallery({ explorationBusy: true });
+    const chip = await screen.findByTestId('gallery-busy-chip');
+    expect(chip.textContent).toContain('视觉探索进行中');
+    view.rerender(<GalleryWorkspace open explorationBusy={false} onClose={view.onClose} onHidden={view.onHidden} onRestored={view.onRestored} onError={view.onError} onNotify={view.onNotify} />);
+    expect(screen.queryByTestId('gallery-busy-chip')).toBeNull();
+  });
+
   it('open=false 时不渲染任何内容', () => {
     const { container } = render(<GalleryWorkspace open={false} explorationBusy={false} onClose={vi.fn()} onHidden={vi.fn()} onRestored={vi.fn()} onError={vi.fn()} onNotify={vi.fn()} />);
     expect(container.innerHTML).toBe('');
