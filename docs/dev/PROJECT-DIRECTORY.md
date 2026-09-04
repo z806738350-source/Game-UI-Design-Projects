@@ -60,6 +60,11 @@
   去重的可重建查询视图，权威仍在各项目 `screens/{screen_id}/explorations/
   results.json` 与 `workflow/` 历史快照；丢失后可由打开图库时的回填/对账
   重建，损坏时报错而不静默清空，回滚代码也不删除该文件。
+- 助手数据位于桌面端 `<userData>/assistant/`，Web 端位于
+  `<dataRoot>/tenants/<tenantId>/assistant/`。它是应用用户或租户级数据，
+  不属于项目目录、不进入 `artifactRegistry.cjs`，也不随项目备份、复制、
+  归档或删除；每条对话在元数据中不可变绑定项目与 Screen，服务端仍以
+  对应用户/租户根目录作为隔离边界。
 
 ## 3. 备份与迁移
 
@@ -74,3 +79,4 @@
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
 | 1.1 | 2026-08-19 | PR-22 修正 per-screen inputs 位置；补 reference-pack / underlay-repair-task / visual-task |
 | 1.2 | 2026-09-01 | 图库功能：说明 `.gallery/index.json` 为 workspace 用户级索引，不属项目目录与 Artifact Registry |
+| 1.3 | 2026-09-05 | 内嵌助手：登记桌面用户级与 Web 租户级存储，不纳入项目/Artifact 生命周期 |

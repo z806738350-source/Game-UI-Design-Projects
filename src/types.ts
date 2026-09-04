@@ -211,10 +211,71 @@ export type AppConfig = {
     mode: string;
     envSource: string;
     modelSource?: string;
+    assistantModel: string;
     visionModel: string;
     critiqueModel?: string;
     imageModel: string;
   };
+  features: { assistant: boolean };
+};
+
+export type AssistantMode = 'qa' | 'execute';
+export type AssistantRunStatus = 'queued' | 'running' | 'awaiting_confirmation' | 'executing' | 'succeeded' | 'failed' | 'stale' | 'cancelled' | 'interrupted';
+export type AssistantConversationMeta = {
+  schema_version: '1.0';
+  conversation_id: string;
+  title: string;
+  project_id: string;
+  screen_id: string;
+  created_at: string;
+  updated_at: string;
+  has_pending_action?: boolean;
+};
+export type AssistantMessage = {
+  id: string;
+  seq: number;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+};
+export type AssistantRisk = {
+  writes_project: boolean;
+  replaces_content: boolean;
+  reversible: boolean;
+  external_cost: boolean;
+};
+export type AssistantAction = {
+  action_id: string;
+  name: 'save_intent_review_draft';
+  label: string;
+  reason: string;
+  args: Record<string, unknown>;
+  risk: AssistantRisk;
+};
+export type AssistantChangedField = { kind: 'input_revision' | 'artifact_version' | 'artifact_status'; key: string; expected: number | string; actual: number | string };
+export type AssistantRun = {
+  schema_version: '1.0';
+  run_id: string;
+  conversation_id: string;
+  status: AssistantRunStatus;
+  mode: AssistantMode;
+  request_message_id: string | null;
+  context: { project_id: string; screen_id: string; input_revisions: Record<string, number>; artifact_versions: Record<string, number> };
+  proposed_action: AssistantAction | null;
+  result: { noop?: boolean; intent_review_revision?: number; reply_saved?: boolean } | null;
+  error: { code: string; message: string; changed?: AssistantChangedField[] } | null;
+  created_at: string;
+  updated_at: string;
+};
+export type AssistantConversation = {
+  meta: AssistantConversationMeta;
+  messages: AssistantMessage[];
+  runs: AssistantRun[];
+  summary: { schema_version: '1.0'; through_seq: number; summary: string; updated_at: string } | null;
+};
+export type AssistantConversationList = {
+  conversations: AssistantConversationMeta[];
+  warnings: Array<{ conversation_id: string; code: string; message: string }>;
 };
 
 // 图库（v1.1 §5.3 / §7）：用户级索引资产与查询合同。

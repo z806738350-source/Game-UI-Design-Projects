@@ -47,6 +47,7 @@ function readModelConfig(modelConfigPath) {
     const value = JSON.parse(fs.readFileSync(modelConfigPath, 'utf8'));
     if (!value || typeof value !== 'object') return {};
     return {
+      assistantModel: typeof value.assistantModel === 'string' ? value.assistantModel.trim() : '',
       visionModel: typeof value.visionModel === 'string' ? value.visionModel.trim() : '',
       critiqueModel: typeof value.critiqueModel === 'string' ? value.critiqueModel.trim() : '',
       imageModel: typeof value.imageModel === 'string' ? value.imageModel.trim() : ''
@@ -59,11 +60,14 @@ function readModelConfig(modelConfigPath) {
 
 function saveModelConfig(projectRoot, input, processEnv = process.env, options = {}) {
   const modelConfigPath = resolveModelConfigPath(projectRoot, processEnv, options);
+  const current = readModelConfig(modelConfigPath);
+  const visionModel = input?.visionModel !== undefined ? input.visionModel : current.visionModel;
   const value = {
-    schema_version: '1.0',
-    visionModel: validateModelName(input?.visionModel, '视觉理解模型'),
-    critiqueModel: validateModelName(input?.critiqueModel || input?.visionModel, '视觉审查模型'),
-    imageModel: validateModelName(input?.imageModel, '图像模型'),
+    schema_version: '1.1',
+    assistantModel: validateModelName(input?.assistantModel !== undefined ? input.assistantModel : current.assistantModel || visionModel, '助手文本模型'),
+    visionModel: validateModelName(visionModel, '视觉理解模型'),
+    critiqueModel: validateModelName(input?.critiqueModel !== undefined ? input.critiqueModel : current.critiqueModel || visionModel, '视觉审查模型'),
+    imageModel: validateModelName(input?.imageModel !== undefined ? input.imageModel : current.imageModel, '图像模型'),
     updated_at: new Date().toISOString()
   };
   fs.mkdirSync(path.dirname(modelConfigPath), { recursive: true, mode: 0o700 });
@@ -101,11 +105,16 @@ function loadKunpoConfig(projectRoot, processEnv = process.env, options = {}) {
     mode,
     configured: Boolean(baseUrl && (mode === 'gateway' || apiKey)),
     envSource: path.basename(envPath),
-    modelSource: modelConfig.visionModel || modelConfig.imageModel ? path.basename(modelConfigPath) : path.basename(envPath),
+    modelSource: modelConfig.assistantModel || modelConfig.visionModel || modelConfig.critiqueModel || modelConfig.imageModel ? path.basename(modelConfigPath) : path.basename(envPath),
+    assistantModel: modelConfig.assistantModel || modelConfig.visionModel || String(processEnv.KUNPO_VISION_MODEL || fileValues.KUNPO_VISION_MODEL || '').trim() || 'google/gemini-3.1-flash-lite',
     visionModel: modelConfig.visionModel || String(processEnv.KUNPO_VISION_MODEL || fileValues.KUNPO_VISION_MODEL || '').trim() || 'google/gemini-3.1-flash-lite',
     critiqueModel: modelConfig.critiqueModel || String(processEnv.KUNPO_CRITIQUE_MODEL || fileValues.KUNPO_CRITIQUE_MODEL || '').trim() || modelConfig.visionModel || String(processEnv.KUNPO_VISION_MODEL || fileValues.KUNPO_VISION_MODEL || '').trim() || 'google/gemini-3.1-flash-lite',
     imageModel: modelConfig.imageModel || String(processEnv.KUNPO_IMAGE_MODEL || fileValues.KUNPO_IMAGE_MODEL || '').trim() || 'Image-GPT2'
   };
 }
 
-module.exports = { loadKunpoConfig, parseEnv, readModelConfig, resolveModelConfigPath, saveModelConfig, validateModelName };
+function assistantEnabled(processEnv = process.env) {
+  return processEnv.GAME_UI_ASSISTANT_ENABLED === 'true';
+}
+
+module.exports = { assistantEnabled, loadKunpoConfig, parseEnv, readModelConfig, resolveModelConfigPath, saveModelConfig, validateModelName };

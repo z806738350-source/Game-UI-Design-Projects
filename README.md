@@ -76,6 +76,14 @@ pnpm test:ui-e2e        # Playwright Electron E2E（需先 pnpm build）
 KUNPO_GATEWAY_BASE_URL=http://127.0.0.1:9020/v1
 ```
 
+内嵌智能助手默认关闭。需要启用时，在同一环境文件中加入下列唯一开关并重启桌面应用或 Web 服务；关闭开关不会删除既有助手对话或项目数据：
+
+```env
+GAME_UI_ASSISTANT_ENABLED=true
+```
+
+启用后可在右上角打开“AI 助手”，并在“模型与工作区配置”中单独设置助手文本模型。助手对项目的写入会先显示动作详情并等待人工确认；批准、豁免和人工验收不向模型开放。
+
 本地开发也支持直连配置，但 Key 只在 Electron 主进程中读取，不会进入 renderer：
 
 ```env

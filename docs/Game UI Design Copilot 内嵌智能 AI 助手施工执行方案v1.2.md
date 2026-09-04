@@ -7,6 +7,7 @@
 > - 上游方案：`docs/Game-UI-Design-Copilot-AI-Assistant-Implementation-Plan.md`（v1.0）
 > - 文档基线规则：`10ffb70` 只标识源码核验点，不包含本方案与指南 1.3；A0 的第一步是把两份文档作为同一 docs-only 基线提交，A1 必须从包含该提交的分支开始
 > - 方案状态：**可按 A0 → A1 → A2 顺序施工；不得跳过 A0，也不得直接照搬 v1.0 开工**
+> - 本地执行状态（2026-09-05）：docs-only 基线提交 `113e1ec` 已建立；A0、A1、A2 已在本地完成并通过全量自动验收。远端推送仍受发布前安全审计约束，不代表在线版已更新。
 
 ---
 
@@ -133,7 +134,7 @@ v1.2 采用“最小但可交付”的路线：
 | P1 | §15.3 验收档位含桌面不可达的 1120px | 真正的 280px 约束档没被验收，等于一条假验收项 | 改为桌面两档实测 + Web 一档临界窗宽 |
 | P1 | 「不新增 z-index 层」与「删除二次确认」表述互斥 | 实现者会在内联弱确认与违规新建层之间二选一 | 明确复用 `.dialog-backdrop`(z-100) + `.utility-dialog`，复用不属新增层 |
 | P1 | 把“模型正文必须全中文”写成可保证验收项 | 提示词不能保证输出语言；补语言检测/翻译又会增加误判与新失败面 | 应用自有按钮、状态、字段和错误保证简体中文；模型正文只用系统提示尽力约束，状态词永远走结构化映射 |
-| P1 | §13.2 漏 `scripts/check-error-docs.cjs` | 该门禁按三个硬编码标题分段校验，当前无助手分组，加 `ASSISTANT_*` 后 `test:docs` 必挂 | A0 一次定全助手错误码清单，并同改 `errorCodes.cjs`、`ERROR-CATALOG.md` 与门禁分段表 |
+| P1 | 助手错误码可能另开注册组 | `check-error-docs.cjs` 按三个 `##` 标题分段校验；另开第四组会扩大注册与门禁结构 | 助手码继续属于既有 `ERROR_CODES`，只在其现有区间增加 `### 内嵌智能助手`；脚本保持不变并用 `test:docs` 验证 |
 | P2 | 未禁原生 `<select>`，未定 Composer 规格、字号阶梯与 BEM 类名 | 实现期风格漂移 | §12 逐项引用指南 §6.1 / §6.2 / §2.5 / §1 |
 | P2 | 新增 `<userData>/assistant/` 与 `<tenantRoot>/assistant/` 未登记磁盘布局 | 人读事实源缺项 | §13.2 增加 `docs/dev/PROJECT-DIRECTORY.md` |
 | P1 | 大量新组件、策略层和适配层 | 入口分散、状态重复、首版难以定位故障 | 后端三文件、前端一个主要功能组件起步 |
@@ -744,7 +745,7 @@ ponytail: 首版每租户一个未完成助手 run；出现真实并行需求且
 
 首版只承诺：
 
-- 队列中尚未开始的助手请求可以取消；
+- Store/Runtime 接口允许调用方在已持有 `run_id` 时取消尚未开始的 `queued` 请求；首版同步 IPC/HTTP 在模型返回前不会把该 ID 暴露给 Renderer，因此 UI **不承诺**取消正在等待的模型请求；
 - 等待用户确认的动作可以取消；
 - 尚未进入领域服务的动作不会执行。
 
@@ -1044,12 +1045,13 @@ src/styles.css                             # 保留 :668；新增 dialog 元素 
 tests/ui-e2e/gallery.spec.ts               # 通知层几何与 pointer-events 回归
 docs/dev/FRONTEND-DESIGN-GUIDE.md          # 助手专属条款已随本方案 v1.2 落入指南 1.3；功能完成时只补实际偏差，不重写裁定
 docs/dev/ERROR-CATALOG.md                  # 登记 ASSISTANT_DISABLED、ASSISTANT_ACTION_STALE 等稳定错误码
-scripts/check-error-docs.cjs               # 错误码目录门禁：分区标题是硬编码字符串，见下方说明
+scripts/check-error-docs.cjs               # 只复核，不修改：助手码留在既有 ERROR_CODES 区间
 docs/dev/PROJECT-DIRECTORY.md              # 按图库先例声明助手目录的归属，见下方说明
-docs/README.md                             # 功能完成后登记，不提前占位
+.env.example                               # 登记唯一功能开关；默认关闭，进程重启后生效
+README.md                                  # 功能完成后登记入口、模型与人工确认边界
 ```
 
-**`scripts/check-error-docs.cjs` 必须同步修改，否则第一个助手错误码就会让 `pnpm run test:docs` 变红。**该脚本对 `errorCodes.cjs` 与 `ERROR-CATALOG.md` 做双向冻结校验，而分区边界是硬编码的字面量（脚本第 43-45 行）：
+`scripts/check-error-docs.cjs` 对 `errorCodes.cjs` 与 `ERROR-CATALOG.md` 做双向冻结校验，分区边界是硬编码的字面量（脚本第 43-45 行）：
 
 ```js
 ['ERROR_CODES', '## 一、管线错误码', '## 二、Fidelity 检查码'],
@@ -1059,9 +1061,9 @@ docs/README.md                             # 功能完成后登记，不提前�
 
 只有落在这三个 `##` 区间内的表格码才会被统计。因此把 `ASSISTANT_*` 放进新开的 `## 五、助手错误码` 而不改脚本，门禁会判定"注册表里有、目录里没有"；反过来只在目录里写而不注册，会判定"目录里有、注册表里没有"。首版按最小改动执行：
 
-1. 把 `## 一、管线错误码` 改名为 `## 一、管线与助手错误码`，并同步改脚本里这一处字面量；
-2. 在该区间内新增 `### 助手错误码` 子块（`###` 不影响 `##` 边界识别），表格中登记全部助手码；
-3. 助手码继续注册在现有 `ERROR_CODES` 组，**不新增第四个注册组**——新增组意味着再改一次脚本的 `registry` 构造与 `sectionBounds`，而首版助手码数量在个位数，收益不抵成本；
+1. 保留既有 `## 一、管线错误码` 标题与脚本边界不变；
+2. 在该区间内新增 `### 内嵌智能助手` 子块（`###` 不影响 `##` 边界识别），表格中登记全部十个助手码；
+3. 助手码继续注册在现有 `ERROR_CODES` 组，**不新增第四个注册组**。普通测试足以防止代码与目录漂移，不为命名再造一层门禁。
 4. 改完立即跑 `pnpm run test:docs`，确认四条门禁全绿再提交。
 
 **`docs/dev/PROJECT-DIRECTORY.md` 必须登记助手目录的归属。**该文档 §2「路径规则」已有图库先例（其自身 v1.2 变更记录：说明 `<workspaceRoot>/.gallery/index.json` 是 workspace 用户级索引，不属项目目录与 Artifact Registry）。助手存储同理但位置不同——它在 `<userData>/assistant/`（桌面）与 `<dataRoot>/tenants/<tenantId>/assistant/`（在线），既不在项目 workspace 内，也不由 Artifact Registry 管理。必须照同一格式补一条说明，否则后来者会以为助手数据是项目产物的一部分，进而把它纳入项目备份、克隆或归档语义（§6.1 的隔离承诺要求它恰恰**不**参与这些）。`scripts/check-project-tree.cjs` 校验的是 README 目录树、`docs/schemas/project-directory.required.json` 与 `artifactRegistry.cjs` 三者一致，助手目录不在这三者的范围内，因此该脚本本身无需修改。
@@ -1115,6 +1117,8 @@ AssistantSettings.tsx
 - 没有新增 Agents SDK 依赖；
 - schema 与错误码已被测试锁定；
 - 五项设计裁定与状态映射已写入方案并对齐指南 1.3，无一项留作“实现时再定”。
+
+执行记录（2026-09-05）：`assistantGatewayProbe` 使用现有 Chat Completions + `json_object` 合同向实际网关发出最小请求，`gpt-5.6-sol` 返回合法 `reply` 与动作对象；未发送项目内容。首版不依赖且未宣称支持原生函数调用、SSE 或断线续传，这些能力维持“未验证/不启用”。
 
 ### 阶段 A1：持久对话与只读助手
 
@@ -1318,7 +1322,7 @@ pnpm run test:docs
 
 如果涉及在线路由，再执行现有 Web/tenant 相关回归；如果涉及视觉布局，在**桌面真实可达的两档**做人工验收：1321×900 与 1180×760（后者对应 `@media (max-width: 1320px)`，右列 280px、`--rail-w` 244px）。**不要**在 1120px 做助手验收——`electron/main.cjs` 的 `minWidth: 1180` 使该断点在桌面版永远不触发；在线版只需额外确认窄窗不横向溢出、不崩溃。首版不新增断点，也不引入覆盖式助手布局。
 
-若本次改动触及 `docs/dev/ERROR-CATALOG.md` 或 `electron/services/errorCodes.cjs`，`pnpm run test:docs` 必须与 `scripts/check-error-docs.cjs` 的同步修改（§13.2）一起提交，不得先合并错误码再补门禁。
+若本次改动触及 `docs/dev/ERROR-CATALOG.md` 或 `electron/services/errorCodes.cjs`，必须在同一提交中保持双向登记并通过 `pnpm run test:docs`。助手码位于既有 `ERROR_CODES` 区间，不修改 `scripts/check-error-docs.cjs`。
 
 ---
 
@@ -1457,54 +1461,54 @@ Electron 主进程和 Web 服务端各自在启动时读取一次，并通过现
 
 ## 19. 开工检查单
 
-### 开始 A0 前
+### 开始 A0 前（已完成）
 
-- [ ] 本方案与 `FRONTEND-DESIGN-GUIDE.md` 1.3 已形成同一 docs-only 基线提交；A1 分支包含该提交；
-- [ ] 产品确认首版项目与 Screen 绑定不可变；
-- [ ] 产品接受首版一个未完成 run（包含等待确认）、无伪流式；
-- [ ] 明确首个写动作仅为意图审查草稿；
-- [ ] 确认全仓唯一 `GAME_UI_ASSISTANT_ENABLED` 默认关闭，并经 AppConfig 同步门禁 UI 与后端；
-- [ ] 确认 §12 已以 `10ffb70` 和 PR #80 通知层规则为基线；
-- [ ] 确认首版只复用右侧辅助列，不做 overlay/drawer；
-- [ ] 确认不引入语义记忆和 MemoryPanel；
-- [ ] 已读 `docs/dev/FRONTEND-DESIGN-GUIDE.md` 1.3 全文，并确认其 §1/§4/§5/§6.4/§6.5/§7/§8 在本方案中按硬性规定执行；
-- [ ] **裁定一已定死**：常驻右列不使用 `.button--primary`，风险由服务端动作描述符给出，确认按钮按 §9.2 二分支（`secondary` / `danger`），取消恒为 `ghost`；
-- [ ] **裁定二已定死**：费用与说明为中性色；待确认 ActionCard 保持中性，动作卡内不放状态胶囊，橙色待办只走对话列表 `.is-pending` 左边条；带橙色左边条的卡片（含终态 `stale`）按钮一律 `.button--ghost`；
-- [ ] **裁定三已定死**：助手窄屏适配只落在 `@media (max-width: 1320px)`，桌面验收视口为 1321×900 与 1180×760；未新增断点，未使用桌面不可达的 1120px/960px；
-- [ ] **裁定四已定死**：遮罩由 `<dialog>.dialog-backdrop` 自身承载，保留 `styles.css:668` 并补 100% 宽高、无最大尺寸、零 margin/border reset 与透明 `::backdrop`；`cancel` 走受控 `onClose`，effect 对 StrictMode 防重并清理；
-- [ ] **裁定五已定死**：共享 Modal 首批只迁移 SettingsDialog、ProjectManager，并供助手删除确认复用；NewProjectDialog、`GalleryWorkspace.tsx` 与 `GuideModal.tsx` 均不迁移，图库迁移前必须先补 Escape、焦点和重复关闭用例；
-- [ ] 助手状态中文映射与语义色绑定已写入 §6.6 并与指南 §7 / §2.4 一致，`running` 映射「正在思考」，`succeeded` 明确不译为「已批准」；应用自有文本与模型正文的语言保证边界明确。
+- [x] 本方案与 `FRONTEND-DESIGN-GUIDE.md` 1.3 已形成同一 docs-only 基线提交；A1 分支包含该提交；
+- [x] 产品确认首版项目与 Screen 绑定不可变；
+- [x] 产品接受首版一个未完成 run（包含等待确认）、无伪流式；
+- [x] 明确首个写动作仅为意图审查草稿；
+- [x] 确认全仓唯一 `GAME_UI_ASSISTANT_ENABLED` 默认关闭，并经 AppConfig 同步门禁 UI 与后端；
+- [x] 确认 §12 已以 `10ffb70` 和 PR #80 通知层规则为基线；
+- [x] 确认首版只复用右侧辅助列，不做 overlay/drawer；
+- [x] 确认不引入语义记忆和 MemoryPanel；
+- [x] 已读 `docs/dev/FRONTEND-DESIGN-GUIDE.md` 1.3 全文，并确认其 §1/§4/§5/§6.4/§6.5/§7/§8 在本方案中按硬性规定执行；
+- [x] **裁定一已定死**：常驻右列不使用 `.button--primary`，风险由服务端动作描述符给出，确认按钮按 §9.2 二分支（`secondary` / `danger`），取消恒为 `ghost`；
+- [x] **裁定二已定死**：费用与说明为中性色；待确认 ActionCard 保持中性，动作卡内不放状态胶囊，橙色待办只走对话列表 `.is-pending` 左边条；带橙色左边条的卡片（含终态 `stale`）按钮一律 `.button--ghost`；
+- [x] **裁定三已定死**：助手窄屏适配只落在 `@media (max-width: 1320px)`，桌面验收视口为 1321×900 与 1180×760；未新增断点，未使用桌面不可达的 1120px/960px；
+- [x] **裁定四已定死**：遮罩由 `<dialog>.dialog-backdrop` 自身承载，保留 `styles.css:668` 并补 100% 宽高、无最大尺寸、零 margin/border reset 与透明 `::backdrop`；`cancel` 走受控 `onClose`，effect 对 StrictMode 防重并清理；
+- [x] **裁定五已定死**：共享 Modal 首批只迁移 SettingsDialog、ProjectManager，并供助手删除确认复用；NewProjectDialog、`GalleryWorkspace.tsx` 与 `GuideModal.tsx` 均不迁移，图库迁移前必须先补 Escape、焦点和重复关闭用例；
+- [x] 助手状态中文映射与语义色绑定已写入 §6.6 并与指南 §7 / §2.4 一致，`running` 映射「正在思考」，`succeeded` 明确不译为「已批准」；应用自有文本与模型正文的语言保证边界明确。
 
-### 开始 A1 前
+### 开始 A1 前（已完成）
 
-- [ ] 锁定最小文件 schema 与错误码；
-- [ ] 明确消息和上下文字符上限；
-- [ ] 明确 trash 保留期；
-- [ ] Kunpo/OpenAI-compatible 网关 JSON 请求探针通过；
-- [ ] 现有 SettingsDialog 可编辑 `assistantModel`，桌面应用级与 Web 租户级存储语义已验证；
-- [ ] ContextBuilder 的 `open(..., { includePreviews: false, screenId })` 和自愈语义已写入测试；
-- [ ] Gallery 式单写者队列与 AssistantStore 原生 JSONL append 已验证；
-- [ ] 对话列举直接读取 `conversations/*/meta.json`，消息 seq 从最后完整 JSONL 记录推导；不存在 `index.json` 与 `next_message_seq` 双重真相；
-- [ ] 助手反馈不进入 `.overlay-bar`，PR #80 的图库点击与反馈隔离测试通过；
-- [ ] `.assistant-panel` 已加 `inert={galleryOpen}`，且面板没有透明 `position: fixed` 覆盖节点；
-- [ ] 共享 Modal 已在 `ui.tsx` 新建为受控原生 `<dialog>` + Portal，SettingsDialog、ProjectManager 已收敛到它；标题关联、cancel/onClose、Escape 后重开、StrictMode、焦点限制与焦点归还通过；
-- [ ] `.dialog-backdrop` 挂在 `<dialog>` 元素自身，`src/styles.css` 已保留 `:668` 并新增 dialog UA 几何 reset 与透明 `::backdrop`；1180×760 下元素 rect、margin 和 border 断言通过；
-- [ ] `App.test.tsx` 只在测试侧提供最小 `showModal` / `close` shim，生产组件无 jsdom 兼容分支；真实 top layer 行为由 Playwright 覆盖；
-- [ ] NewProjectDialog、`GalleryWorkspace.tsx`、`GuideModal.tsx` 与 `GalleryWorkspace.test.tsx` 的相关实现未被迁移，现有用例继续通过（§13.2）；
-- [ ] 1180×760 下右列实测 280px、动作卡与对话列表的窄屏适配已生效并有断言；
-- [ ] 新增错误码已同时改 `electron/services/errorCodes.cjs`、`docs/dev/ERROR-CATALOG.md` 与 `scripts/check-error-docs.cjs` 的分区标题，`pnpm run test:docs` 四条门禁全绿；
-- [ ] `docs/dev/PROJECT-DIRECTORY.md` 已按图库先例登记助手目录归属（应用级/租户级，不属项目目录与 Artifact Registry）；
-- [ ] 目标文件的现有调用链已复核。
+- [x] 锁定最小文件 schema 与错误码；
+- [x] 明确消息和上下文字符上限；
+- [x] 明确 trash 保留期；
+- [x] Kunpo/OpenAI-compatible 网关 JSON 请求探针通过；
+- [x] 现有 SettingsDialog 可编辑 `assistantModel`，桌面应用级与 Web 租户级存储语义已验证；
+- [x] ContextBuilder 的 `open(..., { includePreviews: false, screenId })` 和自愈语义已写入测试；
+- [x] Gallery 式单写者队列与 AssistantStore 原生 JSONL append 已验证；
+- [x] 对话列举直接读取 `conversations/*/meta.json`，消息 seq 从最后完整 JSONL 记录推导；不存在 `index.json` 与 `next_message_seq` 双重真相；
+- [x] 助手反馈不进入 `.overlay-bar`，PR #80 的图库点击与反馈隔离测试通过；
+- [x] `.assistant-panel` 已加 `inert={galleryOpen}`，且面板没有透明 `position: fixed` 覆盖节点；
+- [x] 共享 Modal 已在 `ui.tsx` 新建为受控原生 `<dialog>` + Portal，SettingsDialog、ProjectManager 已收敛到它；标题关联、cancel/onClose、Escape 后重开、StrictMode、焦点限制与焦点归还通过；
+- [x] `.dialog-backdrop` 挂在 `<dialog>` 元素自身，`src/styles.css` 已保留 `:668` 并新增 dialog UA 几何 reset 与透明 `::backdrop`；1180×760 下元素 rect、margin 和 border 断言通过；
+- [x] `App.test.tsx` 只在测试侧提供最小 `showModal` / `close` shim，生产组件无 jsdom 兼容分支；真实 top layer 行为由 Playwright 覆盖；
+- [x] NewProjectDialog、`GalleryWorkspace.tsx`、`GuideModal.tsx` 与 `GalleryWorkspace.test.tsx` 的相关实现未被迁移，现有用例继续通过（§13.2）；
+- [x] 1180×760 下右列实测 280px、动作卡与对话列表的窄屏适配已生效并有断言；
+- [x] 新增错误码已同时改 `electron/services/errorCodes.cjs` 与 `docs/dev/ERROR-CATALOG.md`，并确认无需改变 `scripts/check-error-docs.cjs` 的既有分区；`pnpm run test:docs` 四条门禁全绿；
+- [x] `docs/dev/PROJECT-DIRECTORY.md` 已按图库先例登记助手目录归属（应用级/租户级，不属项目目录与 Artifact Registry）；
+- [x] 目标文件的现有调用链已复核。
 
-### 开始 A2 前
+### 开始 A2 前（已完成）
 
-- [ ] `save_intent_review_draft` 参数与现有领域入口一一对应；
-- [ ] `save_intent_review_draft` 的服务端风险固定为 `writes_project: true, replaces_content: true, reversible: false, external_cost: false`；
-- [ ] `expectedIntentReviewRevision` 从提议记录到确认执行全链路保留；
-- [ ] ActionCard 不接受 Renderer 回传 args；
-- [ ] AssistantTools 从锁外调用公开方法，且无法访问 `__unsafe`；
-- [ ] `awaiting_confirmation → executing` 原子认领、终态 result/error 回放、幂等和 stale 测试先写好；
-- [ ] 审批/豁免动作不在任何白名单或提示能力描述中。
+- [x] `save_intent_review_draft` 参数与现有领域入口一一对应；
+- [x] `save_intent_review_draft` 的服务端风险固定为 `writes_project: true, replaces_content: true, reversible: false, external_cost: false`；
+- [x] `expectedIntentReviewRevision` 从提议记录到确认执行全链路保留；
+- [x] ActionCard 不接受 Renderer 回传 args；
+- [x] AssistantTools 从锁外调用公开方法，且无法访问 `__unsafe`；
+- [x] `awaiting_confirmation → executing` 原子认领、终态 result/error 回放、幂等和 stale 测试先写好；
+- [x] 审批/豁免动作不在任何白名单或提示能力描述中。
 
 ### 增加任何后续动作前
 
@@ -1635,7 +1639,7 @@ Electron 主进程和 Web 服务端各自在启动时读取一次，并通过现
 | 8 | §12.1 补 `inert={galleryOpen}` 与 fixed 包含块风险 | `App.tsx:223` 已对 `.artifact-inspector` 加 inert；本轮审校进一步改为共享原生 `<dialog>` + Portal，从结构上消除右列祖先包含块影响 |
 | 9 | §12.2 补 BEM 类名与令牌、无内联样式要求；§12.4 明确模式切换用 `role="group"` 按钮组、对话切换用共享 `Dropdown`（禁原生 `<select>`）、删除用 `.dialog-backdrop` + `.utility-dialog` 且不新增 z-index 层；§12.5 补 Composer 样式、字号阶梯与字体族令牌 | 指南 §1 / §2.5 / §6.1 / §6.2 / §6.5 |
 | 10 | §12.6 回归场景从 7 条扩到 14 条，新增 inert、280px 实测、无 primary、费用/说明中性计算样式、遮罩覆盖视口、无原生 select、中文状态渲染等可执行断言 | 裁定需要断言守护，否则下一轮改动会静默回退 |
-| 11 | §13.2 补入 `scripts/check-error-docs.cjs` 与 `docs/dev/PROJECT-DIRECTORY.md`，并给出错误码分区的最小改法（改 `## 一、` 标题 + 加 `### 助手错误码` 子块，不新增第四个注册组） | 该门禁的分区边界是硬编码字面量，只加目录不改脚本会让 `pnpm run test:docs` 变红；PROJECT-DIRECTORY 已有图库归属登记先例 |
+| 11 | §13.2 补入 `scripts/check-error-docs.cjs` 与 `docs/dev/PROJECT-DIRECTORY.md`，要求复核错误码分区边界且不新增第四个注册组 | 实施时证实助手码可留在既有 `ERROR_CODES` 区间，因此脚本无需修改；PROJECT-DIRECTORY 已有图库归属登记先例 |
 | 12 | §2 基线表新增「设计规范」「窗口与断点」「右列装配」三行，并修正「UI 布局」行补入 1320px 实测值 | 原表缺少设计事实来源与窗口下限，导致 §12 只能写否定式约束 |
 | 13 | §3.2 问题清单新增 8 条 P1 与 2 条 P2 | 对应上述各项的评审发现 |
 | 14 | §16 新增 §16.5「设计规范合规（硬性）」；DoD 标题与 §20 结论的版本号同步为 v1.2，并新增"不会破坏设计语言"一条 | 设计规范合规需要与正确性、安全、可维护性并列，不能作为可维护性的子项被忽略 |

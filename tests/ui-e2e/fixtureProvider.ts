@@ -224,6 +224,15 @@ export class FixtureProvider {
   }
 
   private routeSemantic(prompt: string): unknown {
+    if (prompt.startsWith('你是 Game UI Design Copilot 内嵌助手。')) {
+      const request = JSON.parse(prompt.slice(prompt.lastIndexOf('\n\n') + 2)) as { mode: string; project_context?: { intent_review?: Record<string, unknown> } };
+      if (request.mode === 'qa') return { reply: '已根据当前项目快照完成检查。', proposed_action: null };
+      const draft = structuredClone(request.project_context?.intent_review);
+      if (!draft?.page_purpose || typeof draft.page_purpose !== 'object') throw new Error('fixture provider assistant requires an existing intent review');
+      (draft.page_purpose as Record<string, unknown>).text = `${String((draft.page_purpose as Record<string, unknown>).text || '')}（助手草稿）`;
+      (draft.page_purpose as Record<string, unknown>).designer_modified = true;
+      return { reply: '已准备一份意图审查草稿，等待你确认后才会写入。', proposed_action: { name: 'save_intent_review_draft', reason: '补充页面目的说明。', args: { draft } } };
+    }
     // v1.4 §7：TASK_KIND 首行路由。v2 Intent Prompt 只允许命中 v2 fixture，
     // 队列可注入非法分析验证纠正环；无匹配路由硬失败。
     if (prompt.startsWith('TASK_KIND: intent-analysis-v2')) {

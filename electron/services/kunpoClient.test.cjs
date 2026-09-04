@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { generateImage, isTrustedKunpoCdnUrl, repairImage, requestArtifact, requestJson, taskId } = require('./kunpoClient.cjs');
+const { generateImage, isTrustedKunpoCdnUrl, repairImage, requestArtifact, requestAssistant, requestJson, taskId } = require('./kunpoClient.cjs');
 
 function pngHeader(width, height) {
   const bytes = Buffer.alloc(24);
@@ -219,6 +219,62 @@ function jsonResponse(content, extra = {}) {
 }
 
 const REQUEST_JSON_CONFIG = { configured: true, baseUrl: 'https://example.test', visionModel: 'vision-x', mode: 'gateway' };
+
+test('requestAssistant uses the configured text model and the existing JSON chat contract', async () => {
+  const originalFetch = global.fetch;
+  let requestBody;
+  global.fetch = async (_url, options) => {
+    requestBody = JSON.parse(options.body);
+    return jsonResponse(JSON.stringify({ reply: '已读取当前项目状态。', proposed_action: null }), { model: 'assistant-x' });
+  };
+  try {
+    const result = await requestAssistant({ ...REQUEST_JSON_CONFIG, assistantModel: 'assistant-x' }, { prompt: '仅回答' });
+    assert.equal(result.reply, '已读取当前项目状态。');
+    assert.equal(requestBody.model, 'assistant-x');
+    assert.deepEqual(requestBody.response_format, { type: 'json_object' });
+    assert.equal(requestBody.stream, false);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('requestAssistant rejects oversized replies and malformed actions after bounded retries', async () => {
+  const originalFetch = global.fetch;
+  try {
+    for (const value of [
+      { reply: '过'.repeat(20_001), proposed_action: null },
+      { reply: '准备动作', proposed_action: { name: 'save_intent_review_draft', args: null } }
+    ]) {
+      let calls = 0;
+      global.fetch = async () => { calls += 1; return jsonResponse(JSON.stringify(value)); };
+      await assert.rejects(requestAssistant({ ...REQUEST_JSON_CONFIG, assistantModel: 'assistant-x' }, { prompt: '验证边界' }), { code: 'ASSISTANT_RESPONSE_INVALID' });
+      assert.equal(calls, 3);
+    }
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('requestJson aborts a timed-out request and returns the requested stable error code', async () => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async (_url, options) => {
+    calls += 1;
+    return new Promise((_resolve, reject) => options.signal.addEventListener('abort', () => {
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      reject(error);
+    }, { once: true }));
+  };
+  try {
+    await assert.rejects(requestJson(REQUEST_JSON_CONFIG, {
+      prompt: '超时探针', timeoutMs: 5, failureCode: 'ASSISTANT_RESPONSE_INVALID'
+    }), { code: 'ASSISTANT_RESPONSE_INVALID' });
+    assert.equal(calls, 3);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
 
 test('requestJson retries with bounded validation feedback when processValue reports errors', async () => {
   const originalFetch = global.fetch;
