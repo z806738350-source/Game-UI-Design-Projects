@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AssistantAction, AssistantConversation, AssistantConversationList, AssistantConversationMeta, AssistantRun } from '../../types';
@@ -77,7 +77,7 @@ describe('AssistantPanel', () => {
     expect(createAssistantConversation).toHaveBeenCalledWith({ projectId: 'project-a', screenId: 'main' });
     await user.type(screen.getByLabelText('输入消息'), '请检查当前设计');
     await user.click(screen.getByRole('button', { name: '发送' }));
-    expect(sendAssistantMessage).toHaveBeenCalledWith(meta.conversation_id, expect.objectContaining({ projectId: 'project-a', screenId: 'main' }));
+    expect(sendAssistantMessage).toHaveBeenCalledWith(meta.conversation_id, expect.objectContaining({ mode: 'execute', projectId: 'project-a', screenId: 'main' }));
     await screen.findByText('模型未返回有效内容。');
     expect(document.querySelector('.overlay-bar')).toBeNull();
     expect(document.querySelector('.assistant-panel .button--primary')).toBeNull();
@@ -126,8 +126,10 @@ describe('AssistantPanel', () => {
     listAssistantConversations.mockResolvedValue({ conversations: [meta], warnings: [] });
     openAssistantConversation.mockResolvedValue(assistantConversation());
     render(<AssistantPanel project={project} open inert={false} onClose={() => {}} />);
-    const trigger = await screen.findByRole('button', { name: '删除对话' });
+    await screen.findByText('这是本轮建议。');
+    const trigger = screen.getByRole('button', { name: '切换助手对话' });
     await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: /^删除对话/ }));
     let dialog = screen.getByRole('dialog', { name: '删除对话' });
     expect(dialog.parentElement).toBe(document.body);
     expect((dialog as HTMLDialogElement).open).toBe(true);
@@ -138,7 +140,155 @@ describe('AssistantPanel', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '删除对话' })).toBeNull());
     expect(document.activeElement).toBe(trigger);
     await user.click(trigger);
+    await user.click(screen.getByRole('button', { name: /^删除对话/ }));
     dialog = screen.getByRole('dialog', { name: '删除对话' });
     expect((dialog as HTMLDialogElement).open).toBe(true);
   });
+});
+
+describe('截图消息', () => {
+  const file = () => new File(['pixels'], '截图.png', { type: 'image/png' });
+  async function setup() {
+    listAssistantConversations.mockResolvedValue({ conversations: [meta], warnings: [] });
+    openAssistantConversation.mockResolvedValue(assistantConversation());
+    render(<AssistantPanel project={project} open inert={false} onClose={() => {}} />);
+    await screen.findByLabelText('输入消息');
+  }
+
+  it('选择、移除、粘贴和纯图片发送，成功后清空附件', async () => {
+    const user = userEvent.setup();
+    await setup();
+    sendAssistantMessage.mockImplementation(async (_id, input) => ({ ...assistantConversation(), messages: [{ id: 'image', role: 'user', content: input.content, attachments: input.attachments }] }));
+    await user.upload(screen.getByLabelText('选择助手截图'), file());
+    await screen.findByRole('img', { name: '截图.png' });
+    await user.click(screen.getByRole('button', { name: '移除截图 1' }));
+    expect(screen.queryByRole('img')).toBeNull();
+    fireEvent.paste(screen.getByLabelText('输入消息'), { clipboardData: { files: [file()] } });
+    await screen.findByRole('img', { name: '截图.png' });
+    await user.click(screen.getByRole('button', { name: '发送' }));
+    await waitFor(() => expect(sendAssistantMessage).toHaveBeenCalledWith(meta.conversation_id, expect.objectContaining({ content: '', attachments: [{ name: '截图.png', dataUrl: 'data:image/png;base64,cGl4ZWxz' }] })));
+    expect(screen.queryByLabelText('待发送截图')).toBeNull();
+    expect(screen.getByRole('img', { name: '截图.png' })).toBeTruthy();
+  });
+
+  it('发送失败保留文字与截图，拖入超限或错误格式不丢弃已有草稿', async () => {
+    const user = userEvent.setup();
+    await setup();
+    sendAssistantMessage.mockRejectedValueOnce(new Error('网络不可用'));
+    await user.upload(screen.getByLabelText('选择助手截图'), file());
+    await screen.findByRole('img');
+    await user.type(screen.getByLabelText('输入消息'), '这里怎么改');
+    await user.click(screen.getByRole('button', { name: '发送' }));
+    await screen.findByText('网络不可用');
+    expect((screen.getByLabelText('输入消息') as HTMLTextAreaElement).value).toBe('这里怎么改');
+    expect(screen.getByRole('img')).toBeTruthy();
+    fireEvent.drop(document.querySelector('.assistant-panel__composer')!, { dataTransfer: { files: Array.from({ length: 4 }, file) } });
+    await screen.findByText('每条消息最多附加 4 张截图。');
+    fireEvent.drop(document.querySelector('.assistant-panel__composer')!, { dataTransfer: { files: [new File(['x'], 'x.svg', { type: 'image/svg+xml' })] } });
+    await screen.findByText('请使用 PNG、JPG 或 WebP 图片。');
+    expect(screen.getAllByRole('img').length).toBe(1);
+  });
+});
+
+describe('审计问题回归', () => {
+  it('跨目标待执行动作仍可取消，确认保持禁用', async () => {
+    const user = userEvent.setup();
+    const awaiting = assistantConversation(assistantRun());
+    listAssistantConversations.mockResolvedValue({ conversations: [{ ...meta, has_pending_action: true }], warnings: [] });
+    openAssistantConversation.mockResolvedValue(awaiting);
+    cancelAssistantAction.mockResolvedValue(assistantConversation(assistantRun({ status: 'cancelled' })));
+    render(<AssistantPanel project={makeProject({ id: 'project-b', screen_id: 'other' })} open inert={false} onClose={() => {}} />);
+    const cancel = await screen.findByRole('button', { name: '拒绝执行' });
+    expect((screen.getByRole('button', { name: '确认执行' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((cancel as HTMLButtonElement).disabled).toBe(false);
+    await user.click(cancel);
+    expect(cancelAssistantAction).toHaveBeenCalledWith(meta.conversation_id, awaiting.runs[0].run_id, action.action_id);
+    await screen.findByText('已拒绝执行');
+  });
+
+  it('确认前展示完整草稿、待确认答案、可读目标与原内容', async () => {
+    const proposed = { ...action, args: { draft: { page_purpose: { id: 'purpose', text: '将所有装备改成付费解锁', origin: 'ai_inference' }, player_tasks: [{ id: 'task', text: '展示购买前确认', origin: 'ai_inference' }], core_flow: [], visible_controls: [], visible_information_and_states: [], uncertainties: [{ id: 'q', question: '失败是否扣费？', review_status: 'answered', note: '失败不扣费', priority: 'blocking' }] } }, review: { project_name: '装备计划', screen_name: '升级页面', before: '全部装备免费获得', before_truncated: false } };
+    listAssistantConversations.mockResolvedValue({ conversations: [meta], warnings: [] });
+    openAssistantConversation.mockResolvedValue(assistantConversation(assistantRun({ proposed_action: proposed })));
+    render(<AssistantPanel project={project} open inert={false} onClose={() => {}} />);
+    await screen.findByText('将所有装备改成付费解锁');
+    expect(screen.getByText('展示购买前确认')).toBeTruthy();
+    expect(screen.getByText('补充：失败不扣费')).toBeTruthy();
+    expect(screen.getByText('装备计划')).toBeTruthy();
+    expect(screen.getByText('升级页面')).toBeTruthy();
+    fireEvent.click(screen.getByText('对照修改前内容'));
+    expect(screen.getByText('全部装备免费获得')).toBeTruthy();
+  });
+
+  it('恢复中的运行自动读到完成状态，关闭后重新打开也刷新', async () => {
+    const running = assistantConversation(assistantRun({ status: 'executing' }));
+    const onProjectRefresh = vi.fn(async () => {});
+    const done = assistantConversation(assistantRun({ status: 'succeeded', proposed_action: null }));
+    listAssistantConversations.mockResolvedValue({ conversations: [meta], warnings: [] });
+    openAssistantConversation.mockResolvedValueOnce(running).mockResolvedValue(done);
+    const view = render(<AssistantPanel project={project} open inert={false} onClose={() => {}} onProjectRefresh={onProjectRefresh} />);
+    await screen.findByText('正在思考…');
+    await waitFor(() => expect((screen.getByLabelText('输入消息') as HTMLTextAreaElement).disabled).toBe(false), { timeout: 3000 });
+    expect(openAssistantConversation.mock.calls.length).toBe(2);
+    expect(onProjectRefresh).toHaveBeenCalledWith(meta.project_id, meta.screen_id);
+    view.rerender(<AssistantPanel project={project} open={false} inert={false} onClose={() => {}} />);
+    const withReply = { ...done, messages: [...done.messages, { ...done.messages[0], id: 'latest', seq: 2, content: '重新打开后最新回复' }] };
+    openAssistantConversation.mockResolvedValue(withReply);
+    view.rerender(<AssistantPanel project={project} open inert={false} onClose={() => {}} />);
+    await screen.findByText('重新打开后最新回复');
+  });
+
+  it('最新对话无法打开时仍列出并自动选择可用的旧对话', async () => {
+    const healthy = { ...meta, conversation_id: '55555555-5555-4555-8555-555555555555', title: '完好旧对话' };
+    listAssistantConversations.mockResolvedValue({ conversations: [meta, healthy], warnings: [] });
+    openAssistantConversation.mockImplementation(async (id: string) => {
+      if (id === meta.conversation_id) throw new Error('聊天记录损坏');
+      return { ...assistantConversation(), meta: healthy };
+    });
+    render(<AssistantPanel project={project} open inert={false} onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId('assistant-conversation-switch').textContent).toContain('完好旧对话'));
+    expect((screen.getByLabelText('输入消息') as HTMLTextAreaElement).disabled).toBe(false);
+  });
+});
+
+it('conversation row actions target that row without switching or clearing the active draft', async () => {
+  const user = userEvent.setup();
+  const other = { ...meta, conversation_id: '66666666-6666-4666-8666-666666666666', title: 'Other conversation' };
+  let items = [meta, other];
+  listAssistantConversations.mockImplementation(async () => ({ conversations: items, warnings: [] }));
+  openAssistantConversation.mockResolvedValue(assistantConversation());
+  renameAssistantConversation.mockImplementation(async (id: string, title: string) => {
+    expect(id).toBe(other.conversation_id);
+    items = [meta, { ...other, title }];
+    return { ...assistantConversation(), meta: { ...other, title } };
+  });
+  deleteAssistantConversation.mockImplementation(async (id: string) => { items = items.filter((item) => item.conversation_id !== id); return { deleted: true }; });
+  render(<AssistantPanel project={project} open inert={false} onClose={() => {}} />);
+  const input = await screen.findByLabelText('输入消息');
+  await user.type(input, 'Keep this unsent draft');
+  const trigger = screen.getByRole('button', { name: '切换助手对话' });
+  await user.click(trigger);
+  await user.click(screen.getByRole('button', { name: '重命名对话「Other conversation」' }));
+  const rename = screen.getByRole('dialog', { name: '重命名对话' });
+  await user.clear(within(rename).getByLabelText('对话标题'));
+  await user.type(within(rename).getByLabelText('对话标题'), 'Renamed conversation');
+  await user.click(within(rename).getByRole('button', { name: '保存' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(trigger.textContent).toContain(meta.title);
+  expect((input as HTMLTextAreaElement).value).toBe('Keep this unsent draft');
+  await user.click(trigger);
+  await user.click(screen.getByRole('button', { name: '删除对话「Renamed conversation」' }));
+  const deletion = screen.getByRole('dialog', { name: '删除对话' });
+  expect(deletion.textContent).toContain('Renamed conversation');
+  await user.click(within(deletion).getByRole('button', { name: '删除对话' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(deleteAssistantConversation).toHaveBeenCalledWith(other.conversation_id);
+  expect(trigger.textContent).toContain(meta.title);
+  expect((input as HTMLTextAreaElement).value).toBe('Keep this unsent draft');
+  expect(openAssistantConversation).toHaveBeenCalledTimes(1);
+  expect(document.querySelector('.assistant-panel__conversation-tools')).toBeNull();
+  await user.click(trigger);
+  await user.keyboard('{Escape}');
+  expect(trigger.getAttribute('aria-expanded')).toBe('false');
+  expect(document.activeElement).toBe(trigger);
 });

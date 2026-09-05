@@ -3,6 +3,33 @@ const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { ERROR_CODES } = require('./errorCodes.cjs');
 const { ensureDir, readJson, writeJson } = require('./jsonStore.cjs');
+const { imageMetadataFromBuffer } = require('./imageMetadata.cjs');
+const sharp = require('./sharpRuntime.cjs');
+
+const MAX_ATTACHMENTS = 4;
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_ATTACHMENTS_BYTES = 12 * 1024 * 1024;
+
+function validateAttachments(attachments = []) {
+  const invalid = () => fail(ERROR_CODES.ASSISTANT_MESSAGE_INVALID, '截图无效：支持 PNG、JPG、WebP，最多 4 张，每张不超过 5MB，合计不超过 12MB。', { status: 400 });
+  if (!Array.isArray(attachments) || attachments.length > MAX_ATTACHMENTS) throw invalid();
+  let total = 0;
+  return attachments.map((attachment) => {
+    const dataUrl = attachment?.dataUrl;
+    if (typeof dataUrl !== 'string' || dataUrl.length > Math.ceil(MAX_ATTACHMENT_BYTES / 3) * 4 + 32) throw invalid();
+    const prefix = /^data:image\/(png|jpeg|webp);base64,/.exec(dataUrl);
+    if (!prefix) throw invalid();
+    const encoded = dataUrl.slice(prefix[0].length);
+    const bytes = Buffer.from(encoded, 'base64');
+    const metadata = imageMetadataFromBuffer(bytes);
+    total += bytes.length;
+    if (!bytes.length || bytes.length > MAX_ATTACHMENT_BYTES || total > MAX_ATTACHMENTS_BYTES
+      || bytes.toString('base64') !== encoded || !metadata || metadata.mime !== `image/${prefix[1]}`
+      || !metadata.width || !metadata.height || metadata.width > 16384 || metadata.height > 16384
+      || metadata.width * metadata.height > 40_000_000) throw invalid();
+    return { name: cleanText(attachment.name || '截图', 120, '图片名称'), dataUrl };
+  });
+}
 
 const MESSAGE_LIMIT = 20_000;
 const SUMMARY_MESSAGE_LIMIT = 30;
@@ -83,33 +110,47 @@ function createAssistantStore({ assistantRoot }) {
     if (!value || typeof value !== 'object' || !UUID.test(value.id) || !Number.isSafeInteger(value.seq) || value.seq < 1 || !['user', 'assistant'].includes(value.role) || typeof value.content !== 'string' || value.content.length > MESSAGE_LIMIT || typeof value.created_at !== 'string' || !Number.isFinite(Date.parse(value.created_at))) {
       throw fail(ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, `对话 ${conversationId} 的消息记录损坏。`, { status: 409 });
     }
+    try { if (value.attachments !== undefined) value.attachments = validateAttachments(value.attachments); }
+    catch { throw fail(ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, '对话中的截图记录损坏。', { status: 409 }); }
     return value;
   }
 
   async function readMessages(conversationId, { recoverTail = true } = {}) {
     const filePath = path.join(conversationPath(conversationId), 'messages.jsonl');
-    let source;
-    try { source = await fs.readFile(filePath, 'utf8'); }
+    let handle;
+    try { handle = await fs.open(filePath, 'r'); }
     catch (error) { if (error?.code === 'ENOENT') return []; throw error; }
-    if (!source) return [];
-    const trailingNewline = source.endsWith('\n');
-    const lines = source.split('\n');
-    if (trailingNewline) lines.pop();
     const messages = [];
-    for (let index = 0; index < lines.length; index += 1) {
-      if (!lines[index]) throw fail(ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, `对话 ${conversationId} 的消息记录中间存在空行。`, { status: 409 });
-      let parsed;
-      try { parsed = JSON.parse(lines[index]); }
-      catch (error) {
-        if (recoverTail && index === lines.length - 1 && !trailingNewline) {
-          const cut = source.lastIndexOf('\n') + 1;
-          await fs.truncate(filePath, Buffer.byteLength(source.slice(0, cut), 'utf8'));
-          break;
-        }
-        throw fail(ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, `对话 ${conversationId} 的消息记录无法解析。`, { status: 409 });
+    try {
+      const { size } = await handle.stat();
+      if (!size) return [];
+      const lastByte = Buffer.alloc(1);
+      await handle.read(lastByte, 0, 1, size - 1);
+      const trailingNewline = lastByte[0] === 10;
+      const parse = (line) => {
+        if (!line) throw fail(ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, `对话 ${conversationId} 的消息记录中间存在空行。`, { status: 409 });
+        return JSON.parse(line);
+      };
+      let pending = null;
+      for await (const line of handle.readLines()) {
+        if (pending !== null) messages.push(validateMessage(parse(pending), conversationId));
+        pending = line;
       }
-      messages.push(validateMessage(parsed, conversationId));
-    }
+      if (pending !== null) {
+        let parsed;
+        try { parsed = parse(pending); }
+        catch (error) {
+          if (!recoverTail || trailingNewline || !(error instanceof SyntaxError)) throw error;
+          // Only a crashed partial tail needs byte-exact recovery, including CRLF history.
+          const source = await fs.readFile(filePath);
+          await fs.truncate(filePath, source.lastIndexOf(10) + 1);
+        }
+        if (parsed !== undefined) messages.push(validateMessage(parsed, conversationId));
+      }
+    } catch (error) {
+      if (error instanceof SyntaxError) throw fail(ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, `对话 ${conversationId} 的消息记录无法解析。`, { status: 409 });
+      throw error;
+    } finally { await handle.close(); }
     messages.sort((a, b) => a.seq - b.seq);
     for (let index = 0; index < messages.length; index += 1) {
       if (messages[index].seq !== index + 1) throw fail(ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, `对话 ${conversationId} 的消息序号不连续。`, { status: 409 });
@@ -218,9 +259,11 @@ function createAssistantStore({ assistantRoot }) {
     const conversations = [];
     for (const meta of listed.conversations) {
       try {
-        const runs = await listRuns(meta.conversation_id);
+        const conversation = await openConversation(meta.conversation_id);
+        const runs = conversation.runs;
+        if (conversation.message_error) listed.warnings.push({ conversation_id: meta.conversation_id, code: ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, message: conversation.message_error });
         const has_pending_action = runs.some((run) => run.status === 'awaiting_confirmation');
-        conversations.push({ ...meta, has_pending_action });
+        conversations.push({ ...meta, has_pending_action, ...(conversation.message_error ? { message_error: conversation.message_error } : {}) });
       } catch (error) {
         listed.warnings.push({ conversation_id: meta.conversation_id, code: error.code || ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT, message: '一条对话的运行记录已损坏，未加入列表。' });
       }
@@ -250,13 +293,18 @@ function createAssistantStore({ assistantRoot }) {
   async function openConversation(conversationId) {
     await ensureReady();
     const meta = await readMeta(conversationId);
+    let message_error;
     const [messages, runs, summary] = await Promise.all([
-      readMessages(conversationId),
+      enqueue(conversationId, () => readMessages(conversationId)).catch((error) => {
+        if (error.code !== ERROR_CODES.ASSISTANT_CONVERSATION_CORRUPT && !(error instanceof SyntaxError)) throw error;
+        message_error = '这条对话的聊天记录损坏，已暂停发送和确认。';
+        return [];
+      }),
       listRuns(conversationId),
       readSummary(conversationId)
     ]);
     const lastSeq = messages.at(-1)?.seq || 0;
-    return { meta, messages, runs, summary: summary && summary.through_seq <= lastSeq ? summary : null };
+    return { meta, messages, runs, ...(message_error ? { message_error } : {}), summary: summary && summary.through_seq <= lastSeq ? summary : null };
   }
 
   async function renameConversation(conversationId, title) {
@@ -274,22 +322,38 @@ function createAssistantStore({ assistantRoot }) {
     if (messages.length < SUMMARY_MESSAGE_LIMIT && characters < SUMMARY_CHARACTER_LIMIT) return;
     const keep = 12;
     const covered = messages.slice(0, Math.max(1, messages.length - keep));
-    const summary = covered.map((message) => `${message.role === 'user' ? '用户' : '助手'}：${message.content}`).join('\n').slice(-8_000);
+    const line = (message) => `${message.role === 'user' ? '用户' : '助手'}：${message.content}${message.attachments?.length ? `（曾附 ${message.attachments.length} 张截图，摘录不含图片像素）` : ''}`;
+    // ponytail: 有界摘录不能保存所有中途约束；超出窗口需用户重申，未来可改为用户可编辑的会话笔记。
+    const opening = covered.filter((message) => message.role === 'user').slice(0, 3).map(line).join('\n').slice(0, 2_500);
+    const recent = covered.map(line).join('\n').slice(-5_200);
+    const summary = `【历史摘录，不完整记忆；后续明确更正优先】\n最初需求：\n${opening}\n最近归档：\n${recent}`;
     await writeJson(path.join(conversationPath(conversationId), 'summary.json'), {
       schema_version: '1.0', through_seq: covered.at(-1).seq, summary, updated_at: new Date().toISOString()
     });
   }
 
-  async function appendMessage(conversationId, { role, content }) {
+  async function appendMessage(conversationId, { role, content, attachments }) {
     await ensureReady();
     return enqueue(conversationId, async () => {
       if (!['user', 'assistant'].includes(role)) throw fail(ERROR_CODES.ASSISTANT_MESSAGE_INVALID, '消息角色无效。', { status: 400 });
+      const images = validateAttachments(attachments);
+      if (images.length && role !== 'user') throw fail(ERROR_CODES.ASSISTANT_MESSAGE_INVALID, '只有用户消息可以附加截图。', { status: 400 });
+      for (const image of images) {
+        try { await sharp(Buffer.from(image.dataUrl.split(',')[1], 'base64'), { limitInputPixels: 40_000_000 }).stats(); }
+        catch { throw fail(ERROR_CODES.ASSISTANT_MESSAGE_INVALID, '截图内容损坏或无法解码，请重新导出 PNG、JPG 或 WebP。', { status: 400 }); }
+      }
       const meta = await readMeta(conversationId);
       const messages = await readMessages(conversationId);
-      const message = { id: randomUUID(), seq: (messages.at(-1)?.seq || 0) + 1, role, content: cleanText(content, MESSAGE_LIMIT, '消息'), created_at: new Date().toISOString() };
+      // ponytail: 有界截图随 JSONL 保存；大规模长对话测出瓶颈后再拆独立附件文件。
+      const message = { id: randomUUID(), seq: (messages.at(-1)?.seq || 0) + 1, role, content: cleanText(String(content || '').trim() || (images.length ? '请结合截图帮我分析当前问题。' : ''), MESSAGE_LIMIT, '消息'), ...(images.length ? { attachments: images } : {}), created_at: new Date().toISOString() };
       const filePath = path.join(conversationPath(conversationId), 'messages.jsonl');
-      const existing = await fs.readFile(filePath, 'utf8').catch((error) => error?.code === 'ENOENT' ? '' : Promise.reject(error));
-      await fs.appendFile(filePath, `${existing && !existing.endsWith('\n') ? '\n' : ''}${JSON.stringify(message)}\n`, 'utf8');
+      const handle = await fs.open(filePath, 'a+');
+      try {
+        const { size } = await handle.stat();
+        const lastByte = Buffer.alloc(1);
+        if (size) await handle.read(lastByte, 0, 1, size - 1);
+        await handle.writeFile(`${size && lastByte[0] !== 10 ? '\n' : ''}${JSON.stringify(message)}\n`, 'utf8');
+      } finally { await handle.close(); }
       await writeJson(path.join(conversationPath(conversationId), 'meta.json'), { ...meta, updated_at: message.created_at });
       // 摘要只是可重建缓存；失败不能推翻已成功追加的消息。
       await refreshSummary(conversationId, [...messages, message]).catch(() => undefined);
@@ -380,7 +444,7 @@ function createAssistantStore({ assistantRoot }) {
       const run = await getRun(conversationId, runId);
       if (TERMINAL.has(run.status)) return run;
       if (!['queued', 'awaiting_confirmation'].includes(run.status)) throw fail(ERROR_CODES.ASSISTANT_ACTION_IN_PROGRESS, '当前运行已经开始，无法安全取消。', { status: 409 });
-      const next = { ...run, status: 'cancelled', error: null, updated_at: new Date().toISOString() };
+      const next = { ...run, status: 'cancelled', ...(run.proposed_action ? { result: { user_decision: 'rejected' } } : {}), error: null, updated_at: new Date().toISOString() };
       await writeJson(runPath(conversationId, runId), next);
       return next;
     });
@@ -407,4 +471,4 @@ function createAssistantStore({ assistantRoot }) {
   };
 }
 
-module.exports = { createAssistantStore, MESSAGE_LIMIT, RUN_STATUSES, TERMINAL, UNFINISHED };
+module.exports = { createAssistantStore, MESSAGE_LIMIT, RUN_STATUSES, TERMINAL, UNFINISHED, MAX_ATTACHMENTS, MAX_ATTACHMENTS_BYTES };

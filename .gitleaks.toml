@@ -3,5 +3,9 @@
 useDefault = true
 
 [allowlist]
-description = "Web HTTP 集成测试仅含本地一次性假值（SESSION_SECRET 等），非真实密钥"
+description = "仅排除既有一次性测试假值及已核实的完整公开 CDN 域名"
 paths = ['''server/webServer\.delivery\.test\.cjs''', '''server/webServer\.reference\.test\.cjs''']
+
+# 历史 SNAPSHOT_HOSTS 中的公开对象存储域名被 generic-api-key 误判；仅匹配该完整域名。
+regexTarget = "secret"
+regexes = ['''^vcg\-prod\-1258344699\.cos\.ap\-guangzhou\.tencentcos\.cn$''']

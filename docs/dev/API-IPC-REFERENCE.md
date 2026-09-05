@@ -107,3 +107,26 @@ UI 与服务端双重阻断，且不提供豁免口子；仅 fail-closed 历史�
 | 1.0 | 2026-08-19 | PR-18 首次成文（0.2.1） |
 | 1.2 | 2026-09-01 | 图库功能：新增 §6b 图库 IPC 与 Web 路由（galleryStore、下载门禁） |
 | 1.3 | 2026-09-02 | 图库下载豁免：新增 `copilot:gallery:waive` / `POST /api/gallery/:assetId/waive`，fail-closed 历史资产逐张留痕放行 |
+
+
+## 内嵌助手截图消息
+
+`sendAssistantMessage(conversationId, input)` 与 `POST /api/assistant/conversations/:id/messages` 共用运行时。`input` 在原有 `mode/content/projectId/screenId` 上增加可选 `attachments: Array<{ name: string, dataUrl: string }>`；缺省与原文字消息兼容。只有用户可附图，纯截图使用默认提问文本。
+
+- PNG/JPEG/WebP 的规范 base64 data URL；最多 4 张，每张 5MiB，合计 12MiB，最大边长 16384px、总像素 4000 万。后端验证真实格式、尺寸和可解码性，不接受远程 URL 或本地路径。
+- 消息 POST 独立使用 17MiB 请求上限以容纳 base64，其余 JSON 接口仍为 2MiB；认证、Origin 校验及租户隔离沿用原路径。
+- 有界附件随 `messages.jsonl` 持久化；消息可选字段兼容旧记录。截图随对话删除进入既有回收目录。
+- 模型请求复用 `requestJson`，以 `image_url` / `detail: high` 发送真实像素，重试沿用图片。最近 24000 字符、摘要之后的消息优先携带最新最多 4 张且总计不超过 12MiB 的图片；文字 prompt 仅放名称和从 1 开始的图片索引，未附带旧图标为 null，摘要不包含像素。
+- 图片内容视为不可信材料；写操作仍由原确认、CAS、动作白名单和幂等状态机约束。
+
+### 助手草稿与恢复
+
+- Renderer 统一发送 `mode: execute`，不显示模式切换；旧接口和历史记录仍兼容 `qa`。一般问答返回 `proposed_action: null`。
+- “拒绝执行”复用 cancel 接口，在原有运行记录中原子保存 `status: cancelled` 与 `result.user_decision: rejected`。重复拒绝不改变结果，拒绝后确认不会执行。最近 10 条方案及其状态进入 `recent_actions` 上下文（每份草稿最多 2000 字符的去敏摘要），拒绝动作不会额外调用模型或伪造用户聊天消息。
+
+- 消息可选 `currentStage`，只接受五个现有 UI 阶段；仅用于操作引导，不会运行阶段或批准产物。
+- `requestAssistant` 的动作校验复用 `validateIntentReview`，字段错误进入既有最多三次 JSON 修正；服务端再次校验并补充风险、版本和可读目标。动作的 `review` 保存修改前文本对照（最多 8000 字，截断明确标识），完整拟写入内容来自 `args.draft`。
+- 首次结构化草稿由 `saveIntentReview` 的显式 `initialize: true` 路径处理，必填 `expectedRequirementRevision`，与原 `expectedIntentReviewRevision` 一同在项目锁内检查。旧输入进入现有历史，保存后仍未确认。已有结构化调用的行为不变。
+- 列表和打开结果可带 `message_error`：损坏消息隔离，原文件不删，暂停该对话发送和确认；有效运行记录仍可取消，然后使用既有回收机制删除对话。
+- 面板重新打开时刷新，恢复中的 queued/running/executing 每 1.5 秒读取状态；请求串行，关闭面板停止刷新，失败后 5 秒重试。不自动重发消息或执行动作。
+- 项目诊断和产物正文采用有界、去敏上下文。历史达到既有阈值后保留最近 12 条消息，归档摘录最多 8000 字，其中最初三条用户需求最多 2500 字、最近归档最多 5200 字；原始消息仍保留。图片仍受上述上下文窗口限制。

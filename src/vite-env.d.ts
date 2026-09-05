@@ -11,7 +11,7 @@ interface DesignCopilotApi {
   openAssistantConversation(conversationId: string): Promise<AssistantConversation>;
   renameAssistantConversation(conversationId: string, title: string): Promise<AssistantConversation>;
   deleteAssistantConversation(conversationId: string): Promise<{ deleted: true; conversation_id: string }>;
-  sendAssistantMessage(conversationId: string, input: { mode: AssistantMode; content: string; projectId: string; screenId: string }): Promise<AssistantConversation>;
+  sendAssistantMessage(conversationId: string, input: { mode: AssistantMode; currentStage?: string; content: string; attachments?: import('./types').AssistantAttachment[]; projectId: string; screenId: string }): Promise<AssistantConversation>;
   confirmAssistantAction(conversationId: string, runId: string, actionId: string): Promise<AssistantConversation>;
   cancelAssistantAction(conversationId: string, runId: string, actionId: string): Promise<AssistantConversation>;
   listProjects(): Promise<ProjectSummary[]>;

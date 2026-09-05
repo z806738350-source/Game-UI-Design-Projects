@@ -21,6 +21,82 @@ test.describe.serial('内嵌智能助手 A1/A2 安全闭环', () => {
     await provider?.stop();
   });
 
+  test('截图经桌面接口进入模型请求，刷新后保留且能继续追问', async () => {
+    await createNewProject(page, 'E2E 截图问答');
+    await page.getByRole('button', { name: 'AI 助手' }).click();
+    const panel = page.getByTestId('assistant-panel');
+    await panel.getByRole('button', { name: '新建对话', exact: true }).click();
+    await panel.getByLabel('选择助手截图').setInputFiles(GOLDEN_ASSETS.wireframe);
+    await expect(panel.getByLabel('待发送截图').locator('img')).toHaveCount(1);
+    await panel.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(panel).toContainText('已根据当前项目快照完成检查。');
+    expect(provider.assistantImages.at(-1)?.[0]).toMatch(/^data:image\/png;base64,/);
+    const pixels = provider.assistantImages.at(-1)?.[0];
+    await page.reload();
+    await page.getByRole('button', { name: 'AI 助手' }).click();
+    await expect(panel.locator('.assistant-panel__sent-image')).toHaveCount(1);
+    await panel.getByLabel('输入消息').fill('图中这个要怎么改？');
+    await panel.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(panel.locator('.assistant-panel__message--assistant')).toHaveCount(2);
+    expect(provider.assistantImages.at(-1)?.[0]).toBe(pixels);
+    await page.setViewportSize({ width: 1500, height: 950 });
+    await page.screenshot({ path: 'test-results/assistant-images.png' });
+    await panel.getByRole('button', { name: '关闭助手' }).click();
+    await page.locator('.project-switcher > button').filter({ hasText: '新项目' }).click();
+  });
+
+  test('新项目可直接准备草稿，确认区可读且保存后主工作区立即更新', async () => {
+    await createNewProject(page, 'E2E 助手首次草稿');
+    await page.getByRole('button', { name: 'AI 助手' }).click();
+    const panel = page.getByTestId('assistant-panel');
+    await panel.getByRole('button', { name: '为当前项目和 Screen 新建对话', exact: true }).click();
+    await expect(panel.getByRole('group', { name: '助手模式' })).toHaveCount(0);
+    await panel.getByLabel('输入消息').fill('完善装备升级设计并准备保存草稿');
+    await panel.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(panel.getByLabel('拟保存的完整草稿')).toContainText('查看装备并升级，材料不足时提示');
+    await expect(panel.locator('.assistant-panel__action-card')).toContainText('E2E 助手首次草稿');
+    await page.screenshot({ path: 'test-results/assistant-draft-review.png' });
+    expect((await getProject(page, 'E2E 助手首次草稿')).intent_mode).not.toBe('structured-v2');
+    await panel.getByRole('button', { name: '拒绝执行' }).click();
+    await expect(panel).toContainText('已拒绝执行');
+    await expect(panel.getByRole('button', { name: '确认执行' })).toHaveCount(0);
+    expect((await getProject(page, 'E2E 助手首次草稿')).intent_mode).not.toBe('structured-v2');
+    await panel.getByLabel('输入消息').fill('现在请重新准备保存草稿');
+    await panel.getByRole('button', { name: '发送', exact: true }).click();
+    await panel.getByRole('button', { name: '确认执行' }).click();
+    await expect(panel.locator('.assistant-panel__action-card.is-succeeded')).toContainText('已完成');
+    await expect(page.getByRole('textbox', { name: '页面目的' })).toHaveValue(/材料不足/);
+    const saved = await getProject(page, 'E2E 助手首次草稿');
+    expect(saved.intent_mode).toBe('structured-v2');
+    expect(saved.requirement_confirmed).toBe(false);
+    await expect(panel.getByText('使用说明与功能入口')).toHaveCount(0);
+    await expect(panel.getByRole('heading', { level: 2 })).toHaveCount(0);
+    const header = panel.locator('header.assistant-panel__list');
+    const dropdownBounds = await header.getByRole('button', { name: '切换助手对话' }).boundingBox();
+    const newBounds = await header.getByRole('button', { name: '为当前项目和 Screen 新建对话' }).boundingBox();
+    const closeBounds = await header.getByRole('button', { name: '关闭助手' }).boundingBox();
+    expect(dropdownBounds!.x).toBeLessThan(newBounds!.x);
+    expect(newBounds!.x).toBeLessThan(closeBounds!.x);
+    expect(newBounds!.y).toBeCloseTo(closeBounds!.y, 0);
+    const activeTitle = await header.getByRole('button', { name: '切换助手对话' }).textContent();
+    await header.getByRole('button', { name: '切换助手对话' }).click();
+    await panel.locator('.assistant-panel__conversation-row:not(.is-selected)').first().getByRole('button', { name: /^重命名对话/ }).click();
+    const renameDialog = page.getByRole('dialog', { name: '重命名对话' });
+    await renameDialog.getByLabel('对话标题').fill('已重命名的旧对话');
+    await renameDialog.getByRole('button', { name: '保存', exact: true }).click();
+    await expect(renameDialog).toHaveCount(0);
+    await expect(header.getByRole('button', { name: '切换助手对话' })).toHaveText(activeTitle!);
+    await header.getByRole('button', { name: '切换助手对话' }).click();
+    await expect(panel.getByRole('button', { name: '删除对话「已重命名的旧对话」' })).toBeVisible();
+    await page.screenshot({ path: 'test-results/assistant-conversation-menu.png' });
+    await panel.getByRole('button', { name: '删除对话「已重命名的旧对话」' }).click();
+    await page.getByRole('dialog', { name: '删除对话' }).getByRole('button', { name: '删除对话', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(header.getByRole('button', { name: '切换助手对话' })).toHaveText(activeTitle!);
+    await panel.getByRole('button', { name: '关闭助手' }).click();
+    await page.locator('.project-switcher > button').filter({ hasText: '新项目' }).click();
+  });
+
   test('跨项目确认不串写，版本漂移进入 stale，并保持图库/模态/窄屏边界', async () => {
     await createNewProject(page, 'E2E 助手项目 A');
     await queueOpenFiles(launched.app, [GOLDEN_ASSETS.wireframe]);
@@ -31,8 +107,7 @@ test.describe.serial('内嵌智能助手 A1/A2 安全闭环', () => {
     await page.getByRole('button', { name: 'AI 助手' }).click();
     const panel = page.getByTestId('assistant-panel');
     await expect(panel).toBeVisible();
-    await panel.getByRole('button', { name: '新建对话', exact: true }).click();
-    await panel.getByRole('button', { name: '执行', exact: true }).click();
+    await panel.getByRole('button', { name: '为当前项目和 Screen 新建对话', exact: true }).click();
     await panel.getByLabel('输入消息').fill('请补充页面目的，并准备保存意图审查草稿。');
     await panel.getByRole('button', { name: '发送' }).click();
     const confirm = panel.getByRole('button', { name: '确认执行' });
@@ -98,17 +173,21 @@ test.describe.serial('内嵌智能助手 A1/A2 安全闭环', () => {
     await expect(panel).toBeVisible();
     await expect(page.locator('.artifact-inspector')).toHaveCount(0);
 
-    // 两个桌面真实可达宽度：右列分别为 316 / 280px，不新增断点。
+    // 两个桌面真实可达宽度：压缩左栏，将空间让给助手，同时保持主区可用。
     const originalContentSize = await launched.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getContentSize());
     await page.setViewportSize({ width: 1321, height: 900 });
-    expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(316, 0);
+    expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(420, 0);
     await page.setViewportSize({ width: 1180, height: 760 });
-    expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(280, 0);
+    expect(await panel.evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(380, 0);
     const regenerateFits = await panel.getByRole('button', { name: '重新生成计划' }).evaluate((node) => node.scrollWidth <= node.clientWidth);
     expect(regenerateFits).toBe(true);
+    expect(await page.locator('.stage-rail').evaluate((node) => node.getBoundingClientRect().width)).toBeCloseTo(190, 0);
+    expect(await panel.evaluate((node) => node.getBoundingClientRect().right <= innerWidth)).toBe(true);
 
     // 删除确认在 body top layer，遮罩由 dialog 自身覆盖视口。
-    const deleteTrigger = panel.getByRole('button', { name: '删除对话' });
+    const menuTrigger = panel.getByRole('button', { name: '切换助手对话' });
+    await menuTrigger.click();
+    const deleteTrigger = panel.locator('.assistant-panel__conversation-row.is-selected').getByRole('button', { name: /^删除对话/ });
     await deleteTrigger.click();
     const dialog = page.getByRole('dialog', { name: '删除对话' });
     await expect(dialog).toBeVisible();
@@ -125,7 +204,8 @@ test.describe.serial('内嵌智能助手 A1/A2 安全闭环', () => {
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(panel).toBeVisible();
-    await expect(deleteTrigger).toBeFocused();
+    await expect(menuTrigger).toBeFocused();
+    await menuTrigger.click();
     await deleteTrigger.click();
     await expect(page.getByRole('dialog', { name: '删除对话' })).toBeVisible();
     await page.getByRole('dialog', { name: '删除对话' }).getByRole('button', { name: '取消' }).click();

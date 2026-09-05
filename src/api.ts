@@ -1,4 +1,4 @@
-import type { AppConfig, AssistantConversation, AssistantConversationList, AssistantMode, CreateProjectInput, DesignProject, GalleryAsset, GalleryDownloadResult, GalleryListResult, GalleryQuery, IntentCandidate, IntentReview, ProjectSummary } from './types';
+import type { AppConfig, AssistantConversation, AssistantConversationList, AssistantMode, AssistantAttachment, CreateProjectInput, DesignProject, GalleryAsset, GalleryDownloadResult, GalleryListResult, GalleryQuery, IntentCandidate, IntentReview, ProjectSummary } from './types';
 
 const previewProjects: DesignProject[] = [];
 const previewIntentCandidates = new Map<string, IntentCandidate>();
@@ -514,7 +514,7 @@ export const copilotApi = {
   openAssistantConversation: (conversationId: string): Promise<AssistantConversation> => api().openAssistantConversation(conversationId),
   renameAssistantConversation: (conversationId: string, title: string): Promise<AssistantConversation> => api().renameAssistantConversation(conversationId, title),
   deleteAssistantConversation: (conversationId: string): Promise<{ deleted: true; conversation_id: string }> => api().deleteAssistantConversation(conversationId),
-  sendAssistantMessage: (conversationId: string, input: { mode: AssistantMode; content: string; projectId: string; screenId: string }): Promise<AssistantConversation> => api().sendAssistantMessage(conversationId, input),
+  sendAssistantMessage: (conversationId: string, input: { mode: AssistantMode; currentStage?: string; content: string; attachments?: AssistantAttachment[]; projectId: string; screenId: string }): Promise<AssistantConversation> => api().sendAssistantMessage(conversationId, input),
   confirmAssistantAction: (conversationId: string, runId: string, actionId: string): Promise<AssistantConversation> => api().confirmAssistantAction(conversationId, runId, actionId),
   cancelAssistantAction: (conversationId: string, runId: string, actionId: string): Promise<AssistantConversation> => api().cancelAssistantAction(conversationId, runId, actionId),
   listProjects: (): Promise<ProjectSummary[]> => api().listProjects(),

@@ -137,9 +137,9 @@ function providerMeta(payload, config) {
 // —— 可归一化但接触不到 Key；errors 触发纠正（最多 3 次），warnings 不重试；
 // captureMeta 与 captureRaw 语义分开：meta 载荷绝不含 raw text / Key / data URL。
 // 图片在任务开始时读取一次并在全部尝试内复用。
-async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys = [], captureRaw = false, captureMeta = false, processValue, failureCode, model = config.visionModel, timeoutMs = 300000 }) {
+async function requestJson(config, { prompt, imagePaths = [], imageDataUrls = [], requiredStringKeys = [], captureRaw = false, captureMeta = false, processValue, failureCode, model = config.visionModel, timeoutMs = 300000 }) {
   if (!config.configured) throw new Error('Kunpo is not configured. Set a Gateway URL or local API URL + key.');
-  const images = await Promise.all(imagePaths.filter(Boolean).map(fileDataUrl));
+  const images = [...await Promise.all(imagePaths.filter(Boolean).map(fileDataUrl)), ...imageDataUrls];
   let feedback = '';
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -200,9 +200,10 @@ async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys
   throw final;
 }
 
-async function requestAssistant(config, { prompt }) {
+async function requestAssistant(config, { prompt, imageDataUrls = [], validateAction }) {
   const envelope = await requestJson(config, {
     prompt,
+    imageDataUrls,
     model: config.assistantModel || config.visionModel,
     timeoutMs: 120000,
     failureCode: ERROR_CODES.ASSISTANT_RESPONSE_INVALID,
@@ -217,7 +218,8 @@ async function requestAssistant(config, { prompt }) {
         else if (typeof candidate.name !== 'string' || !candidate.name.trim() || typeof candidate.args !== 'object' || !candidate.args || Array.isArray(candidate.args)) errors.push('proposed_action requires name and object args');
         else proposedAction = { name: candidate.name.trim(), reason: typeof candidate.reason === 'string' ? candidate.reason.trim().slice(0, 1_000) : '', args: candidate.args };
       }
-      return { value: { reply, proposed_action: proposedAction }, errors, warnings: [] };
+      if (proposedAction && validateAction) errors.push(...validateAction(proposedAction));
+      return { value: { reply, proposed_action: proposedAction }, errors, warnings: [], repairContext: value };
     }
   });
   return envelope.value;

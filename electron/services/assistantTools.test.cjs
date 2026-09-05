@@ -14,7 +14,7 @@ test('server owns action risk and executes only through the public intent servic
   const action = tools.describe({
     name: 'save_intent_review_draft', reason: '保存', args: { draft },
     risk: { writes_project: false, reversible: true }
-  }, { input_revisions: { intent_review: 7 } });
+  }, { intent_mode: 'structured-v2', input_revisions: { intent_review: 7 } });
   assert.deepEqual(action.risk, { writes_project: true, replaces_content: true, reversible: false, external_cost: false });
   await tools.execute(action, { project_id: 'project-a', screen_id: 'main' });
   assert.deepEqual(calls[0], ['project-a', 'main', { expectedIntentReviewRevision: 7, draft }]);

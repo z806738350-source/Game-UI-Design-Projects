@@ -151,6 +151,7 @@ function promptText(body: Record<string, unknown>): string {
 
 export class FixtureProvider {
   baseUrl = '';
+  assistantImages: string[][] = [];
   requests: Array<{ kind: string; head: string }> = [];
   private server: http.Server | null = null;
   private chatFailures = 0;
@@ -198,7 +199,9 @@ export class FixtureProvider {
       response.end(JSON.stringify(payload));
     };
     if (request.method === 'POST' && request.url === '/chat/completions') {
-      const prompt = promptText(JSON.parse(bodyText || '{}'));
+      const body = JSON.parse(bodyText || '{}');
+      const prompt = promptText(body);
+      if (prompt.startsWith('你是 Game UI Design Copilot 内嵌助手。')) this.assistantImages.push(body.messages[0].content.filter((item: { type: string }) => item.type === 'image_url').map((item: { image_url: { url: string } }) => item.image_url.url));
       this.requests.push({ kind: 'chat', head: prompt.slice(0, 160) });
       if (this.chatFailures > 0) { this.chatFailures -= 1; return send(500, { error: { message: 'fixture provider injected failure' } }); }
       try { return send(200, semanticResponse(this.routeSemantic(prompt))); }
@@ -225,9 +228,12 @@ export class FixtureProvider {
 
   private routeSemantic(prompt: string): unknown {
     if (prompt.startsWith('你是 Game UI Design Copilot 内嵌助手。')) {
-      const request = JSON.parse(prompt.slice(prompt.lastIndexOf('\n\n') + 2)) as { mode: string; project_context?: { intent_review?: Record<string, unknown> } };
-      if (request.mode === 'qa') return { reply: '已根据当前项目快照完成检查。', proposed_action: null };
-      const draft = structuredClone(request.project_context?.intent_review);
+      const request = JSON.parse(prompt.slice(prompt.lastIndexOf('\n\n') + 2)) as { mode: string; recent_messages?: Array<{ role: string; content: string }>; recent_actions?: Array<{ user_decision?: string }>; project_context?: { intent_review?: Record<string, unknown> } };
+      if (request.mode === 'qa' || !/保存|草稿|计划/.test(request.recent_messages?.filter((message) => message.role === 'user').at(-1)?.content || '')) return { reply: '已根据当前项目快照完成检查。', proposed_action: null };
+      const draft = structuredClone(request.project_context?.intent_review || {
+        page_purpose: { id: 'purpose', text: '查看装备并升级，材料不足时提示', origin: 'ai_inference' },
+        player_tasks: [], core_flow: [], visible_controls: [], visible_information_and_states: [], uncertainties: []
+      });
       if (!draft?.page_purpose || typeof draft.page_purpose !== 'object') throw new Error('fixture provider assistant requires an existing intent review');
       (draft.page_purpose as Record<string, unknown>).text = `${String((draft.page_purpose as Record<string, unknown>).text || '')}（助手草稿）`;
       (draft.page_purpose as Record<string, unknown>).designer_modified = true;

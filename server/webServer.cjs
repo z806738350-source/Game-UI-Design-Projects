@@ -220,8 +220,8 @@ async function readBody(request, limit) {
   return Buffer.concat(chunks);
 }
 
-async function readJsonBody(request) {
-  const body = await readBody(request, MAX_JSON_BYTES);
+async function readJsonBody(request, maxBytes = MAX_JSON_BYTES) {
+  const body = await readBody(request, maxBytes);
   if (!body.length) return {};
   try { return JSON.parse(body.toString('utf8')); }
   catch {
@@ -394,7 +394,8 @@ function createApplication(environment = process.env) {
     const { projectStore, intentStateStore, designPipeline, kunpoConfig, assistantRuntime } = context;
     if (url.pathname.startsWith('/api/assistant/')) response.setHeader('Cache-Control', 'no-store');
     const binaryUpload = url.pathname.endsWith('/import') || /\/assets\/(font|component|forge-manifest)$/.test(url.pathname);
-    const body = ['POST', 'PUT', 'PATCH'].includes(request.method) && !binaryUpload ? await readJsonBody(request) : {};
+    const assistantMessage = request.method === 'POST' && /^\/api\/assistant\/conversations\/[^/]+\/messages$/.test(url.pathname);
+    const body = ['POST', 'PUT', 'PATCH'].includes(request.method) && !binaryUpload ? await readJsonBody(request, assistantMessage ? 17 * 1024 * 1024 : MAX_JSON_BYTES) : {};
     let value;
     if (request.method === 'GET' && url.pathname === '/api/config') {
       value = { kunpo: kunpoClient.safeConfig(kunpoConfig), workspaceRoot: '在线工作区（当前飞书账号）', platform: 'web', features };

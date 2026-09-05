@@ -230,11 +230,14 @@ export type AssistantConversationMeta = {
   created_at: string;
   updated_at: string;
   has_pending_action?: boolean;
+  message_error?: string;
 };
+export type AssistantAttachment = { name: string; dataUrl: string };
 export type AssistantMessage = {
   id: string;
   seq: number;
   role: 'user' | 'assistant';
+  attachments?: AssistantAttachment[];
   content: string;
   created_at: string;
 };
@@ -251,6 +254,7 @@ export type AssistantAction = {
   reason: string;
   args: Record<string, unknown>;
   risk: AssistantRisk;
+  review?: { project_name: string; screen_name: string; before: string; before_truncated: boolean };
 };
 export type AssistantChangedField = { kind: 'input_revision' | 'artifact_version' | 'artifact_status'; key: string; expected: number | string; actual: number | string };
 export type AssistantRun = {
@@ -262,12 +266,13 @@ export type AssistantRun = {
   request_message_id: string | null;
   context: { project_id: string; screen_id: string; input_revisions: Record<string, number>; artifact_versions: Record<string, number> };
   proposed_action: AssistantAction | null;
-  result: { noop?: boolean; intent_review_revision?: number; reply_saved?: boolean } | null;
+  result: { noop?: boolean; intent_review_revision?: number; reply_saved?: boolean; user_decision?: 'rejected' } | null;
   error: { code: string; message: string; changed?: AssistantChangedField[] } | null;
   created_at: string;
   updated_at: string;
 };
 export type AssistantConversation = {
+  message_error?: string;
   meta: AssistantConversationMeta;
   messages: AssistantMessage[];
   runs: AssistantRun[];

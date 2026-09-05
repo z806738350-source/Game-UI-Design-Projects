@@ -423,3 +423,40 @@ test('requestJson keeps legacy captureRaw and plain return behavior without proc
     global.fetch = originalFetch;
   }
 });
+
+
+test('assistant sends image pixels on every provider repair attempt without putting base64 in text', async () => {
+  const originalFetch = global.fetch;
+  const images = ['data:image/png;base64,aW1hZ2U='];
+  const bodies = [];
+  global.fetch = async (_url, options) => {
+    bodies.push(JSON.parse(options.body));
+    return jsonResponse(JSON.stringify(bodies.length === 1 ? { reply: '' } : { reply: '已看见截图', proposed_action: null }));
+  };
+  try {
+    await requestAssistant(REQUEST_JSON_CONFIG, { prompt: '看图', imageDataUrls: images });
+    assert.equal(bodies.length, 2);
+    for (const body of bodies) {
+      assert.deepEqual(body.messages[0].content[1], { type: 'image_url', image_url: { url: images[0], detail: 'high' } });
+      assert.doesNotMatch(body.messages[0].content[0].text, /base64/);
+    }
+  } finally { global.fetch = originalFetch; }
+});
+
+test('assistant repairs domain-invalid drafts using field-level errors', async () => {
+  const { validateAction } = require('./assistantTools.cjs');
+  const originalFetch = global.fetch;
+  const prompts = [];
+  global.fetch = async (_url, options) => {
+    prompts.push(JSON.parse(options.body).messages[0].content[0].text);
+    const draft = prompts.length === 1 ? { goal: '升级' } : { page_purpose: { id: 'purpose', text: '升级装备', origin: 'ai_inference' }, player_tasks: [], core_flow: [], visible_controls: [], visible_information_and_states: [], uncertainties: [] };
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ reply: '请确认草稿', proposed_action: { name: 'save_intent_review_draft', args: { draft } } }) } }] }), { status: 200 });
+  };
+  try {
+    const response = await requestAssistant({ configured: true, baseUrl: 'https://example.test', visionModel: 'vision' }, { prompt: '草稿', validateAction });
+    assert.equal(prompts.length, 2);
+    assert.match(prompts[1], /review.player_tasks must be an array/);
+    assert.match(prompts[1], /INVALID_DRAFT/);
+    assert.equal(response.proposed_action.args.draft.page_purpose.text, '升级装备');
+  } finally { global.fetch = originalFetch; }
+});

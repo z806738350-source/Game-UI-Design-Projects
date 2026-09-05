@@ -41,7 +41,7 @@ test('serializes concurrent JSONL appends and a rejected append does not poison 
   assert.deepEqual(opened.messages.map((item) => item.seq), Array.from({ length: 12 }, (_, index) => index + 1));
 });
 
-test('repairs only a half-written tail and rejects corruption in the middle', async (t) => {
+test('repairs only a half-written tail and exposes damaged history without editing it', async (t) => {
   const { root, store } = await temporaryStore(t);
   const conversation = await store.createConversation({ projectId: 'project-a', screenId: 'main' });
   const id = conversation.meta.conversation_id;
@@ -50,9 +50,9 @@ test('repairs only a half-written tail and rejects corruption in the middle', as
   await fs.appendFile(file, '{"id":"partial"', 'utf8');
   assert.equal((await store.openConversation(id)).messages.length, 1);
   await fs.appendFile(file, JSON.stringify({ id: '11111111-1111-4111-8111-111111111111', role: 'user', content: '字段损坏', created_at: new Date().toISOString() }), 'utf8');
-  await assert.rejects(store.openConversation(id), { code: 'ASSISTANT_CONVERSATION_CORRUPT' });
+  assert.match((await store.openConversation(id)).message_error, /损坏/);
   await fs.appendFile(file, 'not-json\n', 'utf8');
-  await assert.rejects(store.openConversation(id), { code: 'ASSISTANT_CONVERSATION_CORRUPT' });
+  assert.match((await store.openConversation(id)).message_error, /损坏/);
 });
 
 test('a corrupt conversation is isolated and a corrupt summary cache never blocks history', async (t) => {
@@ -132,4 +132,17 @@ test('startup removes only assistant trash entries older than seven days', async
   await fs.utimes(target, old, old);
   await createAssistantStore({ assistantRoot: root }).initialize();
   await assert.rejects(fs.access(target), { code: 'ENOENT' });
+});
+
+test('long history keeps opening user constraints and recent corrections within its explicit excerpt budget', async (t) => {
+  const { store } = await temporaryStore(t);
+  const conversation = await store.createConversation({ projectId: 'project', screenId: 'main' });
+  const id = conversation.meta.conversation_id;
+  await store.appendMessage(id, { role: 'user', content: '所有按钮必须支持色弱玩家；不使用付费解锁。' });
+  for (let index = 0; index < 42; index += 1) await store.appendMessage(id, { role: index % 2 ? 'user' : 'assistant', content: `第 ${index} 轮：${'设计讨论'.repeat(160)}` });
+  const result = await store.openConversation(id);
+  assert.match(result.summary.summary, /支持色弱玩家/);
+  assert.match(result.summary.summary, /不完整记忆/);
+  assert.ok(result.summary.summary.length <= 8000);
+  assert.equal(result.messages.length, 43);
 });

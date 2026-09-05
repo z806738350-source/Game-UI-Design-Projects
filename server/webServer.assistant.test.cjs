@@ -125,3 +125,37 @@ test('disabled assistant remains absent from tenant storage and rejects every ro
     await runtime.close();
   }
 });
+
+
+test('HTTP screenshot payload above 2MB reaches model and persists without crossing tenant boundary', async () => {
+  const runtime = await startApplication(true);
+  const sharp = require('sharp');
+  const pixels = require('node:crypto').randomBytes(1024 * 800 * 3);
+  const png = await sharp(pixels, { raw: { width: 1024, height: 800, channels: 3 } }).png().toBuffer();
+  const image = { name: '截图.png', dataUrl: `data:image/png;base64,${png.toString('base64')}` };
+  let calls = 0;
+  globalThis.fetch = async (url, options) => {
+    if (!String(url).startsWith('https://gateway.example.test/')) return originalFetch(url, options);
+    calls += 1;
+    const body = JSON.parse(options.body);
+    assert.equal(body.messages[0].content[1].image_url.url, image.dataUrl);
+    return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ reply: '已看见截图。', proposed_action: null }) } }] }), { status: 200 });
+  };
+  try {
+    const project = await runtime.app.tenantContext(runtime.tenantA).projectStore.create({ name: '截图项目', projectType: 'new' });
+    const created = await request(runtime, '/api/assistant/conversations', { method: 'POST', body: { projectId: project.id, screenId: 'main' } });
+    const route = `/api/assistant/conversations/${created.payload.meta.conversation_id}`;
+    const body = { mode: 'qa', content: '', projectId: project.id, screenId: 'main', attachments: [image] };
+    assert.ok(Buffer.byteLength(JSON.stringify(body)) > 2 * 1024 * 1024);
+    const sent = await request(runtime, `${route}/messages`, { method: 'POST', body });
+    assert.equal(sent.response.status, 200);
+    assert.equal(sent.payload.runs[0].status, 'succeeded');
+    assert.equal(calls, 1);
+    const reopened = await request(runtime, route);
+    assert.deepEqual(reopened.payload.messages[0].attachments, [image]);
+    assert.equal((await request(runtime, route, { cookie: runtime.cookieB })).response.status, 404);
+    assert.equal((await request(runtime, `${route}/messages`, { method: 'POST', body, origin: 'https://evil.example' })).response.status, 403);
+    assert.equal(calls, 1);
+    assert.equal((await request(runtime, `${route}/messages`, { method: 'POST', body: { ...body, content: 'x'.repeat(18 * 1024 * 1024) } })).response.status, 413);
+  } finally { globalThis.fetch = originalFetch; await runtime.close(); }
+});
