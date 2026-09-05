@@ -104,6 +104,7 @@ function loadKunpoConfig(projectRoot, processEnv = process.env, options = {}) {
     apiKey,
     mode,
     configured: Boolean(baseUrl && (mode === 'gateway' || apiKey)),
+    assistantEnabled: pick('GAME_UI_ASSISTANT_ENABLED') === 'true',
     envSource: path.basename(envPath),
     modelSource: modelConfig.assistantModel || modelConfig.visionModel || modelConfig.critiqueModel || modelConfig.imageModel ? path.basename(modelConfigPath) : path.basename(envPath),
     assistantModel: modelConfig.assistantModel || modelConfig.visionModel || String(processEnv.KUNPO_VISION_MODEL || fileValues.KUNPO_VISION_MODEL || '').trim() || 'google/gemini-3.1-flash-lite',

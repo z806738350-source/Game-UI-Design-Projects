@@ -64,6 +64,17 @@ test('assistant feature flag accepts only the explicit literal true', () => {
   }
 });
 
+test('desktop feature flag is read from the same .env as Kunpo config', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-assistant-flag-'));
+  fs.writeFileSync(path.join(root, '.env'), 'GAME_UI_ASSISTANT_ENABLED=true\n', 'utf8');
+  try {
+    assert.equal(loadKunpoConfig(root, {}).assistantEnabled, true);
+    assert.equal(loadKunpoConfig(root, { GAME_UI_ASSISTANT_ENABLED: 'false' }).assistantEnabled, false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('saveModelConfig rejects blank or unsafe model ids', () => {
   const modelConfigPath = path.join(os.tmpdir(), `invalid-models-${Date.now()}.json`);
   assert.throws(() => saveModelConfig(os.tmpdir(), { visionModel: '', imageModel: 'Image-GPT2' }, {}, { modelConfigPath }), /不能为空/);
