@@ -2,6 +2,7 @@ import {
   Check, ChevronDown, Clock3, FileJson, Layers3, LockKeyhole, Maximize2, ScanSearch, Upload, WandSparkles, X
 } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Artifact, DesignProject, ScreenControl } from '../../types';
 
 export const stages = [
@@ -52,7 +53,49 @@ export function statusOf(project: DesignProject | null, stageId: StageId) {
 }
 
 export function statusLabel(status: string) {
-  return ({ draft: '待开始', in_progress: '运行中', reviewed: '待确认', approved: '已批准', generated: '已生成', stale: '需更新', rejected: '已否决', failed: '失败', cancelled: '已停止' } as Record<string, string>)[status] || status;
+  return ({
+    draft: '待开始', in_progress: '运行中', reviewed: '待确认', approved: '已批准', generated: '已生成',
+    queued: '排队中', running: '正在思考', awaiting_confirmation: '待确认执行', executing: '执行中', succeeded: '已完成',
+    stale: '需更新', rejected: '已否决', failed: '失败', cancelled: '已停止', interrupted: '已中断'
+  } as Record<string, string>)[status] || status;
+}
+
+export function Modal({ title, copy, onClose, children, wide = false }: {
+  title: string;
+  copy?: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const closeRef = useRef(onClose);
+  const titleId = useId();
+  const copyId = useId();
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!dialog.open) dialog.showModal();
+    return () => {
+      if (dialog.open) dialog.close();
+      returnFocusRef.current?.focus();
+    };
+  }, []);
+
+  return createPortal(
+    <dialog ref={dialogRef} className="dialog-backdrop" aria-labelledby={titleId} aria-describedby={copy ? copyId : undefined}
+      onCancel={(event) => { event.preventDefault(); closeRef.current(); }}
+      onMouseDown={(event) => { if (event.target === event.currentTarget) closeRef.current(); }}>
+      <section className={`utility-dialog ${wide ? 'utility-dialog--wide' : ''}`}>
+        <header><div><h2 id={titleId}>{title}</h2>{copy && <p id={copyId}>{copy}</p>}</div><button className="icon-button" type="button" onClick={() => closeRef.current()} aria-label="关闭"><X size={18} /></button></header>
+        {children}
+      </section>
+    </dialog>,
+    document.body
+  );
 }
 
 export function friendlyError(cause: unknown) {
@@ -154,7 +197,7 @@ export function retryContextMatches(
 
 export const strictContinuation = (project: DesignProject) => project.continuation_mode === 'existing-strict' || project.continuation_mode === 'locked-continuation';
 
-export type DropdownOption = { value: string; label: string; disabled?: boolean };
+export type DropdownOption = { value: string; label: string; disabled?: boolean; className?: string };
 
 // 自绘下拉框：macOS 下原生 <select> 的展开列表是系统菜单，无法套用设计令牌，
 // 故统一用 DOM 列表框替代，展开态完全遵循 Darkroom Precision 风格。
@@ -282,7 +325,7 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
   const current = options.find((option) => option.value === value);
   return (
     <div className="dropdown" ref={rootRef} data-testid={testId}>
-      <div ref={comboboxRef} role="combobox" tabIndex={disabled ? -1 : 0} className="dropdown-button" aria-haspopup="listbox" aria-expanded={open} aria-controls={menuId} aria-activedescendant={open && activeIndex >= 0 ? `${menuId}-option-${activeIndex}` : undefined} aria-disabled={disabled || undefined} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} onClick={() => { if (disabled) return; if (open) close(); else openAt(currentIndex >= 0 ? currentIndex : firstEnabled); }} onKeyDown={onComboboxKeyDown}>
+      <div ref={comboboxRef} role="combobox" tabIndex={disabled ? -1 : 0} className={`dropdown-button${current?.className ? ` ${current.className}` : ''}`} aria-haspopup="listbox" aria-expanded={open} aria-controls={menuId} aria-activedescendant={open && activeIndex >= 0 ? `${menuId}-option-${activeIndex}` : undefined} aria-disabled={disabled || undefined} aria-label={ariaLabel} aria-labelledby={ariaLabelledBy} onClick={() => { if (disabled) return; if (open) close(); else openAt(currentIndex >= 0 ? currentIndex : firstEnabled); }} onKeyDown={onComboboxKeyDown}>
         <span className={current ? undefined : 'is-placeholder'}>{current ? current.label : placeholder}</span>
         <ChevronDown size={13} />
       </div>
@@ -290,7 +333,7 @@ export function Dropdown({ value, options, onChange, disabled = false, testId, a
         {options.map((option, index) => (
           <li key={option.value} id={`${menuId}-option-${index}`} role="option" aria-selected={option.value === value} aria-disabled={option.disabled || undefined} data-value={option.value}
             ref={(node) => { optionRefs.current[index] = node; }}
-            className={`dropdown-option${option.value === value ? ' is-selected' : ''}${option.disabled ? ' is-disabled' : ''}${index === activeIndex ? ' is-active' : ''}`}
+            className={`dropdown-option${option.value === value ? ' is-selected' : ''}${option.disabled ? ' is-disabled' : ''}${index === activeIndex ? ' is-active' : ''}${option.className ? ` ${option.className}` : ''}`}
             // 触发元素是 div[role=combobox]，不属于 labelable element，外围 <label>
             // 的激活行为不会转发到它；此 preventDefault 仅为防御性保留。
             onClick={(event) => { event.preventDefault(); selectAt(index); }}

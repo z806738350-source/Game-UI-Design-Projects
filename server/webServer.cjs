@@ -10,9 +10,10 @@ const { createIntentStateStore } = require('../electron/services/intentStateStor
 const { createGalleryStore, isDownloadAllowed, hasDownloadWaiver, blockedDownloadMessage } = require('../electron/services/galleryStore.cjs');
 const { hashBuffer, resolveProjectPath } = require('../electron/services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('../electron/services/finalDeliveryGate.cjs');
-const { loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
+const { assistantEnabled, loadKunpoConfig, saveModelConfig } = require('../electron/services/env.cjs');
 const kunpoClient = require('../electron/services/kunpoClient.cjs');
 const { ERROR_CODES } = require('../electron/services/errorCodes.cjs');
+const { createAssistantRuntime } = require('../electron/services/assistantRuntime.cjs');
 
 const MAX_JSON_BYTES = 2 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -219,8 +220,8 @@ async function readBody(request, limit) {
   return Buffer.concat(chunks);
 }
 
-async function readJsonBody(request) {
-  const body = await readBody(request, MAX_JSON_BYTES);
+async function readJsonBody(request, maxBytes = MAX_JSON_BYTES) {
+  const body = await readBody(request, maxBytes);
   if (!body.length) return {};
   try { return JSON.parse(body.toString('utf8')); }
   catch {
@@ -275,6 +276,7 @@ function validateConfiguration(environment) {
 
 function createApplication(environment = process.env) {
   const config = validateConfiguration(environment);
+  const features = Object.freeze({ assistant: assistantEnabled(environment) });
   const identityStore = new IdentityStore(path.join(config.dataRoot, 'identity'), config.sessionSecret);
   const contexts = new Map();
 
@@ -296,7 +298,11 @@ function createApplication(environment = process.env) {
     });
     const designPipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore, galleryStore });
     const flowStateRepair = createFlowStateRepair({ projectStore });
-    const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, intentStateStore, kunpoConfig, designPipeline, flowStateRepair, galleryStore };
+    const assistantRuntime = features.assistant ? createAssistantRuntime({
+      assistantRoot: path.join(tenantRoot, 'assistant'), kunpoConfig, kunpoClient,
+      projectStore, intentStateStore, enabled: true
+    }) : null;
+    const context = { tenantRoot, workspaceRoot, modelConfigPath, projectRoot, projectStore, intentStateStore, kunpoConfig, designPipeline, flowStateRepair, galleryStore, assistantRuntime };
     contexts.set(tenantId, context);
     return context;
   }
@@ -385,19 +391,39 @@ function createApplication(environment = process.env) {
   async function handleApi(request, response, url, session) {
     enforceOrigin(request);
     const context = tenantContext(session.tenant_id);
-    const { projectStore, intentStateStore, designPipeline, kunpoConfig } = context;
+    const { projectStore, intentStateStore, designPipeline, kunpoConfig, assistantRuntime } = context;
+    if (url.pathname.startsWith('/api/assistant/')) response.setHeader('Cache-Control', 'no-store');
     const binaryUpload = url.pathname.endsWith('/import') || /\/assets\/(font|component|forge-manifest)$/.test(url.pathname);
-    const body = ['POST', 'PUT', 'PATCH'].includes(request.method) && !binaryUpload ? await readJsonBody(request) : {};
+    const assistantMessage = request.method === 'POST' && /^\/api\/assistant\/conversations\/[^/]+\/messages$/.test(url.pathname);
+    const body = ['POST', 'PUT', 'PATCH'].includes(request.method) && !binaryUpload ? await readJsonBody(request, assistantMessage ? 17 * 1024 * 1024 : MAX_JSON_BYTES) : {};
     let value;
     if (request.method === 'GET' && url.pathname === '/api/config') {
-      value = { kunpo: kunpoClient.safeConfig(kunpoConfig), workspaceRoot: '在线工作区（当前飞书账号）', platform: 'web' };
+      value = { kunpo: kunpoClient.safeConfig(kunpoConfig), workspaceRoot: '在线工作区（当前飞书账号）', platform: 'web', features };
     } else if (request.method === 'POST' && url.pathname === '/api/config/models') {
       const saved = saveModelConfig(context.projectRoot, body, environment, { modelConfigPath: context.modelConfigPath });
       kunpoConfig.visionModel = saved.visionModel;
       kunpoConfig.critiqueModel = saved.critiqueModel;
       kunpoConfig.imageModel = saved.imageModel;
+      kunpoConfig.assistantModel = saved.assistantModel;
       kunpoConfig.modelSource = path.basename(saved.modelConfigPath);
-      value = { kunpo: kunpoClient.safeConfig(kunpoConfig), workspaceRoot: '在线工作区（当前飞书账号）', platform: 'web' };
+      value = { kunpo: kunpoClient.safeConfig(kunpoConfig), workspaceRoot: '在线工作区（当前飞书账号）', platform: 'web', features };
+    } else if (url.pathname.startsWith('/api/assistant/')) {
+      if (!assistantRuntime) throw Object.assign(new Error('内嵌助手当前已关闭。'), { code: ERROR_CODES.ASSISTANT_DISABLED, status: 404 });
+      const rootPath = '/api/assistant/conversations';
+      if (request.method === 'GET' && url.pathname === rootPath) value = await assistantRuntime.listConversations();
+      else if (request.method === 'POST' && url.pathname === rootPath) value = await assistantRuntime.createConversation(body);
+      else {
+        const match = url.pathname.match(/^\/api\/assistant\/conversations\/([^/]+)(?:\/(messages)|\/runs\/([^/]+)\/(confirm|cancel))?$/);
+        if (!match) return false;
+        const conversationId = decodeURIComponent(match[1]);
+        if (request.method === 'GET' && !match[2] && !match[3]) value = await assistantRuntime.openConversation(conversationId);
+        else if (request.method === 'PATCH' && !match[2] && !match[3]) value = await assistantRuntime.renameConversation(conversationId, body);
+        else if (request.method === 'DELETE' && !match[2] && !match[3]) value = await assistantRuntime.deleteConversation(conversationId);
+        else if (request.method === 'POST' && match[2] === 'messages') value = await assistantRuntime.sendMessage(conversationId, body);
+        else if (request.method === 'POST' && match[3] && match[4] === 'confirm') value = await assistantRuntime.confirmAction(conversationId, decodeURIComponent(match[3]), body.actionId);
+        else if (request.method === 'POST' && match[3] && match[4] === 'cancel') value = await assistantRuntime.cancelAction(conversationId, decodeURIComponent(match[3]), body.actionId);
+        else return false;
+      }
     } else if (request.method === 'GET' && url.pathname === '/api/gallery') {
       // 图库是租户级资源：路由必须先于 /api/projects 解析（§7.3）。
       const query = {};

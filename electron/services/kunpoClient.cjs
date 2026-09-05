@@ -137,9 +137,9 @@ function providerMeta(payload, config) {
 // —— 可归一化但接触不到 Key；errors 触发纠正（最多 3 次），warnings 不重试；
 // captureMeta 与 captureRaw 语义分开：meta 载荷绝不含 raw text / Key / data URL。
 // 图片在任务开始时读取一次并在全部尝试内复用。
-async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys = [], captureRaw = false, captureMeta = false, processValue, failureCode }) {
+async function requestJson(config, { prompt, imagePaths = [], imageDataUrls = [], requiredStringKeys = [], captureRaw = false, captureMeta = false, processValue, failureCode, model = config.visionModel, timeoutMs = 300000 }) {
   if (!config.configured) throw new Error('Kunpo is not configured. Set a Gateway URL or local API URL + key.');
-  const images = await Promise.all(imagePaths.filter(Boolean).map(fileDataUrl));
+  const images = [...await Promise.all(imagePaths.filter(Boolean).map(fileDataUrl)), ...imageDataUrls];
   let feedback = '';
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -149,12 +149,12 @@ async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys
       const { payload } = await fetchJson(`${config.baseUrl}/chat/completions`, {
         method: 'POST', headers: headers(config),
         body: JSON.stringify({
-          model: config.visionModel,
+          model,
           messages: [{ role: 'user', content }],
           response_format: { type: 'json_object' },
           stream: false
         })
-      }, 300000);
+      }, timeoutMs);
       const text = responseText(payload);
       if (!text) throw new Error('Kunpo returned no readable text.');
       const value = extractJson(text);
@@ -198,6 +198,31 @@ async function requestJson(config, { prompt, imagePaths = [], requiredStringKeys
   const final = new Error(`连续 3 次未返回有效内容：${lastError?.message || '未知格式错误'}`);
   if (failureCode) final.code = failureCode;
   throw final;
+}
+
+async function requestAssistant(config, { prompt, imageDataUrls = [], validateAction }) {
+  const envelope = await requestJson(config, {
+    prompt,
+    imageDataUrls,
+    model: config.assistantModel || config.visionModel,
+    timeoutMs: 120000,
+    failureCode: ERROR_CODES.ASSISTANT_RESPONSE_INVALID,
+    processValue(value) {
+      const errors = [];
+      const reply = typeof value.reply === 'string' ? value.reply.trim() : '';
+      if (!reply || reply.length > 20_000) errors.push('reply must be a non-empty string of at most 20000 characters');
+      let proposedAction = null;
+      if (value.proposed_action != null) {
+        const candidate = value.proposed_action;
+        if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) errors.push('proposed_action must be null or an object');
+        else if (typeof candidate.name !== 'string' || !candidate.name.trim() || typeof candidate.args !== 'object' || !candidate.args || Array.isArray(candidate.args)) errors.push('proposed_action requires name and object args');
+        else proposedAction = { name: candidate.name.trim(), reason: typeof candidate.reason === 'string' ? candidate.reason.trim().slice(0, 1_000) : '', args: candidate.args };
+      }
+      if (proposedAction && validateAction) errors.push(...validateAction(proposedAction));
+      return { value: { reply, proposed_action: proposedAction }, errors, warnings: [], repairContext: value };
+    }
+  });
+  return envelope.value;
 }
 
 function nestedObjects(payload, maxDepth = 6, maxNodes = 500) {
@@ -467,10 +492,11 @@ function safeConfig(config) {
     mode: config.mode,
     envSource: config.envSource,
     modelSource: config.modelSource,
+    assistantModel: config.assistantModel || config.visionModel,
     visionModel: config.visionModel,
     critiqueModel: config.critiqueModel,
     imageModel: config.imageModel
   };
 }
 
-module.exports = { generateImage, isTrustedKunpoCdnUrl, repairImage, requestArtifact, requestJson, safeConfig, taskId };
+module.exports = { generateImage, isTrustedKunpoCdnUrl, repairImage, requestArtifact, requestAssistant, requestJson, safeConfig, taskId };

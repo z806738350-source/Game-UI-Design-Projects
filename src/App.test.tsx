@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppConfig, GalleryAsset, GalleryListResult } from './types';
@@ -15,13 +15,16 @@ const restoreGalleryAsset = vi.fn();
 const downloadGalleryAsset = vi.fn();
 const saveProject = vi.fn();
 const draftRequirement = vi.fn();
+const getConfig = vi.fn(async (): Promise<AppConfig> => ({
+  platform: 'darwin',
+  workspaceRoot: '/tmp/workspace',
+  features: { assistant: false },
+  kunpo: { configured: true, mode: 'gateway', modelSource: 'models.json', envSource: '.env', assistantModel: 'assistant', visionModel: 'vision', imageModel: 'image' }
+}));
+const listAssistantConversations = vi.fn(async () => ({ conversations: [], warnings: [] }));
 vi.mock('./api', () => ({
   copilotApi: {
-    getConfig: vi.fn(async (): Promise<AppConfig> => ({
-      platform: 'darwin',
-      workspaceRoot: '/tmp/workspace',
-      kunpo: { configured: true, mode: 'gateway', modelSource: 'models.json', envSource: '.env' }
-    } as AppConfig)),
+    getConfig: () => getConfig(),
     listProjects: (...args: unknown[]) => listProjects(...args),
     createProject: (...args: unknown[]) => createProject(...args),
     openProject: (...args: unknown[]) => openProject(...args),
@@ -31,7 +34,8 @@ vi.mock('./api', () => ({
     restoreGalleryAsset: (...args: unknown[]) => restoreGalleryAsset(...args),
     downloadGalleryAsset: (...args: unknown[]) => downloadGalleryAsset(...args),
     saveProject: (...args: unknown[]) => saveProject(...args),
-    draftRequirement: (...args: unknown[]) => draftRequirement(...args)
+    draftRequirement: (...args: unknown[]) => draftRequirement(...args),
+    listAssistantConversations: () => listAssistantConversations()
   }
 }));
 
@@ -40,6 +44,9 @@ import { makeProject } from './test-utils/fixtures';
 
 // jsdom 未实现 Element.scrollTo（App 在阶段切换时对主工作区调用），测试环境补空实现
 if (!Element.prototype.scrollTo) Element.prototype.scrollTo = () => {};
+// jsdom 30 尚未实现原生 dialog 方法；只在测试环境补最小行为。
+if (!HTMLDialogElement.prototype.showModal) HTMLDialogElement.prototype.showModal = function showModal() { this.open = true; };
+if (!HTMLDialogElement.prototype.close) HTMLDialogElement.prototype.close = function close() { this.open = false; };
 
 afterEach(() => {
   cleanup();
@@ -56,6 +63,13 @@ afterEach(() => {
   saveProject.mockReset();
   saveProject.mockResolvedValue(undefined);
   draftRequirement.mockReset();
+  getConfig.mockReset();
+  getConfig.mockImplementation(async () => ({
+    platform: 'darwin', workspaceRoot: '/tmp/workspace', features: { assistant: false },
+    kunpo: { configured: true, mode: 'gateway', modelSource: 'models.json', envSource: '.env', assistantModel: 'assistant', visionModel: 'vision', imageModel: 'image' }
+  }));
+  listAssistantConversations.mockReset();
+  listAssistantConversations.mockResolvedValue({ conversations: [], warnings: [] });
 });
 
 describe('App 顶栏帮助入口', () => {
@@ -111,6 +125,69 @@ describe('App 顶栏帮助入口', () => {
     await user.click(await screen.findByTitle('使用说明书'));
     await user.click(screen.getByRole('button', { name: '在系统浏览器中打开' }));
     await screen.findByText(/IPC_GUIDE_OPEN_FAILED/);
+  });
+});
+
+describe('App 助手功能开关与右侧列', () => {
+  it('功能开关关闭时不渲染助手入口', async () => {
+    render(<App />);
+    await screen.findByTitle('模型与工作区配置');
+    expect(screen.queryByRole('button', { name: 'AI 助手' })).toBeNull();
+  });
+
+  it('助手与产物检查器互斥，图库打开时保持挂载但 inert', async () => {
+    const user = userEvent.setup();
+    getConfig.mockResolvedValueOnce({
+      platform: 'darwin', workspaceRoot: '/tmp/workspace', features: { assistant: true },
+      kunpo: { configured: true, mode: 'gateway', modelSource: 'models.json', envSource: '.env', assistantModel: 'assistant', visionModel: 'vision', imageModel: 'image' }
+    });
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'AI 助手' }));
+    const panel = screen.getByTestId('assistant-panel');
+    expect(panel.hidden).toBe(false);
+    expect(document.querySelector('.artifact-inspector')).toBeNull();
+    await user.click(screen.getByTitle('查看 AI 输入、产物与历史版本'));
+    expect(panel.hidden).toBe(true);
+    expect(document.querySelector('.artifact-inspector')).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: 'AI 助手' }));
+    expect(panel.hidden).toBe(false);
+    expect(document.querySelector('.artifact-inspector')).toBeNull();
+    await user.click(screen.getByTestId('gallery-entry'));
+    expect(panel.hasAttribute('inert')).toBe(true);
+    expect(document.querySelector('.assistant-panel .button--primary')).toBeNull();
+  });
+
+  it('共享 Settings dialog 受控关闭、归还焦点并可重新打开', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const trigger = await screen.findByTitle('模型与工作区配置');
+    await user.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: '模型与工作区配置' });
+    expect((dialog as HTMLDialogElement).open).toBe(true);
+    const cancel = new Event('cancel', { cancelable: true });
+    fireEvent(dialog, cancel);
+    expect(cancel.defaultPrevented).toBe(true);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '模型与工作区配置' })).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+    await user.click(trigger);
+    expect((screen.getByRole('dialog', { name: '模型与工作区配置' }) as HTMLDialogElement).open).toBe(true);
+  });
+
+  it('项目管理复用同一个 Portal 原生 dialog', async () => {
+    const user = userEvent.setup();
+    const project = makeProject({ id: 'project-a', name: '项目 A' });
+    listProjects.mockResolvedValueOnce([{ id: project.id, name: project.name, project_type: project.project_type, status: 'draft', updated_at: project.updated_at }]);
+    openProject.mockResolvedValueOnce(project);
+    render(<App />);
+    const trigger = await screen.findByRole('button', { name: '管理' });
+    await user.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: '项目管理' });
+    expect(dialog.parentElement).toBe(document.body);
+    expect(dialog.querySelector('.utility-dialog--wide')).not.toBeNull();
+    const cancel = new Event('cancel', { cancelable: true });
+    fireEvent(dialog, cancel);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '项目管理' })).toBeNull());
+    expect(document.activeElement).toBe(trigger);
   });
 });
 
