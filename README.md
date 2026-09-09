@@ -125,6 +125,8 @@ pnpm test:ui-e2e       # Playwright Electron E2E，需先 pnpm build
 
 测试数量随提交变化，以对应提交的 [CI 结果](https://github.com/z806738350-source/Game-UI-Design-Projects/actions) 为准。助手源码 `153746d` 已通过 422 项后端测试、202 项前端单测、58 项桌面 UI E2E 和 7 项 CI；38 项 fixture E2E 也是后端测试中的一部分，不应重复相加。
 
+**当前检查限制（2026-09-09）**：以上测试通过数量是对应提交此前的验证记录。本次 [README 修订 PR #82](https://github.com/z806738350-source/Game-UI-Design-Projects/pull/82) 的依赖审计发现现有 `sharp` 版本命中 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)，导致 `validate` 未通过；需要处理依赖风险并重新验证后才能满足合并检查。本文档修订没有升级依赖或增加审计豁免。
+
 2026-09-07 的在线更新还完成了真实模型截图像素问答、对话重载和合成身份隔离检查。真实飞书账号的完整界面操作及双账号隔离仍待人工验收；服务健康或自动测试通过不等于已完成这部分验收。
 
 ## 项目 Artifact
