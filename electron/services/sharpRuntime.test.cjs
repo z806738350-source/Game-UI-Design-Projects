@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { execFileSync } = require('node:child_process');
 const sharp = require('sharp');
 
@@ -34,19 +35,31 @@ const sharp = require('sharp');
 (async () => {
   const gif = Buffer.from(${JSON.stringify(GIF_1X1_BASE64)}, 'base64');
   const tiff = await sharp({ create: { width: 2, height: 2, channels: 3, background: { r: 9, g: 8, b: 7 } } }).tiff().toBuffer();
-  process.stdout.write(JSON.stringify([(await sharp(gif).metadata()).format, (await sharp(tiff).metadata()).format]));
+  const avif = await sharp({ create: { width: 2, height: 2, channels: 3, background: 'red' } }).avif().toBuffer();
+  process.stdout.write(JSON.stringify([(await sharp(gif).metadata()).format, (await sharp(tiff).metadata()).format, (await sharp(avif).metadata()).format]));
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 `;
 
-test('GIF and TIFF decode before the mitigation and are refused after it', async () => {
+test('GIF, TIFF and AVIF decode before the mitigation and are refused after it', async (t) => {
   const unshielded = execFileSync(process.execPath, ['-e', UNSHIELDED_PROBE], { cwd: REPO_ROOT, encoding: 'utf8' });
-  assert.deepEqual(JSON.parse(unshielded), ['gif', 'tiff']);
+  assert.deepEqual(JSON.parse(unshielded), ['gif', 'tiff', 'heif']);
 
   const tiff = await rasterBuffer('tiff');
   const mitigated = require('./sharpRuntime.cjs');
   assert.equal(mitigated, sharp, 'sharpRuntime 必须导出调用方拿到的同一个 sharp 实例，否则 block 不作用于生产路径');
   await assert.rejects(mitigated(GIF_1X1).metadata(), /unsupported image format/);
   await assert.rejects(mitigated(tiff).metadata(), /unsupported image format/);
+
+  const avif = await rasterBuffer('avif');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sharp-heif-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  // 故意伪装成 PNG：必须按解码器阻断，不能依赖扩展名。覆盖 Buffer 与文件加载器。
+  const disguised = path.join(dir, 'image.png');
+  fs.writeFileSync(disguised, avif);
+  for (const input of [avif, disguised]) {
+    await assert.rejects(mitigated(input).metadata(), /unsupported image format/);
+    await assert.rejects(mitigated(input).png().toBuffer(), /unsupported image format/);
+  }
 });
 
 test('product formats keep decoding after the mitigation', async () => {

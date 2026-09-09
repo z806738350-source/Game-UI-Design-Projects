@@ -407,7 +407,13 @@ function createIntentStateStore(options = {}) {
       const project = await projectStore.resolveProject(projectId);
       const projectPath = project.workspacePath;
       const inputs = (await requireScreen(projectPath, screenId)) || {};
-      if (!structuredMode(inputs)) throw new Error('Screen is not in structured-v2 mode.');
+      const initializing = !structuredMode(inputs);
+      if (initializing) {
+        if (input.initialize !== true) throw new Error('Screen is not in structured-v2 mode.');
+        if (!Number.isSafeInteger(input.expectedRequirementRevision) || input.expectedRequirementRevision < 0 || input.expectedRequirementRevision !== rev(inputs, 'requirement')) {
+          throw intentError(ERROR_CODES.INTENT_REVISION_CONFLICT, '原需求已变化，请刷新后重新准备草稿。', { expected: input.expectedRequirementRevision, current: rev(inputs, 'requirement') });
+        }
+      }
       assertExpectedRevision(input.expectedIntentReviewRevision, rev(inputs, 'intent_review'), '保存 Intent Review');
       if (Number(input.expectedIntentReviewRevision) !== rev(inputs, 'intent_review')) {
         throw intentError(ERROR_CODES.INTENT_REVISION_CONFLICT, 'Intent Review 已被更新，请刷新后基于最新版本保存。', { expected: Number(input.expectedIntentReviewRevision), current: rev(inputs, 'intent_review') });
@@ -441,6 +447,7 @@ function createIntentStateStore(options = {}) {
       // requirement as designer-owned (§8.9 steps 10–11).
       const nextInputs = {
         ...inputs,
+        ...(initializing ? { intent_mode: 'structured-v2' } : {}),
         intent_review: nextReview,
         requirement,
         requirement_source: 'user',
@@ -449,7 +456,7 @@ function createIntentStateStore(options = {}) {
         intent_context: { revision: Number(revisions.intent_context || 0), hash: ctx.hash },
         updated_at: now
       };
-      const snapshot = inputs.intent_review ? buildHistorySnapshot(inputs, screenId, 'review-save', now) : null;
+      const snapshot = inputs.intent_review || initializing ? buildHistorySnapshot(inputs, screenId, 'review-save', now) : null;
       await runPublishSequence({ projectPath, projectId, screenId, nextInputs, snapshot });
       return { noop: false, contextChanged, inputs: nextInputs };
     });

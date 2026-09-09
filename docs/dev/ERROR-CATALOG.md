@@ -7,7 +7,7 @@
 错误码分三组：
 
 - **管线错误码（`ERROR_CODES`）**：由后端以 `Error.code` 抛出，或被 IPC/导出门禁引用，
-  共 54 个。
+  共 78 个。
 - **Fidelity 检查码（`FIDELITY_ISSUE_CODES`）**：写入 Fidelity Report `issues[].code`
   或 Underlay Critique 门禁的结构化检查码，共 27 个。
 - **Binding 校验码（`BINDING_VALIDATION_CODES`）**：`validateBindings` 返回的
@@ -17,7 +17,7 @@
 `COMPOSITION_OUTPUT_UNREADABLE` 既是管线错误码，也被像素检查器作为 issue code 使用；
 它们只定义在 `ERROR_CODES` 中，检查器直接引用 `ERROR_CODES.*`。
 
-## 一、管线错误码（ERROR_CODES，68 个）
+## 一、管线错误码（ERROR_CODES，78 个）
 
 ### Screen 上下文
 
@@ -146,6 +146,21 @@
 | `INTENT_REVISION_CONFLICT` | `electron/services/intentStateStore.cjs` | 保存/确认/恢复时 expected revision CAS 冲突 | 刷新后基于最新版本重试 |
 | `INTENT_HISTORY_LIMIT_REACHED` | `electron/services/intentStateStore.cjs` | 历史达到 100 条或 64 MiB 上限 | 删除或导出旧历史后重试 |
 
+### 内嵌智能助手
+
+| 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
+| --- | --- | --- | --- |
+| `ASSISTANT_DISABLED` | `electron/services/assistantRuntime.cjs`、Electron IPC、Web 路由 | 功能开关未显式开启 | 保持关闭，或在下次进程启动前设置唯一开关 |
+| `ASSISTANT_CONVERSATION_NOT_FOUND` | `electron/services/assistantStore.cjs` | 对话 ID 无效、不存在或已删除 | 刷新对话列表后选择现有对话 |
+| `ASSISTANT_CONVERSATION_CORRUPT` | `electron/services/assistantStore.cjs` | 对话元数据、JSONL 中间记录或 run 损坏 | 保留数据供检查，从列表跳过并新建对话 |
+| `ASSISTANT_MESSAGE_INVALID` | `electron/services/assistantStore.cjs`、`assistantRuntime.cjs` | 消息/模式为空、超限或含非法内容 | 缩短或修正输入后重试 |
+| `ASSISTANT_RUN_IN_PROGRESS` | `electron/services/assistantStore.cjs` | 应用或租户已有未完成助手 run | 等待、确认或取消当前 run |
+| `ASSISTANT_RUN_INTERRUPTED` | `electron/services/assistantStore.cjs` | 应用重启时发现 queued/running/executing run | 刷新项目状态后重新发起 |
+| `ASSISTANT_RESPONSE_INVALID` | `electron/services/kunpoClient.cjs`、`assistantRuntime.cjs` | 模型连续未返回合法 JSON，或回复超限 | 重试当前消息；持续失败时检查文本模型兼容性 |
+| `ASSISTANT_ACTION_NOT_ALLOWED` | `electron/services/assistantTools.cjs`、`assistantStore.cjs` | 模型动作不在白名单、参数无效或 action ID 不匹配 | 拒绝执行并重新生成合法计划 |
+| `ASSISTANT_ACTION_IN_PROGRESS` | `electron/services/assistantStore.cjs` | 动作已被另一确认请求认领执行 | 等待已有执行持久化结果 |
+| `ASSISTANT_ACTION_STALE` | `electron/services/assistantRuntime.cjs` | 确认时项目 revision 已不等于提议时快照 | 根据错误中的实际变化重新生成计划，不强制覆盖 |
+
 ### 迁移
 
 | 错误码 | 抛出模块 | 触发条件 | 恢复动作 |
@@ -254,3 +269,4 @@ font_role 时也以 `Error.code` 直接抛出 `BINDING_FONT_ROLE_REQUIRED`。完
 | 1.0 | 2026-08-19 | PR-18 首次建立错误码事实目录（0.2.1） |
 | 1.1 | 2026-08-19 | F-01：新增 `BINDING_VALIDATION_CODES`（10 个）完整表格；`BINDING_FONT_ROLE_REQUIRED` 标注 strict 合成器抛错路径 |
 | 1.2 | 2026-08-30 | PR-I1：新增 Intent 预填 v2 错误码（10 个）；`ERROR_CODES` 总数 58 → 68 |
+| 1.3 | 2026-09-05 | 内嵌智能助手：新增 10 个 `ASSISTANT_*` 错误码；`ERROR_CODES` 总数 68 → 78 |

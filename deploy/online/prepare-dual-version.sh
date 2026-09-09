@@ -36,14 +36,21 @@ tar -xzf "$archive" -C "$release_dir"
 (cd "$release_dir" && sha256sum -c MANIFEST.sha256)
 (cd "$release_dir" && env PATH=/opt/game-ui-design-copilot-online/runtime/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /opt/game-ui-design-copilot-online/runtime/node/bin/corepack pnpm install --prod --frozen-lockfile)
 # 候选 release 预检必须证明 ADR-010 的缓解真的随包生效：只 require('sharp') 无法发现
-# sharpRuntime.cjs 缺失或其中 sharp.block 调用被移除的候选。GIF 解码被拒绝即缓解生效。
+# sharpRuntime.cjs 缺失或其中 sharp.block 调用被移除的候选。GIF 与 AVIF 解码必须被拒绝，正常 PNG 必须仍可用。
 (cd "$release_dir" && /opt/game-ui-design-copilot-online/runtime/node/bin/node -e '
+const assert = require("node:assert/strict");
 const sharp = require("./electron/services/sharpRuntime.cjs");
-const gif = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
-sharp(gif).metadata().then(
-  () => { console.error("sharp-mitigation-ineffective: GIF decoded"); process.exit(1); },
-  () => console.log("sharp-runtime-ok sharp=" + sharp.versions.sharp + " libvips=" + sharp.versions.vips),
-);
+(async () => {
+  const gif = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+  const pixel = { create: { width: 2, height: 2, channels: 3, background: "red" } };
+  const avif = await sharp(pixel).avif().toBuffer();
+  for (const input of [gif, avif]) {
+    await assert.rejects(sharp(input).metadata(), /unsupported image format/);
+    await assert.rejects(sharp(input).png().toBuffer(), /unsupported image format/);
+  }
+  assert.equal((await sharp(await sharp(pixel).png().toBuffer()).metadata()).format, "png");
+  console.log("sharp-runtime-ok sharp=" + sharp.versions.sharp + " libvips=" + sharp.versions.vips + " GIF/AVIF blocked");
+})().catch((error) => { console.error("sharp-mitigation-ineffective: " + error.message); process.exitCode = 1; });
 ')
 chown -R root:root "$release_dir"
 

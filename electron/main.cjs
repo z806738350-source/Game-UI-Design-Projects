@@ -9,6 +9,7 @@ const { createDesignPipeline } = require('./services/designPipeline.cjs');
 const { createFlowStateRepair } = require('./services/flowStateRepair.cjs');
 const { createIntentStateStore } = require('./services/intentStateStore.cjs');
 const { createGalleryStore, isDownloadAllowed, hasDownloadWaiver, blockedDownloadMessage } = require('./services/galleryStore.cjs');
+const { createAssistantRuntime } = require('./services/assistantRuntime.cjs');
 const { exportCompositionOutput, hashBuffer, resolveProjectPath } = require('./services/compositionRenderer.cjs');
 const { assertFinalDeliveryReady } = require('./services/finalDeliveryGate.cjs');
 
@@ -66,6 +67,7 @@ function registerIpc() {
   const projectRoot = path.join(__dirname, '..');
   const modelConfigPath = path.join(app.getPath('userData'), 'models.json');
   const kunpoConfig = loadKunpoConfig(projectRoot, process.env, { modelConfigPath });
+  const features = Object.freeze({ assistant: kunpoConfig.assistantEnabled });
   const projectStore = createProjectStore();
   // v1.4 PR-I1：Intent 状态存储接入同一项目写锁；读取时自愈、UE/Project Type
   // freshness 与 Clone 运行态检查通过 hooks 生效。专用 IPC 在 PR-I3 接入。
@@ -78,24 +80,43 @@ function registerIpc() {
   });
   const pipeline = createDesignPipeline({ projectStore, kunpoClient, kunpoConfig, intentStateStore, galleryStore });
   const flowStateRepair = createFlowStateRepair({ projectStore });
+  const assistantRuntime = features.assistant ? createAssistantRuntime({
+    assistantRoot: path.join(app.getPath('userData'), 'assistant'),
+    kunpoConfig, kunpoClient, projectStore, intentStateStore, enabled: true
+  }) : null;
+  const assistant = (operation) => {
+    if (!assistantRuntime) throw Object.assign(new Error('内嵌助手当前已关闭。'), { code: ERROR_CODES.ASSISTANT_DISABLED });
+    return operation(assistantRuntime);
+  };
 
   ipcMain.handle('copilot:config', async () => ({
     kunpo: kunpoClient.safeConfig(kunpoConfig),
     workspaceRoot: projectStore.workspaceRoot,
-    platform: process.platform
+    platform: process.platform,
+    features
   }));
   ipcMain.handle('copilot:config:models', async (_event, input) => {
     const saved = saveModelConfig(projectRoot, input, process.env, { modelConfigPath });
     kunpoConfig.visionModel = saved.visionModel;
     kunpoConfig.critiqueModel = saved.critiqueModel;
     kunpoConfig.imageModel = saved.imageModel;
+    kunpoConfig.assistantModel = saved.assistantModel;
     kunpoConfig.modelSource = path.basename(saved.modelConfigPath);
     return {
       kunpo: kunpoClient.safeConfig(kunpoConfig),
       workspaceRoot: projectStore.workspaceRoot,
-      platform: process.platform
+      platform: process.platform,
+      features
     };
   });
+  ipcMain.handle('copilot:assistant:list', () => assistant((runtime) => runtime.listConversations()));
+  ipcMain.handle('copilot:assistant:create', (_event, input) => assistant((runtime) => runtime.createConversation(input)));
+  ipcMain.handle('copilot:assistant:open', (_event, conversationId) => assistant((runtime) => runtime.openConversation(conversationId)));
+  ipcMain.handle('copilot:assistant:rename', (_event, conversationId, input) => assistant((runtime) => runtime.renameConversation(conversationId, input)));
+  ipcMain.handle('copilot:assistant:delete', (_event, conversationId) => assistant((runtime) => runtime.deleteConversation(conversationId)));
+  ipcMain.handle('copilot:assistant:send', (_event, conversationId, input) => assistant((runtime) => runtime.sendMessage(conversationId, input)));
+  ipcMain.handle('copilot:assistant:confirm', (_event, conversationId, runId, actionId) => assistant((runtime) => runtime.confirmAction(conversationId, runId, actionId)));
+  ipcMain.handle('copilot:assistant:cancel', (_event, conversationId, runId, actionId) => assistant((runtime) => runtime.cancelAction(conversationId, runId, actionId)));
   ipcMain.handle('copilot:projects:list', () => projectStore.list());
   ipcMain.handle('copilot:projects:create', (_event, input) => projectStore.create(input));
   ipcMain.handle('copilot:projects:duplicate', (_event, projectId) => projectStore.duplicate(projectId));

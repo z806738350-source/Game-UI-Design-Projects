@@ -5,7 +5,15 @@ type PipelineStage = 'wireframe_interpretation' | 'layout_design' | 'style_resol
 
 interface DesignCopilotApi {
   getConfig(): Promise<AppConfig>;
-  saveModelConfig(input: { visionModel: string; critiqueModel?: string; imageModel: string }): Promise<AppConfig>;
+  saveModelConfig(input: { assistantModel: string; visionModel: string; critiqueModel?: string; imageModel: string }): Promise<AppConfig>;
+  listAssistantConversations(): Promise<AssistantConversationList>;
+  createAssistantConversation(input: { projectId: string; screenId: string; title?: string }): Promise<AssistantConversation>;
+  openAssistantConversation(conversationId: string): Promise<AssistantConversation>;
+  renameAssistantConversation(conversationId: string, title: string): Promise<AssistantConversation>;
+  deleteAssistantConversation(conversationId: string): Promise<{ deleted: true; conversation_id: string }>;
+  sendAssistantMessage(conversationId: string, input: { mode: AssistantMode; currentStage?: string; content: string; attachments?: import('./types').AssistantAttachment[]; projectId: string; screenId: string }): Promise<AssistantConversation>;
+  confirmAssistantAction(conversationId: string, runId: string, actionId: string): Promise<AssistantConversation>;
+  cancelAssistantAction(conversationId: string, runId: string, actionId: string): Promise<AssistantConversation>;
   listProjects(): Promise<ProjectSummary[]>;
   createProject(input: CreateProjectInput): Promise<DesignProject>;
   duplicateProject(projectId: string): Promise<DesignProject>;

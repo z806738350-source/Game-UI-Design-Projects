@@ -1,4 +1,4 @@
-import type { AppConfig, CreateProjectInput, DesignProject, GalleryAsset, GalleryDownloadResult, GalleryListResult, GalleryQuery, IntentCandidate, IntentReview, ProjectSummary } from './types';
+import type { AppConfig, AssistantConversation, AssistantConversationList, AssistantMode, AssistantAttachment, CreateProjectInput, DesignProject, GalleryAsset, GalleryDownloadResult, GalleryListResult, GalleryQuery, IntentCandidate, IntentReview, ProjectSummary } from './types';
 
 const previewProjects: DesignProject[] = [];
 const previewIntentCandidates = new Map<string, IntentCandidate>();
@@ -93,8 +93,16 @@ function previewApi(): DesignCopilotApi {
     return project;
   };
   return {
-    getConfig: async () => ({ workspaceRoot: 'Browser preview · Electron saves to a local workspace', platform: 'browser', kunpo: { configured: true, mode: 'preview', envSource: 'preview', visionModel: 'gemini-vision', imageModel: 'Image-GPT2' } }),
-    saveModelConfig: async (input) => ({ workspaceRoot: 'Browser preview · Electron saves to a local workspace', platform: 'browser', kunpo: { configured: true, mode: 'preview', envSource: 'preview', visionModel: input.visionModel, imageModel: input.imageModel } }),
+    getConfig: async () => ({ workspaceRoot: 'Browser preview · Electron saves to a local workspace', platform: 'browser', features: { assistant: false }, kunpo: { configured: true, mode: 'preview', envSource: 'preview', assistantModel: 'gemini-vision', visionModel: 'gemini-vision', imageModel: 'Image-GPT2' } }),
+    saveModelConfig: async (input) => ({ workspaceRoot: 'Browser preview · Electron saves to a local workspace', platform: 'browser', features: { assistant: false }, kunpo: { configured: true, mode: 'preview', envSource: 'preview', assistantModel: input.assistantModel, visionModel: input.visionModel, imageModel: input.imageModel } }),
+    listAssistantConversations: async () => ({ conversations: [], warnings: [] }),
+    createAssistantConversation: async () => { throw new Error('浏览器预览模式未启用内嵌助手。'); },
+    openAssistantConversation: async () => { throw new Error('浏览器预览模式未启用内嵌助手。'); },
+    renameAssistantConversation: async () => { throw new Error('浏览器预览模式未启用内嵌助手。'); },
+    deleteAssistantConversation: async () => { throw new Error('浏览器预览模式未启用内嵌助手。'); },
+    sendAssistantMessage: async () => { throw new Error('浏览器预览模式未启用内嵌助手。'); },
+    confirmAssistantAction: async () => { throw new Error('浏览器预览模式未启用内嵌助手。'); },
+    cancelAssistantAction: async () => { throw new Error('浏览器预览模式未启用内嵌助手。'); },
     listProjects: async () => previewProjects,
     createProject: async (input) => {
       const id = `preview-${Date.now()}`;
@@ -336,6 +344,14 @@ function webApi(): DesignCopilotApi {
   return {
     getConfig: () => request('/api/config'),
     saveModelConfig: (input) => request('/api/config/models', { method: 'POST', body: JSON.stringify(input) }),
+    listAssistantConversations: () => request('/api/assistant/conversations'),
+    createAssistantConversation: (input) => request('/api/assistant/conversations', { method: 'POST', body: JSON.stringify(input) }),
+    openAssistantConversation: (conversationId) => request(`/api/assistant/conversations/${encodeURIComponent(conversationId)}`),
+    renameAssistantConversation: (conversationId, title) => request(`/api/assistant/conversations/${encodeURIComponent(conversationId)}`, { method: 'PATCH', body: JSON.stringify({ title }) }),
+    deleteAssistantConversation: (conversationId) => request(`/api/assistant/conversations/${encodeURIComponent(conversationId)}`, { method: 'DELETE' }),
+    sendAssistantMessage: (conversationId, input) => request(`/api/assistant/conversations/${encodeURIComponent(conversationId)}/messages`, { method: 'POST', body: JSON.stringify(input) }),
+    confirmAssistantAction: (conversationId, runId, actionId) => request(`/api/assistant/conversations/${encodeURIComponent(conversationId)}/runs/${encodeURIComponent(runId)}/confirm`, { method: 'POST', body: JSON.stringify({ actionId }) }),
+    cancelAssistantAction: (conversationId, runId, actionId) => request(`/api/assistant/conversations/${encodeURIComponent(conversationId)}/runs/${encodeURIComponent(runId)}/cancel`, { method: 'POST', body: JSON.stringify({ actionId }) }),
     listProjects: () => request('/api/projects'),
     createProject: (input) => request('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
     duplicateProject: (id) => request(`${projectPath(id)}/duplicate`, { method: 'POST', body: '{}' }),
@@ -492,7 +508,15 @@ function api() {
 
 export const copilotApi = {
   getConfig: (): Promise<AppConfig> => api().getConfig(),
-  saveModelConfig: (input: { visionModel: string; critiqueModel?: string; imageModel: string }): Promise<AppConfig> => api().saveModelConfig(input),
+  saveModelConfig: (input: { assistantModel: string; visionModel: string; critiqueModel?: string; imageModel: string }): Promise<AppConfig> => api().saveModelConfig(input),
+  listAssistantConversations: (): Promise<AssistantConversationList> => api().listAssistantConversations(),
+  createAssistantConversation: (input: { projectId: string; screenId: string; title?: string }): Promise<AssistantConversation> => api().createAssistantConversation(input),
+  openAssistantConversation: (conversationId: string): Promise<AssistantConversation> => api().openAssistantConversation(conversationId),
+  renameAssistantConversation: (conversationId: string, title: string): Promise<AssistantConversation> => api().renameAssistantConversation(conversationId, title),
+  deleteAssistantConversation: (conversationId: string): Promise<{ deleted: true; conversation_id: string }> => api().deleteAssistantConversation(conversationId),
+  sendAssistantMessage: (conversationId: string, input: { mode: AssistantMode; currentStage?: string; content: string; attachments?: AssistantAttachment[]; projectId: string; screenId: string }): Promise<AssistantConversation> => api().sendAssistantMessage(conversationId, input),
+  confirmAssistantAction: (conversationId: string, runId: string, actionId: string): Promise<AssistantConversation> => api().confirmAssistantAction(conversationId, runId, actionId),
+  cancelAssistantAction: (conversationId: string, runId: string, actionId: string): Promise<AssistantConversation> => api().cancelAssistantAction(conversationId, runId, actionId),
   listProjects: (): Promise<ProjectSummary[]> => api().listProjects(),
   createProject: async (input: CreateProjectInput): Promise<DesignProject> => rememberScreen(await api().createProject(input)),
   // P1-10：复制项目后 wrapper 立即把新项目设为当前，必须同步记住其

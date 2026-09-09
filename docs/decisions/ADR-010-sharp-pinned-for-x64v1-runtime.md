@@ -4,6 +4,8 @@
 - 日期：2026-09-02
 - 关联：阶段 E（在线版部署）、GHSA-f88m-g3jw-g9cj、`docs/dev/RELEASE-CHECKLIST.md` §2、`deploy/online/prepare-dual-version.sh`、`.github/workflows/ci.yml`（`ui-e2e` 作业）、ADR-007
 
+> 2026-09-09 补充已将运行时阻断范围扩展到 HEIF/AVIF，并增加一条有对应缓解的精确审计例外。下方 2026-09-02 的运行记录保留为历史证据，当前决策以文末补充为准。
+
 ## 背景
 
 CI 生产审计门 `.github/workflows/ci.yml` 的 `pnpm audit --prod --audit-level high` 要求生产依赖无 high 级漏洞。GHSA-f88m-g3jw-g9cj（high，sharp 继承 libvips 的 CVE-2026-33327、CVE-2026-33328、CVE-2026-35590、CVE-2026-35591，影响处理不可信输入的解码路径）首个修复版本为 **0.35.0**，因此 main 一度固定 `sharp 0.35.3`。
@@ -84,3 +86,21 @@ gh run view <run-id> --log | grep -cE 'MEMORY-ERROR|GSlice'
 - 阶段 E 候选 release 可从 main 可复现构建并在线上 CPU 通过预检，图库功能按期上线；
 - `ui-e2e` 与线上服务器同为 Ubuntu 24.04，Electron 作业的系统库口径与部署环境一致；该 runner 变更与 sharp 版本无耦合，本例外退出后不需要回退；
 - 该例外只影响 sharp 这一条依赖的版本口径与审计告警，不豁免任何其他代码、测试、文档或安全门禁要求。
+
+
+## 2026-09-09 补充：阻断 HEIF/AVIF 解码
+
+新公告 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c) 于 2026-09-08 进入 GitHub 审计库，影响 sharp < 0.35.4 的 libheif 解码路径；预编译修复版为 sharp 0.35.4（libheif 1.23.2）。公告提供的无法升级时的替代措施是 `sharp.block({ operation: ["VipsForeignLoadHeif"] })`。
+
+沿用本 ADR 已公开记录的 x86-64-v1 兼容性约束，不能仅修改依赖版本后发布，否则新版原生模块无法加载。本次缓解依赖实际阻断 HEIF 解码入口；不将公告中的 PIE 纵深防御建议当作此项阻断的替代措施或已验证保障。
+
+处理方式：
+
+1. 在既有 `sharpRuntime.cjs` 的进程级 block 中增加 `VipsForeignLoadHeif`，保留既有三类阻断。该父操作同时覆盖文件和 Buffer 加载器，AVIF 同样走这个加载器。PNG/JPEG/WebP 位图、SVG 组件及内部光栅化仍按原路径处理，不增加新依赖。
+2. `sharpRuntime.test.cjs` 在独立未加载缓解的子进程中先证明正常 AVIF 可解码，再在缓解后验证真实 AVIF 的 Buffer 与伪装成 `.png` 的文件均不能读取元数据或转码。该用例在修复前确实以 Missing expected rejection 失败；正常 PNG/JPEG/WebP/SVG 与生产引入路径检查保留。
+3. 原有候选部署检查扩展为真实 GIF/AVIF 必须解码失败，PNG 必须成功。只禁 GIF 或删除 HEIF 缓解的包不能通过预检。部署脚本仍然不允许仅靠审计结果代替运行时验证。
+4. `auditConfig.ignoreGhsas` 只增加此确切 GHSA，保留原条目；其他高危公告仍阻断 CI。这是阻断产品不支持的解码路径后的有条件例外，**不是依赖二进制已打补丁或零漏洞**。本次用户要求解决审计阻塞，由执行者依据实时兼容性证据选择此方案，不声称用户另行签署了新的豁免。
+
+剩余边界：sharp/libheif 的旧二进制仍在依赖树中；如果绕过统一入口或重新开放 HEIF/AVIF，例外立即失效。PNG/JPEG/WebP 的扩展名和魔数校验是额外防线，不能替代 libvips 层的 block。现存已运行进程不会因源码修订自动获得缓解，只有经过候选预检并重启到新 release 的服务才生效。
+
+退出条件沿用本 ADR，并将升级最低版本更新为 **sharp >= 0.35.4 / libheif >= 1.23.2**，同时满足当时最新安全公告。CPU 条件允许或可提供已修复且兼容 v1 的运行库后，升级、移除这两条审计例外，再评估是否开放格式；必须同步更新运行时测试和部署预检。禁止仅为消除审计输出而放宽测试或关闭整个审计步骤。

@@ -21,7 +21,7 @@ export interface LaunchedApp {
   exportDir: string;
 }
 
-export async function launchApp(provider: FixtureProvider): Promise<LaunchedApp> {
+export async function launchApp(provider: FixtureProvider, options: { assistant?: boolean } = {}): Promise<LaunchedApp> {
   const distEntry = path.join(REPO_ROOT, 'dist', 'index.html');
   if (!fs.existsSync(distEntry)) throw new Error('dist/ is missing: run `pnpm build` before `pnpm test:ui-e2e`.');
   const requiredAssets = [
@@ -37,8 +37,10 @@ export async function launchApp(provider: FixtureProvider): Promise<LaunchedApp>
   fs.mkdirSync(exportDir, { recursive: true });
   const envFile = path.join(workspace, 'e2e.env');
   fs.writeFileSync(envFile, '# UI E2E: keep the repo .env out of the test run\n', 'utf8');
+  const electronArgs = ['.'];
+  if (options.assistant) electronArgs.push(`--user-data-dir=${path.join(workspace, '.electron-user-data')}`);
   const app = await electron.launch({
-    args: ['.'],
+    args: electronArgs,
     cwd: REPO_ROOT,
     env: {
       ...process.env,
@@ -46,7 +48,8 @@ export async function launchApp(provider: FixtureProvider): Promise<LaunchedApp>
       DESIGN_COPILOT_WORKSPACE: workspace,
       DESIGN_COPILOT_ENV_FILE: envFile,
       DESIGN_COPILOT_FORCE_DIST: 'true',
-      DESIGN_COPILOT_SNAPSHOT_PROVIDER_IMAGES: 'true'
+      DESIGN_COPILOT_SNAPSHOT_PROVIDER_IMAGES: 'true',
+      ...(options.assistant ? { GAME_UI_ASSISTANT_ENABLED: 'true' } : {})
     }
   });
   const page = await app.firstWindow();
@@ -133,6 +136,7 @@ type ProjectSnapshot = {
   requirement: string;
   requirement_confirmed?: boolean;
   intent_mode?: string;
+  input_revisions?: Record<string, number>;
   artifacts: Record<string, { status?: string; version?: number; [key: string]: unknown } | undefined>;
   screens?: Array<{ id: string; name: string; status?: string }>;
   reference_assets?: Array<{ id: string; approved?: boolean }>;
