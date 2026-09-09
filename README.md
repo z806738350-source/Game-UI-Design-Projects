@@ -10,7 +10,7 @@
 | --- | --- |
 | [正式 Release v0.2.2](https://github.com/z806738350-source/Game-UI-Design-Projects/releases/tag/v0.2.2) | 发布于 2026-08-19；是此前的合规与治理收口版本，不包含后续全部功能。当前源码的 `package.json` 仍使用 `0.2.2`，尚未为助手功能创建新的正式 Release。 |
 | [默认分支 main](https://github.com/z806738350-source/Game-UI-Design-Projects/tree/main) | 包含主设计流程、意图预填与评审、图库、Web 用户隔离和版本路由；**尚未合入内嵌 AI 助手**。 |
-| [助手分支 codex/embedded-ai-assistant](https://github.com/z806738350-source/Game-UI-Design-Projects/tree/codex/embedded-ai-assistant) | 包含截图问答、项目上下文、确认或拒绝写操作及紧凑聊天面板；已推送源码提交 `153746d`。[PR #81](https://github.com/z806738350-source/Game-UI-Design-Projects/pull/81) 保持 Draft、未合并。 |
+| [助手分支 codex/embedded-ai-assistant](https://github.com/z806738350-source/Game-UI-Design-Projects/tree/codex/embedded-ai-assistant) | 包含截图问答、项目上下文、确认或拒绝写操作及紧凑聊天面板；最新源码提交见分支记录。[PR #81](https://github.com/z806738350-source/Game-UI-Design-Projects/pull/81) 保持 Draft、未合并。 |
 | 公司在线新版 | 已部署助手分支的 `153746d`，release 为 `20260907-001500-153746d`，助手已启用。正式入口默认仍进入经典版，需要主动选择新版。 |
 
 普通克隆或下载 `main` 不会获得助手功能；需要助手时，请使用上表中的助手分支，或进入在线新版。
@@ -125,7 +125,7 @@ pnpm test:ui-e2e       # Playwright Electron E2E，需先 pnpm build
 
 测试数量随提交变化，以对应提交的 [CI 结果](https://github.com/z806738350-source/Game-UI-Design-Projects/actions) 为准。助手源码 `153746d` 已通过 422 项后端测试、202 项前端单测、58 项桌面 UI E2E 和 7 项 CI；38 项 fixture E2E 也是后端测试中的一部分，不应重复相加。
 
-**当前检查限制（2026-09-09）**：以上测试通过数量是对应提交此前的验证记录。本次 [README 修订 PR #82](https://github.com/z806738350-source/Game-UI-Design-Projects/pull/82) 的依赖审计发现现有 `sharp` 版本命中 [GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)，导致 `validate` 未通过；需要处理依赖风险并重新验证后才能满足合并检查。本文档修订没有升级依赖或增加审计豁免。
+**图片运行库的兼容性与安全范围（2026-09-09）**：服务器 CPU 暂不支持新版 `sharp` 预编译包，因此仍固定 `0.33.5`。已按上游官方方案在统一入口禁用 GIF/TIFF/VIPS/HEIF（含 AVIF）解码，正常 PNG/JPEG/WebP 和 SVG 保留；真实解码回归与候选部署预检必须通过。依赖审计精确排除两条已有缓解的公告，其余高危项仍阻断 CI，**不代表旧依赖已打补丁或零漏洞**。原因、验证及升级退出条件见 [ADR-010](docs/decisions/ADR-010-sharp-pinned-for-x64v1-runtime.md)。该修复需部署到新 release 并重启后才作用于在线服务；下文 2026-09-07 的部署记录不表示线上已加载本次修复。
 
 2026-09-07 的在线更新还完成了真实模型截图像素问答、对话重载和合成身份隔离检查。真实飞书账号的完整界面操作及双账号隔离仍待人工验收；服务健康或自动测试通过不等于已完成这部分验收。
 
