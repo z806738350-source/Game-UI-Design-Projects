@@ -1,99 +1,137 @@
 # Game UI Design Copilot
 
-面向游戏 UI 设计师的 Artifact-driven AI 设计流水线。
+面向游戏 UI 设计师的 AI 设计工具：从需求与 UE 线框出发，经过功能解读、布局比较、风格锁定，生成可审核、可追溯的视觉结果。支持 Electron 桌面端与需要飞书登录的 Web 端。
 
-> **发布状态：`0.2.2`（2026-08-19）。** v0.2.1 审核尾项的最终合规与治理收口版本：F-01 Binding State/Font Role 真正显式化（冻结 BINDING_VALIDATION_CODES 门禁、无自动默认、compositor 无回退）、F-03 UI E2E 原场景逐项覆盖（多 Screen 生命周期、nine-slice、字体/组件文件故障与 stale 链，全部经 UI 驱动）、F-02 文档事实完整性（三注册表 ↔ ERROR-CATALOG 双向校验、文档命令校验、项目树三方校验与负向 Fixture）。`0.2.1` 的 REM-01~06 结论与 `0.2.0` 的整改 Definition of Done 依然有效：五组真实 provider Golden Samples 全部 pipeline-passed（三组校准 + 两组保留，含简体中文样本），fixture E2E 在 CI 中重放已发布证据链，设计师签核（韩枫，UI设计师）五组全部 APPROVED，`release-evidence/golden-samples/index.json` 派生为 `released`。整改范围与门禁见 `docs/Game-UI-Design-Copilot-整改审核与执行基线-v1.0.md` 与 `docs/baseline/pr8-golden-release.md`；本轮尾项要求与执行见 `docs/Game-UI-Design-Copilot-v0.2.1-剩余未闭环要求与最终整改执行指导.md`。
+## 版本与功能状态
 
-当前版本已覆盖的能力包括：
+以下状态核对于 **2026-09-09**。GitHub Release、默认分支和在线部署分别演进，不能仅凭应用内的版本号判断是否包含 AI 助手。
 
-1. 策划需求 + UE Wireframe 输入
-2. Functional Screen Contract 生成与人工批准
-3. 三套 Layout Proposal 生成、比较与人工批准
-4. 新项目风格探索 / 已有项目风格重建
-5. Style Contract 批准与 Style Lock
-6. 已有项目默认 `existing-strict`，新项目保留探索模式
-7. Font Manifest、Component Contract 与必要控件 100% Binding
-8. Binding 语义门禁（`binding-policy-v1` 角色词表冻结策略，禁止隐式默认绑定）
-9. Workbench 边界（每个工作台只能调用本阶段允许的 IPC 操作）
-10. 多 Screen、Schema 2.0 安全迁移与细粒度 stale 传播
-11. Underlay Contract、结构 Guide、真实 Review Overlay/指标、自动 Critique 与有限次数 Repair 闭环
-12. Composition Manifest + 真实 Composition Output、独立组件/字体 renderer、final PNG 落盘/导出与初步 Fidelity Gate
-13. UI E2E（Playwright + Electron，本地 FixtureProvider 模拟网关）进入 CI
-14. 执行级文档体系：11 份契约文档 + 用户 SOP + 开发运维文档，由 docs-validate 门禁自动校验
+| 版本入口 | 当前情况 |
+| --- | --- |
+| [正式 Release v0.2.2](https://github.com/z806738350-source/Game-UI-Design-Projects/releases/tag/v0.2.2) | 发布于 2026-08-19；是此前的合规与治理收口版本，不包含后续全部功能。当前源码的 `package.json` 仍使用 `0.2.2`，尚未为助手功能创建新的正式 Release。 |
+| [默认分支 main](https://github.com/z806738350-source/Game-UI-Design-Projects/tree/main) | 包含主设计流程、意图预填与评审、图库、Web 用户隔离和版本路由；**尚未合入内嵌 AI 助手**。 |
+| [助手分支 codex/embedded-ai-assistant](https://github.com/z806738350-source/Game-UI-Design-Projects/tree/codex/embedded-ai-assistant) | 包含截图问答、项目上下文、确认或拒绝写操作及紧凑聊天面板；最新源码提交见分支记录。[PR #81](https://github.com/z806738350-source/Game-UI-Design-Projects/pull/81) 保持 Draft、未合并。 |
+| 公司在线新版 | 已部署助手分支的 `153746d`，release 为 `20260907-001500-153746d`，助手已启用。正式入口默认仍进入经典版，需要主动选择新版。 |
+
+普通克隆或下载 `main` 不会获得助手功能；需要助手时，请使用上表中的助手分支，或进入在线新版。
+
+## 主要能力
+
+- **项目输入**：导入 UE 线框与需求，AI 预读并生成可编辑的设计意图；支持结构化评审、确认与历史版本留存。
+- **功能解读**：生成 Functional Screen Contract，由设计师补充或修改并批准。
+- **布局设计**：生成三套 Layout Proposal，比较、调整并批准选定布局。
+- **风格锁定**：支持新项目风格探索和已有项目风格重建，管理 Style Contract、字体、组件与绑定；已有项目默认采用 `existing-strict`。
+- **视觉探索与输出**：支持底图生成、结构引导、审核指标、自动 Critique 与有限次数 Repair，以及组件/字体合成、最终 PNG 导出和初步 Fidelity Gate。
+- **项目管理与图库**：支持多个页面（Screen）、项目归档、生成图片集中浏览，以及阶段产物和历史版本查看。
+- **可追溯的工作流**：记录生成、修改和批准；上游变化使相关下游结果失效（`stale`），防止继续使用旧批准结果。绑定校验和各工作台的操作边界仍生效。
+- **桌面与 Web**：桌面端使用本地项目空间；Web 端提供飞书登录，以及按登录身份隔离的项目、配置和持久化数据。
+
+### 内嵌 AI 助手（助手分支 / 在线新版）
+
+助手帮助用户理解操作、查找当前项目缺漏并整理设计意图。它尤其适合在“项目输入”和“功能解读”阶段辅助补充需求，也可以解释后续阶段的状态；**它不是能够任意修改整个项目的自动执行器**。
+
+- 可结合当前项目、页面、所处阶段和聊天记录回答问题。对话绑定具体目标，切换目标后可为当前目标新建对话。
+- 支持选择、粘贴或拖入 PNG、JPEG、WebP 截图；图片像素会发送给助手模型。每条消息最多 4 张，单张最多 5 MiB、合计最多 12 MiB。
+- 统一聊天入口，不再区分“问答 / 执行”菜单。助手提出写操作后，显示待保存草稿供用户检查，并提供**确认执行 / 拒绝执行**；拒绝会记录到对话上下文且不保存草稿。
+- 当前允许的写操作只有**保存设计意图评审草稿**（`save_intent_review_draft`）。保存仍需确认，并检查目标及输入版本，防止重复执行和覆盖过期内容；不会代替用户批准功能契约、布局或风格，也不会直接发起出图。
+- 支持对话持久化与恢复，聊天区域优先展示消息；顶部整合对话选择、新建和关闭，重命名与删除位于对话下拉列表内。
+- 截图随对话保存：桌面端保存在本地助手数据目录，Web 端保存在服务端对应用户空间。模型每次接收的历史文本与图片数量有限，最多携带 4 张近期图片；这不等同于无限上下文或长期记忆。
+
+助手默认关闭。**仅在包含助手代码的版本中**，桌面端可在项目根目录 `.env` 添加以下变量后重启应用；Web 部署需将变量注入服务端进程环境后重启对应服务：
+
+```env
+GAME_UI_ASSISTANT_ENABLED=true
+```
+
+启用后，从右上角机器人按钮打开面板。仅给 `main` 配置此变量不会增加尚未合并的助手代码。
 
 ## 本地运行
 
-需要 Node.js、pnpm 和可用的 Kunpo 配置：
+建议使用 **Node.js 22**；仓库锁定的包管理器为 **pnpm（11.19.0）**。需要可用的 Kunpo Gateway 或本地直连配置。版本依据见 [package.json](package.json) 与 [CI 配置](.github/workflows/ci.yml)。
 
-macOS 可以直接双击项目根目录的：
-
-```text
-Start Game UI Design Copilot.command
-```
-
-也可以在终端快速启动：
+首次获取源码：
 
 ```bash
-pnpm quick-start
+git clone https://github.com/z806738350-source/Game-UI-Design-Projects.git
+cd Game-UI-Design-Projects
 ```
 
-首次使用请阅读 `docs/user/quick-start-guide.html`（双击用浏览器打开即可的新手说明书）；启动前可用 `pnpm quick-start:check` 检查依赖与端口。
-
-常规开发模式：
+如需内嵌 AI 助手，在安装依赖前选择助手分支：
 
 ```bash
-pnpm install
+git switch codex/embedded-ai-assistant
+```
+
+安装依赖并启动桌面开发环境：
+
+```bash
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-构建与测试：
+macOS 也可以双击根目录的 `Start Game UI Design Copilot.command`，或使用快速启动：
 
 ```bash
-pnpm build
-pnpm test
+pnpm quick-start:check
+pnpm quick-start
 ```
 
-文档与门禁校验：
+新用户请阅读 [快速上手说明书](docs/user/quick-start-guide.html)（下载到本地后可直接用浏览器打开）。
 
-```bash
-pnpm test:docs          # check-docs + check-error-docs
-pnpm test:fixture-e2e   # 证据链重放
-pnpm test:ui-unit       # 前端组件单测
-pnpm test:ui-e2e        # Playwright Electron E2E（需先 pnpm build）
-```
+### 模型与连接配置
 
-## 在线运行
-
-生产环境使用 `pnpm build` 生成前端，再由 `node server/webServer.cjs` 提供静态页面、服务端 API、飞书 OAuth 和按用户隔离的持久化空间。浏览器不会读取 Kunpo Key；服务端通过 `KUNPO_GATEWAY_BASE_URL` 调用受控公共 Gateway。
-
-在线版所需变量名称见 `.env.example`。真实 `FEISHU_APP_SECRET` 与 `SESSION_SECRET` 只能保存在服务器受限环境文件中，不得提交到仓库。飞书登录使用 OAuth v3 token 接口，仅以基础用户信息中的 `tenant_key + open_id` 映射内部 tenant UUID，不申请通讯录、邮箱、手机号或离线访问权限。
-
-## Kunpo 配置
-
-推荐让桌面端后端调用本地 Gateway：
+推荐通过受控 Gateway 调用模型，桌面端配置示例：
 
 ```env
 KUNPO_GATEWAY_BASE_URL=http://127.0.0.1:9020/v1
 ```
 
-本地开发也支持直连配置，但 Key 只在 Electron 主进程中读取，不会进入 renderer：
+此地址是示例，需要有实际运行的 Gateway。也支持本地直连；真实 Key 只由后端读取，不进入浏览器或 Electron renderer：
 
 ```env
 KUNPO_API_BASE_URL=https://your-kunpo-host/v1
 KUNPO_API_KEY=your-local-key
 ```
 
-工具按顺序查找：
+桌面端配置文件的查找顺序为：`DESIGN_COPILOT_ENV_FILE` 指定文件 → 当前项目 `.env` → 同级 `Game UI Forge/.env`（仅用于本地迁移兼容）。Web 进程的配置需由部署环境提供，不能假设它会按桌面端规则自动加载本地 `.env`。
 
-1. `DESIGN_COPILOT_ENV_FILE` 指定的文件
-2. 当前项目 `.env`
-3. 同级 `Game UI Forge/.env`（仅作为本地迁移兼容）
+在设置中选择实际接入服务支持的模型：**助手模型**用于聊天、截图理解和动作计划，**视觉理解模型**用于主流程的 UE、需求及参考图理解，两者可使用不同模型；截图问答要求助手模型本身支持图片输入，不会自动转交给视觉理解模型。**图像生成模型**用于出图。助手模型设置仅出现在包含助手功能的版本中。
 
-不要提交真实 Key。2026-08-09 已完成 Provider 连通性 Smoke Test：多模态 Screen Contract 请求通过，Image-GPT2 异步提交、任务轮询和永久 Kunpo CDN 结果返回均通过。该结果只证明 Provider 链路可用，不等同于 strict E2E 或正式产品验收。
+变量模板见 [.env.example](.env.example)。不要提交真实 Key、飞书密钥、会话密钥或个人项目数据。
+
+## 在线运行
+
+生产环境先执行 `pnpm build`，再启动 `pnpm start:web`（对应 `node server/webServer.cjs`），由同一后端提供静态页面、API、飞书认证和用户数据持久化。启动前必须由服务管理器或进程环境配置 Gateway、飞书回调、会话密钥及持久化数据根等变量，名称见 [.env.example](.env.example)。
+
+- 飞书登录使用 OAuth v3 token 接口，通过基础用户信息中的 `tenant_key + open_id` 映射内部用户空间；不申请通讯录、邮箱、手机号或离线访问权限。
+- 浏览器不持有 Kunpo Key；模型请求由服务端发送。真实 `FEISHU_APP_SECRET` 与 `SESSION_SECRET` 只能放在服务器受限环境文件中。
+- 桌面端默认项目目录为 `~/Game UI Design Projects`；Web 使用 `DESIGN_COPILOT_DATA_ROOT` 下按用户分隔的空间，不使用访问者电脑上的该目录。
+- 仓库也提供 `pnpm start:version-router`，可将经典版与新版作为两个独立后端运行，使用独立数据空间。版本路由不代替业务后端，也不自动执行数据迁移。
+- 当前按单实例、文件持久化方式运行；同一数据目录不支持多个业务进程同时写入。分布式任务队列与跨实例恢复尚未实现。
+
+现有公司部署入口为 [在线工具](http://10.8.0.176:9030)，需能访问公司部署网络；[进入新版](http://10.8.0.176:9030/__versions/select/current)。默认经典版保留，新版已启用助手。部署状态可从 [`/__versions/status`](http://10.8.0.176:9030/__versions/status) 查看；版本切换不会把经典版数据自动复制到新版。
+
+## 构建与验证
+
+```bash
+pnpm lint              # TypeScript 检查
+pnpm build             # 类型检查与前端生产构建
+pnpm test              # 后端、服务端与脚本测试
+pnpm test:docs         # 文档结构、错误码、命令、项目树四项校验
+pnpm test:fixture-e2e  # 已发布证据链重放，不调用真实 Provider
+pnpm test:ui-unit      # 前端组件单测
+pnpm test:ui-e2e       # Playwright Electron E2E，需先 pnpm build
+```
+
+测试数量随提交变化，以对应提交的 [CI 结果](https://github.com/z806738350-source/Game-UI-Design-Projects/actions) 为准。助手源码 `153746d` 已通过 422 项后端测试、202 项前端单测、58 项桌面 UI E2E 和 7 项 CI；38 项 fixture E2E 也是后端测试中的一部分，不应重复相加。
+
+**图片运行库的兼容性与安全范围（2026-09-09）**：服务器 CPU 暂不支持新版 `sharp` 预编译包，因此仍固定 `0.33.5`。已按上游官方方案在统一入口禁用 GIF/TIFF/VIPS/HEIF（含 AVIF）解码，正常 PNG/JPEG/WebP 和 SVG 保留；真实解码回归与候选部署预检必须通过。依赖审计精确排除两条已有缓解的公告，其余高危项仍阻断 CI，**不代表旧依赖已打补丁或零漏洞**。原因、验证及升级退出条件见 [ADR-010](docs/decisions/ADR-010-sharp-pinned-for-x64v1-runtime.md)。该修复需部署到新 release 并重启后才作用于在线服务；下文 2026-09-07 的部署记录不表示线上已加载本次修复。
+
+2026-09-07 的在线更新还完成了真实模型截图像素问答、对话重载和合成身份隔离检查。真实飞书账号的完整界面操作及双账号隔离仍待人工验收；服务健康或自动测试通过不等于已完成这部分验收。
 
 ## 项目 Artifact
 
-默认项目目录为 `~/Game UI Design Projects`（此树由 `docs/schemas/project-directory.required.json` 机器事实源校验，修改时同步两处）：
+下面是**单个项目**的产物结构，不是整个部署数据根，也不包含独立存储的登录信息、用户设置和助手对话。此树由 [项目目录事实源](docs/schemas/project-directory.required.json) 校验；修改目录结构时需同步文档与事实源。
 
 <!-- PROJECT_TREE:BEGIN -->
 ```text
@@ -139,58 +177,29 @@ project/
 ```
 <!-- PROJECT_TREE:END -->
 
-所有模型 Artifact 都包含 `schema_version`、`id`、`version`、`status` 和 `source`。上游 Artifact 重新生成时，下游结果会标记为 `stale`，避免旧批准结果被误用。
-
-## 与 Game UI Forge 的合并边界
-
-本项目负责前半段：
-
-```text
-需求 / UE → 功能契约 → 布局批准 → 风格锁定 → 视觉探索
-```
-
-Game UI Forge 负责后半段：
-
-```text
-批准视觉稿 → 元素识别 → 提取计划 → 合图 → 切图 → Manifest / ZIP
-```
-
-后续合并时应共享 Project Store、Provider Client、Task Runner 和 Artifact Registry，但保留两个独立 Feature Workbench，避免形成一个巨型组件。
-
-专项说明见 `docs/EXISTING-PROJECT-WORKFLOW.md`，执行拆分见 `docs/PR-MILESTONES.md`。
+模型产物使用版本、状态与来源信息追踪生成过程；上游变化时，受影响的下游结果会标记为 `stale`，避免旧批准结果被误用。详细约束见 [契约文档](docs/contracts/) 和 [产物依赖图](docs/dev/ARTIFACT-DEPENDENCY-GRAPH.md)。
 
 ## 文档索引
 
-执行级文档由 `pnpm test:docs` 与 CI `docs-validate` job 自动校验（`scripts/check-docs.cjs` + `scripts/check-error-docs.cjs`）。
+- 入门与操作：[快速上手](docs/user/quick-start-guide.html)、[工作台指南](docs/user/WORKBENCH-GUIDE.md)、[已有项目 SOP](docs/user/EXISTING-PROJECT-SOP.md)、[严格续作](docs/user/STRICT-CONTINUATION-GUIDE.md)、[失败恢复](docs/user/FAILURE-RECOVERY.md)。
+- 产品与设计：[已有项目工作流](docs/EXISTING-PROJECT-WORKFLOW.md)、[前端设计指南](docs/dev/FRONTEND-DESIGN-GUIDE.md)。
+- 开发与维护：[状态机](docs/dev/PIPELINE-STATE-MACHINE.md)、[API / IPC](docs/dev/API-IPC-REFERENCE.md)、[项目目录](docs/dev/PROJECT-DIRECTORY.md)、[错误码](docs/dev/ERROR-CATALOG.md)、[Provider 排查](docs/dev/PROVIDER-TROUBLESHOOTING.md)、[迁移与回滚](docs/dev/MIGRATION-ROLLBACK.md)。
+- 契约规范：[STYLE-CONTRACT-2.0.md](docs/contracts/STYLE-CONTRACT-2.0.md)、[FONT-MANIFEST.md](docs/contracts/FONT-MANIFEST.md)、[COMPONENT-CONTRACT.md](docs/contracts/COMPONENT-CONTRACT.md)、[SCREEN-CONTRACT.md](docs/contracts/SCREEN-CONTRACT.md)、[COMPONENT-BINDINGS.md](docs/contracts/COMPONENT-BINDINGS.md)、[APPROVED-LAYOUT.md](docs/contracts/APPROVED-LAYOUT.md)、[UNDERLAY-CONTRACT.md](docs/contracts/UNDERLAY-CONTRACT.md)、[UNDERLAY-CRITIQUE.md](docs/contracts/UNDERLAY-CRITIQUE.md)、[COMPOSITION-MANIFEST.md](docs/contracts/COMPOSITION-MANIFEST.md)、[COMPOSITION-OUTPUT.md](docs/contracts/COMPOSITION-OUTPUT.md)、[FIDELITY-REPORT.md](docs/contracts/FIDELITY-REPORT.md)。
+- 发布治理：[发布检查清单](docs/dev/RELEASE-CHECKLIST.md)、[单人维护审查规则 ADR-007](docs/decisions/ADR-007-single-maintainer-review-governance.md)、[Golden Samples 基线](docs/baseline/pr8-golden-release.md)。
 
-契约文档（`docs/contracts/`）：
-
-- `STYLE-CONTRACT-2.0.md`、`FONT-MANIFEST.md`、`COMPONENT-CONTRACT.md`、`SCREEN-CONTRACT.md`、`COMPONENT-BINDINGS.md`、`APPROVED-LAYOUT.md`、`UNDERLAY-CONTRACT.md`、`UNDERLAY-CRITIQUE.md`、`COMPOSITION-MANIFEST.md`、`COMPOSITION-OUTPUT.md`、`FIDELITY-REPORT.md`
-
-用户文档（`docs/user/`）：
-
-- `quick-start-guide.html`（新用户使用说明书，浏览器直接打开）、`EXISTING-PROJECT-SOP.md`、`STRICT-CONTINUATION-GUIDE.md`、`WORKBENCH-GUIDE.md`、`FAILURE-RECOVERY.md`
-
-开发运维文档（`docs/dev/`）：
-
-- `PIPELINE-STATE-MACHINE.md`、`ARTIFACT-DEPENDENCY-GRAPH.md`、`API-IPC-REFERENCE.md`、`PROJECT-DIRECTORY.md`、`ERROR-CATALOG.md`、`PROVIDER-TROUBLESHOOTING.md`、`MIGRATION-ROLLBACK.md`、`RELEASE-CHECKLIST.md`、`FRONTEND-DESIGN-GUIDE.md`
-
-错误码以 `electron/services/errorCodes.cjs` 冻结注册表为唯一事实来源，`docs/dev/ERROR-CATALOG.md` 与注册表双向校验。
+`pnpm test:docs` 与 CI `docs-validate` 检查文档结构、错误码注册表一致性、命令有效性和项目树一致性。版本化契约及错误码细节以源码注册表和对应文档为准。
 
 ## 分支与发布治理
 
-- main 分支受 GitHub Ruleset 保护：禁止直推与绕过，合并必须通过全部 Required Checks（validate、fixture-e2e、ui-unit、ui-e2e、docs-validate、secret-scan、macos-validate）；
-- 全部变更走 PR：push 前运行 L3 深度安全扫描，PR 经 CodeReview 实质审查与 CI 全绿后合并；
-- 仓库为单人维护，REM-05 的真实技术协作者 Review 与 Approving Review 要求按 `docs/decisions/ADR-007-single-maintainer-review-governance.md` 以批准的例外关闭（七项 CI 强制 + CodeReview 子代理实质审查 + L3 扫描），协作者加入后自动恢复字面要求；
-- 发布流程与检查清单见 `docs/dev/RELEASE-CHECKLIST.md`。
+`main` 受 GitHub Ruleset 保护，变更通过 PR 合并，必须满足全部 7 项 Required Checks：`validate`、`fixture-e2e`、`ui-unit`、`ui-e2e`、`docs-validate`、`secret-scan`、`macos-validate`。不得绕过保护或强推。
 
-## Golden Samples 与发布门禁
+安全扫描、独立审查和单人维护例外按 [发布检查清单](docs/dev/RELEASE-CHECKLIST.md) 与 [ADR-007](docs/decisions/ADR-007-single-maintainer-review-governance.md) 执行。部署某个分支提交，不代表该分支已经合入 `main` 或发布为新 GitHub Release。
 
-真实 Provider 验收采用“校准集 + 保留集”结构：三组校准样本（`functional-dense`、`visual-hero`、`existing-continuation`）与两组未参与调参的保留样本（`jade-shop-zh` 简体中文 + Noto Sans SC、`frontier-campaign`）。阈值固定为 `underlay-metrics-v1`；执行日志记录 Model、Prompt Hash、Input Hash、Provider Task ID、Repair 父子链与 Output Hash；`index.json` 由执行日志与设计师签核派生。证据分层、运行命令与发布门禁见 `docs/baseline/pr8-golden-release.md`。日常 CI 通过 `pnpm test:fixture-e2e` 重放已发布证据链，不调用 Provider。正式发布门禁（设计师真人签核）已于 2026-08-18 关闭，版本提升为 `0.2.0`。
+历史 Golden Samples 的五组真实 Provider 样本于 2026-08-18 完成设计师签核，属于当时的发布证据；日常 fixture E2E 重放这些证据，不会重新运行真实模型。历史结果不能替代后续版本的真实用户验收。
 
-## 当前版本范围外
+## 当前边界
 
-- 正式 Figma 生产
-- 自动 Sprite Sheet、Atlas 与引擎 JSON（由 Game UI Forge 侧承接）
-- Seedance 视频生成（接口边界已审阅，等动效探索进入范围后接入）
-- 多租户服务器部署与任务恢复队列
+- 本工具负责需求 / UE → 功能契约 → 布局批准 → 风格锁定 → 视觉探索与合成输出；素材提取、切图、Sprite Sheet、Atlas 和引擎交付不属于本仓库已实现的自动流程。
+- 暂不支持正式 Figma 生产和 Seedance 视频生成。
+- AI 助手目前只可在确认后保存意图评审草稿，不支持任意项目写入、任意命令执行或自动批准后续阶段。
+- 已有 Web 登录与用户隔离；尚未提供分布式任务队列、多实例共享写入和通用跨实例任务恢复。
